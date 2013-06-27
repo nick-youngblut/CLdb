@@ -115,7 +115,7 @@ Cdb_addScaffolds.pl [options]
 
 =item -d 	sqlite3 database (required).
 
-=item -p 	Path to the genbank files. [./genbank/]
+=item -p 	Path to the genbank files. [./genbank]
 
 =item -v	Verbose output. [TRUE]
 
