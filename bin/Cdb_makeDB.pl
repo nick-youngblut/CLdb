@@ -48,7 +48,7 @@ BEGIN TRANSACTION;
 DROP TABLE IF EXISTS Loci;
 
 CREATE TABLE Loci (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT	NOT NULL,
@@ -61,16 +61,25 @@ CRISPR_Array_End	INTEGER	NOT NULL,
 Status	TEXT	NOT NULL,
 Genbank	TEXT	NOT NULL,
 Array_File	TEXT	NOT NULL,
-Scaffolds	INTEGER	NOT NULL,
+Scaffolds	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL
+);
+
+
+DROP TABLE IF EXISTS Loci_test;
+
+CREATE TABLE Loci_test (
+Locus_ID	integer	primary key	autoincrement,
+Taxon_ID	TEXT	NOT NULL,
+Taxon_Name	TEXT	NOT NULL
 );
 
 
 DROP TABLE IF EXISTS Spacers;
 
 CREATE TABLE Spacers (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Spacer_ID	TEXT	NOT NULL,
 Spacer_Start	INTEGER	NOT NULL,
 Spacer_End	INTEGER	NOT NULL,
@@ -83,7 +92,7 @@ UNIQUE (Locus_ID, Spacer_ID)
 DROP TABLE IF EXISTS DirectRepeats;
 
 CREATE TABLE DirectRepeats (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Repeat_ID	INTEGER	NOT NULL,
 Repeat_Start	INTEGER	NOT NULL,
 Repeat_End	INTEGER	NOT NULL,
@@ -95,7 +104,7 @@ Repeat_Group	INTEGER
 DROP TABLE IF EXISTS DirectRepeatConsensus;
 
 CREATE TABLE DirectRepeatConsensus (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Repeat_Consensus_Sequence	TEXT	NOT NULL
 );
 
@@ -103,7 +112,7 @@ Repeat_Consensus_Sequence	TEXT	NOT NULL
 DROP TABLE IF EXISTS LeaderSeqs;
 
 CREATE TABLE LeaderSeqs (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
 Leader_Sequence	TEXT	NOT NULL,
@@ -114,7 +123,7 @@ Leader_Group	TEXT
 DROP TABLE IF EXISTS Genes;
 
 CREATE TABLE Genes (
-Locus_ID	TEXT	PRIMARY KEY,
+Locus_ID	INTEGER	PRIMARY KEY,
 Gene_ID	TEXT	NOT NULL,
 Gene_Start	INTEGER	NOT NULL,
 Gene_End	INTEGER	NOT NULL,
