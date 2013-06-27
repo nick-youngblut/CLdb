@@ -1,0 +1,5 @@
+do{ my $x = {
+       'blib' => 1,
+       'CRISPR_db-*' => 1
+     };
+$x; }
