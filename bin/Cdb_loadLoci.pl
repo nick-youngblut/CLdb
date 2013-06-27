@@ -82,7 +82,7 @@ sub update_db{
 	
 	$dbh->commit;	
 	
-	print STDERR "...Number of entries updated in loci table:", (scalar keys %$loci_r) -1, "\n"
+	print STDERR "...Number of entries updated in loci table: ", (scalar keys %$loci_r) -1, "\n"
 		unless $verbose;
 	}
 
