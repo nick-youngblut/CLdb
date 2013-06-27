@@ -41,14 +41,50 @@ my ($loci_r, $header_r) = load_loci_table();
 
 # updating / loading_db #
 load_new_entries($dbh, $loci_r->{"new_entry"}, $header_r);
-update_db($dbh, $loci_r);
+update_db($dbh, $loci_r, $header_r);
 
 # disconnect to db #
 $dbh->disconnect();
 exit;
 
 ### Subroutines
+sub update_db{
+# updating any entries with CLI identifiers #
+	my ($dbh, $loci_r, $header_r) = @_;
+	
+	# entries ordered #
+	my @keys = keys %$header_r;
+	@keys = grep(!/^locus_id$/i, @keys);
+	my @values = @$header_r{@keys};
 
+	# setting up update for all columns #
+	my @set;
+	foreach my $key (@keys){
+		(my $tmp = $key) =~ s/$/ = ?/;
+		push @set, $tmp;
+		}
+
+	# preparing sql #	
+	my $cmd = join(" ", "UPDATE Loci SET", join(",", @set), "where locus_id = ?");
+	my $sql = $dbh->prepare($cmd);
+
+	# updating #
+	foreach my $entry (keys %$loci_r){
+		next if $entry eq "new_entry";
+		my $row = $loci_r->{$entry};
+		
+		$sql->execute( (@$row[@values], $$row[$header_r->{"locus_id"}]) );
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$row[@values]), "\n";
+			}
+		}
+	
+	$dbh->commit;	
+	
+	print STDERR "...Number of entries updated in loci table:", (scalar keys %$loci_r) -1, "\n"
+		unless $verbose;
+	}
 
 sub load_new_entries{
 # adding new entries to db #
@@ -70,13 +106,8 @@ sub load_new_entries{
 		}
 	$dbh->commit;
 
-	}
-
-sub update_db{
-# updating db #
-	my ($dbh, $loci_r) = @_;
-	
-	
+	print STDERR "...Number of entries added to loci table: ", scalar @$loci_new_r, "\n"
+		unless $verbose;
 	}
 
 sub load_loci_table{
@@ -115,11 +146,6 @@ sub check_for_loci_table{
 
 sub list_tables{
 	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-#	if ($table_list){ 
-#		print "Tables:\n";
-#		print join(",\n", keys %$all), "\n\n";
-#		exit if ! $column_list;			# if columns do not need to be listed also
-#		}
 	return [keys %$all];
 	}
 
@@ -130,17 +156,19 @@ __END__
 
 =head1 NAME
 
-template.pl -- loading loci entries in to CRISPR_db
+Cdb_loadLoci.pl -- adding/updating loci entries in to CRISPR_db
 
 =head1 SYNOPSIS
 
-template.pl [options] < input > output
+Cdb_loadLoci.pl [options] < loci_table.txt
 
 =head2 options
 
 =over
 
-=item -v	Verbose output
+=item -d 	sqlite3 database (required).
+
+=item -v	Verbose output. [TRUE]
 
 =item -h	This help message
 
@@ -148,24 +176,20 @@ template.pl [options] < input > output
 
 =head2 For more information:
 
-perldoc template.pl
+perldoc Cdb_loadLoci.pl
 
 =head1 DESCRIPTION
 
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+Load and/or update CRISPR loci table entries.
+
+Loci entries will be added if no Locus_id is provided;
+otherwise, the entrie will be updated.
 
 =head1 EXAMPLES
 
-=head2 Usage method 1
+=head2 Usage:
 
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
-
-=head2 Usage method 2
-
-template.pl <library file> <output directory or basename>
+Cdb_loadLoci.pl -d CRISPR.sqlite < loci.txt
 
 =head1 AUTHOR
 
@@ -173,7 +197,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
 
 =head1 COPYRIGHT
 
