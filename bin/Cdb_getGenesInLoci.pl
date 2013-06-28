@@ -13,9 +13,11 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $genbank_path);
+my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "genbank=s" => \$genbank_path,
+	   "sql=s" => \$query,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -37,7 +39,7 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 	or die " Can't connect to $database_file!\n";
 
 # getting loci start - end from loci table (& genbank file names)
-my $loci_se_r = get_loci_start_end($dbh);
+my $loci_se_r = get_loci_start_end($dbh, $query);
 
 # getting CDS info for CDS features in loci regions #
 my $loci_tbl_r = call_genbank_get_region($loci_se_r, $genbank_path);
@@ -168,10 +170,10 @@ sub call_genbank_get_region{
 
 sub get_loci_start_end{
 # getting locus start and locus end from loci table in db #
-	my ($dbh) = @_;
+	my ($dbh, $query) = @_;
 	
 	my %loci_se;
-	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank, Operon_start, Operon_end, CRISPR_Array_Start, CRISPR_Array_End from loci";
+	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank, Operon_start, Operon_end, CRISPR_Array_Start, CRISPR_Array_End from loci $query";
 	my $loci_se_r = $dbh->selectall_arrayref($cmd);	
 	die " ERROR: no locus start-end values found!\n" unless $loci_se_r;	
 
@@ -190,17 +192,27 @@ __END__
 
 =head1 NAME
 
-template.pl -- script template
+Cdb_getGenesInLoci.pl -- getting all genes in CRISPR Loci; output is a table of gene information
 
 =head1 SYNOPSIS
 
-template.pl [options] < input > output
+Cdb_getGenesInLoci.pl [flags] 
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -v	Verbose output
+=item -d 	CRISPR database file.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -s 	sql to refine loci table query. 
+
+=item -v	Verbose output. [FALSE]
 
 =item -h	This help message
 
@@ -208,24 +220,35 @@ template.pl [options] < input > output
 
 =head2 For more information:
 
-perldoc template.pl
+perldoc Cdb_getGenesInLoci.pl
 
 =head1 DESCRIPTION
 
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+Get all CDS features from >= genbanks that fall
+into CRISPR loci. 
+
+The output can be piped directly into
+Cdb_loadGenes.pl or the aliases (or other values)
+can be edited first.
+
+Determining whether genes fall into the designated
+operon for the locus (and not in the CRISPR array)
+is done by determining if genes fall into the operon 
+range while falling outside of the CRISPR array range.
 
 =head1 EXAMPLES
 
-=head2 Usage method 1
+=head2 Basic usage:
 
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
+Cdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_info.txt
 
-=head2 Usage method 2
+=head2 Direct loading to CRISPR database
 
-template.pl <library file> <output directory or basename>
+Cdb_getGenesInLoci.pl -d CRISPR.sqlite | Cdb_loadGenes.pl -d CRISPR.sqlite
+
+=head2 Refining query to just 1 subtype
+
+Cdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
 
 =head1 AUTHOR
 
