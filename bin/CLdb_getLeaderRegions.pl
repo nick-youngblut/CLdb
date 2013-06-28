@@ -9,6 +9,7 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Bio::SeqIO;
+use Set::IntervalTree;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -81,7 +82,6 @@ sub get_leader_seq{
 		my $seqio = Bio::SeqIO->new(-format => "genbank", -file => "$genbank_path/$genbank_file")->next_seq();
 		foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
 			
-			my $strand = shift @{$leader_loc_r->{$locus}};
 			foreach my $loc (@{$leader_loc_r->{$locus}}){		# if both ends, must get both
 				
 				# determining leader region start-end
@@ -90,31 +90,22 @@ sub get_leader_seq{
 				my $array_start = ${$array_se_r->{$locus}}[1];
 				my $array_end = ${$array_se_r->{$locus}}[2];
 				
-				die " LOGIC ERROR: strand is '-', but array start < end" 
-					if $array_start < $array_end && $strand eq "-";
-
-				if($strand eq "+" && $loc eq "start" ){
+				if($loc eq "start" ){
 					$leader_start = $array_start - $length;
 					$leader_end = $array_start; 
 					}
-				elsif($strand eq "+" && $loc eq "end"){		# if "end"
+				elsif($loc eq "end"){		# if "end"
 					$leader_start = $array_end;
 					$leader_end = $array_end + $length;
 					}
-				elsif($strand eq "-" && $loc eq "start"){	# start/end switched (end - end 
-					$leader_start = $array_end - $length;
-					$leader_end = $array_end;
-					}
-				elsif($strand eq "-" && $loc eq "end"){
-					$leader_start = $array_start;
-					$leader_end = $array_start + $length;			
-					}
 				else{ die " LOGIC ERROR: $!\n"; }
 				
+				# checking for gene overlap #
+				($seqio, $leader_start, $leader_end) = check_gene_overlap($seqio, $leader_start, $leader_end, $loc, $locus);
 				
 				# parsing seq from genbank #
 				my $leader_seqio = $seqio->trunc($leader_start, $leader_end);					
-				$leader_seqio->display_id("lci.$locus");
+				$leader_seqio->display_id("cli.$locus");
 				$leader_seqio->desc(" $loc\__$leader_start\__$leader_end");
 								
 				$out->write_seq($leader_seqio);
@@ -128,7 +119,7 @@ sub get_leader_seq{
 sub check_gene_overlap{
 # checking to see if and genes overlap w/ leader region #
 # if yes, truncating leader region #
-	my ($seq, $region_start, $region_end, $leader_loc, $infile) = @_;
+	my ($seq, $region_start, $region_end, $leader_loc, $locus) = @_;
 	
 	# making an interval tree #
 	my $itree = Set::IntervalTree->new();
@@ -177,10 +168,10 @@ sub check_gene_overlap{
 	# altering start / stop #
 	$trans -= $region_start if $trans;			# making index local to region (instead of genome)
 	if($trans){
-		print STDERR "WARNING: Gene(s) overlap the leader in \"$infile\" array. Truncating\n" unless $verbose;
+		print STDERR "WARNING: Gene(s) overlap the leader in cli.$locus array. Truncating\n" unless $verbose;
 		
 		if($leader_loc eq "start"){				# gene overlaps at 5' end
-			$region_start -= $trans;			
+			$region_start += $trans;			
 			}
 		elsif($leader_loc eq "end"){			# gene overlaps at the 3' end
 			$region_end -= $trans;
@@ -229,21 +220,16 @@ sub determine_leader{
 	my $first_cnt = scalar keys %{$group_cnt{1}};
 	my $second_cnt = scalar keys %{$group_cnt{2}};
 
-	# strand #
-	my $strand;
-	if($$array_r[1] <= $$array_r[2]){ $strand = "+"; }			# + strand
-	else{ $strand = "-"; }
-		
 	# start or end? (based on + strand) #
-	if($first_cnt > $second_cnt){		
-		return [$strand, "start"];		# start & stop must be inverted if negative strand
+	if($first_cnt > $second_cnt){		# leader at start
+		return ["start"];		
 		}
-	elsif($first_cnt < $second_cnt){	# 
-		return [$strand, "end"];		
+	elsif($first_cnt < $second_cnt){	# leader at end 
+		return ["end"];		
 		}
 	else{
 		print STDERR " WARNING: for Locus $locus, could not use direct repeat degeneracy determine leader region end. Writing both.";
-		return [$strand, "start", "end"];
+		return ["start", "end"];
 		}
 	}
 
@@ -256,9 +242,16 @@ sub get_array_se{
 
 	my %array_se;
 	foreach my $row (@$ret){
+		# moving array start, stop to positive strand #
+		if($$row[1] > $$row[2]){
+			my $tmp = $$row[1];
+			$$row[1] = $$row[2];
+			$$row[2] = $tmp;
+			}
 		$array_se{$$row[0]} = $row;
 		}
 		#print Dumper %array_se; exit;
+
 	return \%array_se; 
 	}
 
@@ -285,11 +278,23 @@ CLdb_getLeaderRegion.pl -- getting leader region sequences
 
 =head1 SYNOPSIS
 
-CLdb_getLeaderRegion.pl [options] < input > output
+CLdb_getLeaderRegion.pl [flags]
+
+=head2 Required flags
+
+=over
+
+=item -d 	CRISPR database.
+
+=back
 
 =head2 options
 
 =over
+
+=item -l 	Maximum length of leader region (bp). [400]
+
+=item -q 	sql to refine loci query (see EXAMPLES).
 
 =item -v	Verbose output
 
@@ -303,20 +308,40 @@ perldoc CLdb_getLeaderRegion.pl
 
 =head1 DESCRIPTION
 
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+Get the suspected leader regions for CRISPR loci 
+in the CRISPR database.
+
+Leader regions are determined by direct repeat (DR) degeneracy,
+which should occur at the trailer end.
+For example: leader half has 1 cluster due to DR conservation,
+while the trailer half has 3 clusters due to DR degeneracy). 
+This is determined by the 'repeat_group' column in the 
+Directrepeats table in the CRISPR database. Therefore, 
+CLdb_groupArrayElements.pl has to be run on the database 
+before running this script!
+
+Both end regions of a CRISPR array are written if a CRISPR
+array has equal numbers of DR clusters on each half.
+
+The default leader region length is 400bp from the CRISPR array.
+
+The leader region length will be truncated if any genes overlap in 
+that region. 
+
+Leader regions in the output fasta are named as: 
+"cli.ID" "start|end"__"region_start"__"region_end"
+
+Leader region start & end are according to the + strand. 
 
 =head1 EXAMPLES
 
-=head2 Usage method 1
+=head2 Leader regions for all loci
 
-CLdb_getLeaderRegion.pl <read1.fastq> <read2.fastq> <output directory or basename>
+CLdb_getLeaderRegion.pl -d CRISPR.sqlite
 
-=head2 Usage method 2
+=head2 Leader regions for just subtype I-B:
 
-CLdb_getLeaderRegion.pl <library file> <output directory or basename>
+CLdb_getLeaderRegions.pl -d CRISPR.sqlite -q "WHERE subtype='I-B'" > leader_I-B.fna
 
 =head1 AUTHOR
 
@@ -324,7 +349,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
