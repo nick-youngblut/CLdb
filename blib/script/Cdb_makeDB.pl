@@ -67,44 +67,38 @@ Author	TEXT	NOT NULL
 );
 
 
-DROP TABLE IF EXISTS Loci_test;
-
-CREATE TABLE Loci_test (
-Locus_ID	integer	primary key	autoincrement,
-Taxon_ID	TEXT	NOT NULL,
-Taxon_Name	TEXT	NOT NULL
-);
-
-
 DROP TABLE IF EXISTS Spacers;
 
 CREATE TABLE Spacers (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	INTEGER	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
 Spacer_Start	INTEGER	NOT NULL,
 Spacer_End	INTEGER	NOT NULL,
 Spacer_Sequence	TEXT	NOT NULL,
 Spacer_Group	TEXT,
 UNIQUE (Locus_ID, Spacer_ID)
+ON CONFLICT REPLACE
 );
 
 
 DROP TABLE IF EXISTS DirectRepeats;
 
 CREATE TABLE DirectRepeats (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	INTEGER	NOT NULL,
 Repeat_ID	INTEGER	NOT NULL,
 Repeat_Start	INTEGER	NOT NULL,
 Repeat_End	INTEGER	NOT NULL,
 Repeat_Sequence	TEXT	NOT NULL,
-Repeat_Group	INTEGER
+Repeat_Group	INTEGER,
+UNIQUE (LOCUS_ID, Repeat_ID)
+ON CONFLICT REPLACE
 );
 
 
 DROP TABLE IF EXISTS DirectRepeatConsensus;
 
 CREATE TABLE DirectRepeatConsensus (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	INTEGER	NOT NULL,
 Repeat_Consensus_Sequence	TEXT	NOT NULL
 );
 
@@ -112,7 +106,7 @@ Repeat_Consensus_Sequence	TEXT	NOT NULL
 DROP TABLE IF EXISTS LeaderSeqs;
 
 CREATE TABLE LeaderSeqs (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	INTEGER	NOT NULL,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
 Leader_Sequence	TEXT	NOT NULL,
@@ -123,7 +117,7 @@ Leader_Group	TEXT
 DROP TABLE IF EXISTS Genes;
 
 CREATE TABLE Genes (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	INTEGER	NOT NULL,
 Gene_ID	TEXT	NOT NULL,
 Gene_Start	INTEGER	NOT NULL,
 Gene_End	INTEGER	NOT NULL,
@@ -131,6 +125,7 @@ Gene_Length__AA	INTEGER	NOT NULL,
 In_Operon	TEXT	NOT NULL,
 Gene_Alias	TEXT,
 UNIQUE (Locus_ID, Gene_ID)
+ON CONFLICT REPLACE
 );
 
 

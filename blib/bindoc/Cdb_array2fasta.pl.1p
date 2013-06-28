@@ -123,44 +123,50 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_ADDSCAFFOLDS 1"
-.TH CDB_ADDSCAFFOLDS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CDB_ARRAY2FASTA 1"
+.TH CDB_ARRAY2FASTA 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_addScaffolds.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
+Cdb_array2fasta.pl \-\- write CRISPR array spacers or direct repeats to fasta
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_addScaffolds.pl [options]
+Cdb_array2fasta.pl [options] > array.fasta
 .SS "options"
 .IX Subsection "options"
 .IP "\-d 	sqlite3 database (required)." 4
 .IX Item "-d 	sqlite3 database (required)."
 .PD 0
-.IP "\-p 	Path to the genbank files. [./genbank/]" 4
-.IX Item "-p 	Path to the genbank files. [./genbank/]"
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+.IP "\-r 	Get direct repeats instead of spacers." 4
+.IX Item "-r 	Get direct repeats instead of spacers."
+.IP "\-q 	Extra sql to refine which sequences are returned." 4
+.IX Item "-q 	Extra sql to refine which sequences are returned."
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_addScaffolds.pl
+perldoc Cdb_array2fasta.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Add the number of scaffolds in the orginal, unmerged genbank file 
-for each organism.
+Get spacer or direct repeat sequences from the \s-1CRISPR\s0 database
+and write them to a fasta.
 .PP
-Scaffolds are counted from 'source' in the genbank files provided
-in the loci table.
+By default, all spacers or direct repeats (if '\-r') will be written.
+The '\-q' flag can be used to refine the query to certain sequences (see examples).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-Cdb_addScaffolds.pl \-data \s-1CRISPR\s0.sqlite
+.SS "Write all spacers to a fasta:"
+.IX Subsection "Write all spacers to a fasta:"
+Cdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite
+.SS "Write all direct repeats to a fasta:"
+.IX Subsection "Write all direct repeats to a fasta:"
+Cdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-r
+.SS "Refine spacer sequence query:"
+.IX Subsection "Refine spacer sequence query:"
+Cdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

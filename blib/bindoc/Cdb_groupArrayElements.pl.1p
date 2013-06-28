@@ -123,50 +123,48 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_ADDSCAFFOLDS 1"
-.TH CDB_ADDSCAFFOLDS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CDB_GROUPARRAYELEMENTS 1"
+.TH CDB_GROUPARRAYELEMENTS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_addScaffolds.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
+template.pl \-\- script template
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_addScaffolds.pl [options]
+template.pl [options] < input > output
 .SS "options"
 .IX Subsection "options"
-.IP "\-d 	sqlite3 database (required)." 4
-.IX Item "-d 	sqlite3 database (required)."
+.IP "\-v	Verbose output" 4
+.IX Item "-v	Verbose output"
 .PD 0
-.IP "\-p 	Path to the genbank files. [./genbank/]" 4
-.IX Item "-p 	Path to the genbank files. [./genbank/]"
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_addScaffolds.pl
+perldoc template.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Add the number of scaffolds in the orginal, unmerged genbank file 
-for each organism.
-.PP
-Scaffolds are counted from 'source' in the genbank files provided
-in the loci table.
+The flow of execution is roughly:
+   1) Step 1
+   2) Step 2
+   3) Step 3
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-Cdb_addScaffolds.pl \-data \s-1CRISPR\s0.sqlite
+.SS "Usage method 1"
+.IX Subsection "Usage method 1"
+template.pl <read1.fastq> <read2.fastq> <output directory or basename>
+.SS "Usage method 2"
+.IX Subsection "Usage method 2"
+template.pl <library file> <output directory or basename>
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

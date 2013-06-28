@@ -112,8 +112,11 @@ do{ my $x = [
          'extra_compiler_flags' => [],
          'script_files' => [
                              './bin/Cdb_makeDB.pl',
+                             './bin/Cdb_groupArrayElements.pl',
+                             './bin/Cdb_array2fasta.pl',
                              './bin/Cdb_addScaffolds.pl',
-                             './bin/Cdb_loadLoci.pl'
+                             './bin/Cdb_loadLoci.pl',
+                             './bin/Cdb_loadArrays.pl'
                            ],
          'build_script' => 'Build',
          'original_prefix' => {},
