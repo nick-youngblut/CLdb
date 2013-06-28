@@ -64,7 +64,11 @@ sub write_loci_tbl{
 	foreach my $loci (keys %$loci_tbl_r){
 		foreach my $feature (sort{$a<=>$b} keys %{$loci_tbl_r->{$loci}}){
 
-			next unless ${$loci_tbl_r->{$loci}{$feature}}[2] =~ /^fig\|/;		# db_xref must be fig|.+peg
+			unless (${$loci_tbl_r->{$loci}{$feature}}[2] =~ /fig\|.+peg/){		# db_xref must be fig|.+peg
+				print STDERR " WARNING: Locus$loci -> $feature does not have a FIG-PEG ID in a db_xref tag!\n"
+					unless $verbose;
+				next;
+				}
 			print join("\t", "lci.$loci", 
 				${$loci_tbl_r->{$loci}{$feature}}[2], 			# Gene_id (db_xref)
 				@{$loci_tbl_r->{$loci}{$feature}}[(0..1)], 		# start, end 
@@ -153,7 +157,7 @@ sub call_genbank_get_region{
 			$cmd = "genbank_get_region.pl -r $start $end < $genbank_file |";			
 			}
 			
-		print STDERR "$cmd\n" if $verbose;
+		print STDERR "$cmd\n" unless $verbose;
 		open PIPE, $cmd or die $!;
 		while(<PIPE>){
 			chomp;
@@ -236,6 +240,16 @@ operon for the locus (and not in the CRISPR array)
 is done by determining if genes fall into the operon 
 range while falling outside of the CRISPR array range.
 
+=head2 WARNING:
+
+CDS features in genbanks must have db_xref tags with 
+the fig|peg ID (example: "fig|6666666.40253.peg.2362");
+otherwise, the CDS will not be written to the output table.
+
+=head2 Requires:
+
+genbank_get_region.pl
+
 =head1 EXAMPLES
 
 =head2 Basic usage:
@@ -256,7 +270,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
 
 =head1 COPYRIGHT
 
