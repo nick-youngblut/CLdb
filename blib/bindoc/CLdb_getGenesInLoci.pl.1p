@@ -123,50 +123,64 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_LOADARRAYS 1"
-.TH CDB_LOADARRAYS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_GETGENESINLOCI 1"
+.TH CLDB_GETGENESINLOCI 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
+CLdb_getGenesInLoci.pl \-\- getting all genes in CRISPR Loci; output is a table of gene information
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_loadArrays.pl [options]
-.SS "options"
-.IX Subsection "options"
-.IP "\-d 	sqlite3 database (required)." 4
-.IX Item "-d 	sqlite3 database (required)."
+CLdb_getGenesInLoci.pl [flags]
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	\s-1CRISPR\s0 database file." 4
+.IX Item "-d 	CRISPR database file."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
 .PD 0
-.IP "\-p 	Path to the genbank files. [./array/]" 4
-.IX Item "-p 	Path to the genbank files. [./array/]"
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+.IP "\-s 	sql to refine loci table query." 4
+.IX Item "-s 	sql to refine loci table query."
+.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v	Verbose output. [FALSE]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_loadArrays.pl
+perldoc CLdb_getGenesInLoci.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the \s-1CRISPR\s0 database.
+Get all \s-1CDS\s0 features from >= genbanks that fall
+into \s-1CRISPR\s0 loci.
 .PP
-Array file names are obtained from the loci table in the
-\&\s-1CRISPR\s0 database.
+The output can be piped directly into
+CLdb_loadGenes.pl or the aliases (or other values)
+can be edited first.
+.PP
+Determining whether genes fall into the designated
+operon for the locus (and not in the \s-1CRISPR\s0 array)
+is done by determining if genes fall into the operon 
+range while falling outside of the \s-1CRISPR\s0 array range.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-Cdb_loadArrays.pl \-data \s-1CRISPR\s0.sqlite
+.SS "Basic usage:"
+.IX Subsection "Basic usage:"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite > gene_info.txt
+.SS "Direct loading to \s-1CRISPR\s0 database"
+.IX Subsection "Direct loading to CRISPR database"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite | CLdb_loadGenes.pl \-d \s-1CRISPR\s0.sqlite
+.SS "Refining query to just 1 subtype"
+.IX Subsection "Refining query to just 1 subtype"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 subtype='I\-B'\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

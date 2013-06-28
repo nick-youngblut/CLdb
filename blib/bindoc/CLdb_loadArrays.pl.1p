@@ -123,36 +123,44 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_MAKEDB 1"
-.TH CDB_MAKEDB 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADARRAYS 1"
+.TH CLDB_LOADARRAYS 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_makeDB.pl \-\- Initial DB construction
+CLdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_makeDB.pl [options] [DATABASE_name]
+CLdb_loadArrays.pl [options]
 .SS "options"
 .IX Subsection "options"
-.IP "\-r 	Replace existing database." 4
-.IX Item "-r 	Replace existing database."
+.IP "\-d 	sqlite3 database (required)." 4
+.IX Item "-d 	sqlite3 database (required)."
 .PD 0
+.IP "\-p 	Path to the genbank files. [./array/]" 4
+.IX Item "-p 	Path to the genbank files. [./array/]"
+.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
+.IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_makeDB.pl
+perldoc CLdb_loadArrays.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make all of the CRISPR_db tables.
+Parse array files (CRISPRFinder format) and load
+the spacers and direct repeats into the \s-1CRISPR\s0 database.
+.PP
+Array file names are obtained from the loci table in the
+\&\s-1CRISPR\s0 database.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Naming database 'CRISPR_db1'"
-.IX Subsection "Naming database 'CRISPR_db1'"
-Cdb_makeDB.pl CRISPR_db1
+.SS "Usage:"
+.IX Subsection "Usage:"
+CLdb_loadArrays.pl \-data \s-1CRISPR\s0.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

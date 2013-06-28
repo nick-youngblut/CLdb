@@ -142,11 +142,11 @@ __END__
 
 =head1 NAME
 
-Cdb_makeDB.pl -- Initial DB construction
+CLdb_makeDB.pl -- Initial DB construction
 
 =head1 SYNOPSIS
 
-Cdb_makeDB.pl [options] [DATABASE_name]
+CLdb_makeDB.pl [options] [DATABASE_name]
 
 =head2 options
 
@@ -160,7 +160,7 @@ Cdb_makeDB.pl [options] [DATABASE_name]
 
 =head2 For more information:
 
-perldoc Cdb_makeDB.pl
+perldoc CLdb_makeDB.pl
 
 =head1 DESCRIPTION
 
@@ -170,7 +170,7 @@ Make all of the CRISPR_db tables.
 
 =head2 Naming database 'CRISPR_db1'
 
-Cdb_makeDB.pl CRISPR_db1
+CLdb_makeDB.pl CRISPR_db1
 
 =head1 AUTHOR
 

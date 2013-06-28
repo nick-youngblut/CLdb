@@ -123,24 +123,22 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_ADDSCAFFOLDS 1"
-.TH CDB_ADDSCAFFOLDS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADLOCI 1"
+.TH CLDB_LOADLOCI 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_addScaffolds.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
+CLdb_loadLoci.pl \-\- adding/updating loci entries in to CRISPR_db
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_addScaffolds.pl [options]
+CLdb_loadLoci.pl [options] < loci_table.txt
 .SS "options"
 .IX Subsection "options"
 .IP "\-d 	sqlite3 database (required)." 4
 .IX Item "-d 	sqlite3 database (required)."
 .PD 0
-.IP "\-p 	Path to the genbank files. [./genbank/]" 4
-.IX Item "-p 	Path to the genbank files. [./genbank/]"
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
@@ -148,19 +146,18 @@ Cdb_addScaffolds.pl [options]
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_addScaffolds.pl
+perldoc CLdb_loadLoci.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Add the number of scaffolds in the orginal, unmerged genbank file 
-for each organism.
+Load and/or update \s-1CRISPR\s0 loci table entries.
 .PP
-Scaffolds are counted from 'source' in the genbank files provided
-in the loci table.
+Loci entries will be added if no Locus_id is provided;
+otherwise, the entrie will be updated.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Usage:"
 .IX Subsection "Usage:"
-Cdb_addScaffolds.pl \-data \s-1CRISPR\s0.sqlite
+CLdb_loadLoci.pl \-d \s-1CRISPR\s0.sqlite < loci.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

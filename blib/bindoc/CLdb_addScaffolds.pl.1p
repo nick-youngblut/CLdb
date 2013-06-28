@@ -123,59 +123,44 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CDB_GROUPARRAYELEMENTS 1"
-.TH CDB_GROUPARRAYELEMENTS 1 "2013-06-27" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_ADDSCAFFOLDS 1"
+.TH CLDB_ADDSCAFFOLDS 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Cdb_groupArrayElements.pl \-\- group spacers and DRs by 100% sequence ID; add to database
+CLdb_addScaffolds.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-Cdb_groupArrayElements.pl [flags]
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	\s-1CRISPR\s0 database." 4
-.IX Item "-d 	CRISPR database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+CLdb_addScaffolds.pl [options]
+.SS "options"
+.IX Subsection "options"
+.IP "\-d 	sqlite3 database (required)." 4
+.IX Item "-d 	sqlite3 database (required)."
 .PD 0
-.IP "\-s 	Cluster spacers" 4
-.IX Item "-s 	Cluster spacers"
-.IP "\-d 	Cluster direct repeats" 4
-.IX Item "-d 	Cluster direct repeats"
-.IP "\-c 	CD-HIT-EST cluster cutoff. [1]" 4
-.IX Item "-c 	CD-HIT-EST cluster cutoff. [1]"
-.IP "\-p 	Directory where intermediate files are written. [./grouping/]" 4
-.IX Item "-p 	Directory where intermediate files are written. [./grouping/]"
-.IP "\-v	Verbose output" 4
-.IX Item "-v	Verbose output"
+.IP "\-p 	Path to the genbank files. [./genbank/]" 4
+.IX Item "-p 	Path to the genbank files. [./genbank/]"
+.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
+.IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc Cdb_groupArrayElements.pl
+perldoc CLdb_addScaffolds.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Group the spacers and/or direct repeats in the \s-1CRISPR\s0
-database using CD-HIT-EST and add the group \s-1ID\s0 of
-each spacer/DR to the \s-1CRISPR\s0 database.
+Add the number of scaffolds in the orginal, unmerged genbank file 
+for each organism.
 .PP
-Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
-are written to './grouping/' by default.
-.SS "Requires:"
-.IX Subsection "Requires:"
-cd-hit-est, Cdb_array2fasta.pl
+Scaffolds are counted from 'source' in the genbank files provided
+in the loci table.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Grouping spacers"
-.IX Subsection "Grouping spacers"
-Cdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s
-.SS "Grouping spacers & DRs"
-.IX Subsection "Grouping spacers & DRs"
-Cdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s \-r
+.SS "Usage:"
+.IX Subsection "Usage:"
+CLdb_addScaffolds.pl \-data \s-1CRISPR\s0.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

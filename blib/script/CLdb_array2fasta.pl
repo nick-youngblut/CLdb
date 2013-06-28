@@ -93,11 +93,11 @@ __END__
 
 =head1 NAME
 
-Cdb_array2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
+CLdb_array2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
 
 =head1 SYNOPSIS
 
-Cdb_array2fasta.pl [options] > array.fasta
+CLdb_array2fasta.pl [options] > array.fasta
 
 =head2 options
 
@@ -115,7 +115,7 @@ Cdb_array2fasta.pl [options] > array.fasta
 
 =head2 For more information:
 
-perldoc Cdb_array2fasta.pl
+perldoc CLdb_array2fasta.pl
 
 =head1 DESCRIPTION
 
@@ -129,15 +129,15 @@ The '-q' flag can be used to refine the query to certain sequences (see examples
 
 =head2 Write all spacers to a fasta:
 
-Cdb_array2fasta.pl -data CRISPR.sqlite 
+CLdb_array2fasta.pl -data CRISPR.sqlite 
 
 =head2 Write all direct repeats to a fasta:
 
-Cdb_array2fasta.pl -data CRISPR.sqlite -r
+CLdb_array2fasta.pl -data CRISPR.sqlite -r
 
 =head2 Refine spacer sequence query:
 
-Cdb_array2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb_array2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
 
 =head1 AUTHOR
 

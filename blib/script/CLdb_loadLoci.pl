@@ -156,11 +156,11 @@ __END__
 
 =head1 NAME
 
-Cdb_loadLoci.pl -- adding/updating loci entries in to CRISPR_db
+CLdb_loadLoci.pl -- adding/updating loci entries in to CRISPR_db
 
 =head1 SYNOPSIS
 
-Cdb_loadLoci.pl [options] < loci_table.txt
+CLdb_loadLoci.pl [options] < loci_table.txt
 
 =head2 options
 
@@ -176,7 +176,7 @@ Cdb_loadLoci.pl [options] < loci_table.txt
 
 =head2 For more information:
 
-perldoc Cdb_loadLoci.pl
+perldoc CLdb_loadLoci.pl
 
 =head1 DESCRIPTION
 
@@ -189,7 +189,7 @@ otherwise, the entrie will be updated.
 
 =head2 Usage:
 
-Cdb_loadLoci.pl -d CRISPR.sqlite < loci.txt
+CLdb_loadLoci.pl -d CRISPR.sqlite < loci.txt
 
 =head1 AUTHOR
 
