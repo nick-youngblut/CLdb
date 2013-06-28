@@ -130,41 +130,58 @@
 .if n .ad l
 .nh
 .SH "NAME"
-template.pl \-\- script template
+Cdb_groupArrayElements.pl \-\- group spacers and DRs by 100% sequence ID; add to database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-template.pl [options] < input > output
-.SS "options"
-.IX Subsection "options"
+Cdb_groupArrayElements.pl [flags]
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	\s-1CRISPR\s0 database." 4
+.IX Item "-d 	CRISPR database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
+.PD 0
+.IP "\-s 	Cluster spacers" 4
+.IX Item "-s 	Cluster spacers"
+.IP "\-d 	Cluster direct repeats" 4
+.IX Item "-d 	Cluster direct repeats"
+.IP "\-c 	CD-HIT-EST cluster cutoff. [1]" 4
+.IX Item "-c 	CD-HIT-EST cluster cutoff. [1]"
+.IP "\-p 	Directory where intermediate files are written. [./grouping/]" 4
+.IX Item "-p 	Directory where intermediate files are written. [./grouping/]"
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
-.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc template.pl
+perldoc Cdb_groupArrayElements.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+Group the spacers and/or direct repeats in the \s-1CRISPR\s0
+database using CD-HIT-EST and add the group \s-1ID\s0 of
+each spacer/DR to the \s-1CRISPR\s0 database.
+.PP
+Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
+are written to './grouping/' by default.
+.SS "Requires:"
+.IX Subsection "Requires:"
+cd-hit-est, Cdb_array2fasta.pl
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage method 1"
-.IX Subsection "Usage method 1"
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
-.SS "Usage method 2"
-.IX Subsection "Usage method 2"
-template.pl <library file> <output directory or basename>
+.SS "Grouping spacers"
+.IX Subsection "Grouping spacers"
+Cdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s
+.SS "Grouping spacers & DRs"
+.IX Subsection "Grouping spacers & DRs"
+Cdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s \-r
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011
