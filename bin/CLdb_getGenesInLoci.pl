@@ -192,11 +192,11 @@ __END__
 
 =head1 NAME
 
-Cdb_getGenesInLoci.pl -- getting all genes in CRISPR Loci; output is a table of gene information
+CLdb_getGenesInLoci.pl -- getting all genes in CRISPR Loci; output is a table of gene information
 
 =head1 SYNOPSIS
 
-Cdb_getGenesInLoci.pl [flags] 
+CLdb_getGenesInLoci.pl [flags] 
 
 =head2 Required flags
 
@@ -220,7 +220,7 @@ Cdb_getGenesInLoci.pl [flags]
 
 =head2 For more information:
 
-perldoc Cdb_getGenesInLoci.pl
+perldoc CLdb_getGenesInLoci.pl
 
 =head1 DESCRIPTION
 
@@ -228,7 +228,7 @@ Get all CDS features from >= genbanks that fall
 into CRISPR loci. 
 
 The output can be piped directly into
-Cdb_loadGenes.pl or the aliases (or other values)
+CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
 
 Determining whether genes fall into the designated
@@ -240,15 +240,15 @@ range while falling outside of the CRISPR array range.
 
 =head2 Basic usage:
 
-Cdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_info.txt
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_info.txt
 
 =head2 Direct loading to CRISPR database
 
-Cdb_getGenesInLoci.pl -d CRISPR.sqlite | Cdb_loadGenes.pl -d CRISPR.sqlite
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite | CLdb_loadGenes.pl -d CRISPR.sqlite
 
 =head2 Refining query to just 1 subtype
 
-Cdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
 
 =head1 AUTHOR
 

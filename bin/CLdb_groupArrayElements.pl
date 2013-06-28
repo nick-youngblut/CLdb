@@ -151,7 +151,7 @@ sub call_array2fasta{
 	my $outfile;
 	if($flag){ $outfile = "$dir/direct_repeats.fna"; }
 	else{ $outfile = "$dir/spacers.fna"; }
-	`Cdb_array2fasta.pl -d $database_file $flag > $outfile`;
+	`CLdb_array2fasta.pl -d $database_file $flag > $outfile`;
 	
 	return $outfile;
 	}
@@ -180,11 +180,11 @@ __END__
 
 =head1 NAME
 
-Cdb_groupArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
+CLdb_groupArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
 
 =head1 SYNOPSIS
 
-Cdb_groupArrayElements.pl [flags] 
+CLdb_groupArrayElements.pl [flags] 
 
 =head2 Required flags
 
@@ -214,7 +214,7 @@ Cdb_groupArrayElements.pl [flags]
 
 =head2 For more information:
 
-perldoc Cdb_groupArrayElements.pl
+perldoc CLdb_groupArrayElements.pl
 
 =head1 DESCRIPTION
 
@@ -227,17 +227,17 @@ are written to './grouping/' by default.
 
 =head2 Requires:
 
-cd-hit-est, Cdb_array2fasta.pl
+cd-hit-est, CLdb_array2fasta.pl
 
 =head1 EXAMPLES
 
 =head2 Grouping spacers
 
-Cdb_groupArrayElements.pl -d CRISPR.sqlite -s
+CLdb_groupArrayElements.pl -d CRISPR.sqlite -s
 
 =head2 Grouping spacers & DRs
 
-Cdb_groupArrayElements.pl -d CRISPR.sqlite -s -r
+CLdb_groupArrayElements.pl -d CRISPR.sqlite -s -r
 
 =head1 AUTHOR
 

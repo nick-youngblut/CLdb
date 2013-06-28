@@ -103,11 +103,11 @@ __END__
 
 =head1 NAME
 
-Cdb_addScaffolds.pl -- adding number of scaffolds in unmerged genbanks to loci table
+CLdb_addScaffolds.pl -- adding number of scaffolds in unmerged genbanks to loci table
 
 =head1 SYNOPSIS
 
-Cdb_addScaffolds.pl [options] 
+CLdb_addScaffolds.pl [options] 
 
 =head2 options
 
@@ -125,7 +125,7 @@ Cdb_addScaffolds.pl [options]
 
 =head2 For more information:
 
-perldoc Cdb_addScaffolds.pl
+perldoc CLdb_addScaffolds.pl
 
 =head1 DESCRIPTION
 
@@ -139,7 +139,7 @@ in the loci table.
 
 =head2 Usage:
 
-Cdb_addScaffolds.pl -data CRISPR.sqlite
+CLdb_addScaffolds.pl -data CRISPR.sqlite
 
 =head1 AUTHOR
 

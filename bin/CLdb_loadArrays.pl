@@ -160,11 +160,11 @@ __END__
 
 =head1 NAME
 
-Cdb_loadArrays.pl -- loading direct repeats & spacers into CRISPR database
+CLdb_loadArrays.pl -- loading direct repeats & spacers into CRISPR database
 
 =head1 SYNOPSIS
 
-Cdb_loadArrays.pl [options] 
+CLdb_loadArrays.pl [options] 
 
 =head2 options
 
@@ -182,7 +182,7 @@ Cdb_loadArrays.pl [options]
 
 =head2 For more information:
 
-perldoc Cdb_loadArrays.pl
+perldoc CLdb_loadArrays.pl
 
 =head1 DESCRIPTION
 
@@ -196,7 +196,7 @@ CRISPR database.
 
 =head2 Usage:
 
-Cdb_loadArrays.pl -data CRISPR.sqlite 
+CLdb_loadArrays.pl -data CRISPR.sqlite 
 
 =head1 AUTHOR
 
