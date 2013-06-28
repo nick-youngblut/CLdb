@@ -85,27 +85,31 @@ sub get_leader_seq{
 		my $seqio = Bio::SeqIO->new(-format => "genbank", -file => "$genbank_path/$genbank_file")->next_seq();
 		foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
 			
-			# determining leader region start-end
-			my $leader_loc = ${$array_se_r->{$locus}}[5];
-			my $leader_start;
-			my $leader_end;
+			my $strand = shift @{$leader_loc_r->{$locus}};
+			foreach my $loc (@{$leader_loc_r->{$locus}}){
+#				print Dumper $loc; exit;
+				
+				# determining leader region start-end
+				my $leader_start;
+				my $leader_end;
 			
-			if( $leader_loc eq "start" ){
-				$leader_start = ${$array_se_r->{$locus}}[1] - $length;
-				$leader_end = ${$array_se_r->{$locus}}[1]; 
+				if( $loc eq "start" ){
+					$leader_start = ${$array_se_r->{$locus}}[1] - $length;
+					$leader_end = ${$array_se_r->{$locus}}[1]; 
+					}
 				}
-			elsif( $leader_loc eq "end" ){
+			#elsif( $leader_loc eq "end" ){
+			#	
+			#	}
+			#else{
 				
-				}
-			else{
-				
-				}
+			#	}
 
 								#$leader_seqio = $seqio->trunc($region_start, $region_end);
-			my $leader_seqio;
-			if(${$array_se_r->{$locus}}[4] eq "+"){			# positive strand					
-				$leader_seqio = $seqio->trunc($leader_start, $leader_end);	
-				}
+			#my $leader_seqio;
+			#if(${$array_se_r->{$locus}}[4] eq "+"){			# positive strand					
+			#	$leader_seqio = $seqio->trunc($leader_start, $leader_end);	
+			#	}
 			}
 		}
 	
