@@ -164,6 +164,14 @@ Determining whether genes fall into the designated
 operon for the locus (and not in the \s-1CRISPR\s0 array)
 is done by determining if genes fall into the operon 
 range while falling outside of the \s-1CRISPR\s0 array range.
+.SS "\s-1WARNING:\s0"
+.IX Subsection "WARNING:"
+\&\s-1CDS\s0 features in genbanks must have db_xref tags with 
+the fig|peg \s-1ID\s0 (example: \*(L"fig|6666666.40253.peg.2362\*(R");
+otherwise, the \s-1CDS\s0 will not be written to the output table.
+.SS "Requires:"
+.IX Subsection "Requires:"
+genbank_get_region.pl
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Basic usage:"
@@ -180,7 +188,7 @@ CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 subtype='I
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011
