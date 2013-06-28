@@ -13,14 +13,13 @@ use Bio::SeqIO;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $leader_path);
+my ($verbose, $database_file);
 my $extra_query = "";
 my $genbank_path = "";
 my $length = 400;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "query=s" => \$extra_query, 
-	   "path=s" => \$leader_path,
 	   "genbank=s" => \$genbank_path,
 	   "length=i" => \$length,
 	   "verbose" => \$verbose,
@@ -42,9 +41,6 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
-# making leader directory #
-$leader_path = make_leader_dir($leader_path, $database_file);
-
 # getting array start-end from loci table #
 my $array_se_r = get_array_se($dbh, $extra_query);
 
@@ -54,9 +50,6 @@ my $leader_loc_r = get_DR_seq($dbh, $array_se_r);
 
 ## getting sequences from genbanks ##
 get_leader_seq($array_se_r, $leader_loc_r, $genbank_path, $length);
-
-# writing fasta #
-#write_arrays_fasta($arrays_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -79,6 +72,9 @@ sub get_leader_seq{
 	foreach my $locus (keys %$array_se_r){
 		push(@{$genbank_loci_index{ ${$array_se_r->{$locus}}[3] }}, $locus);
 		}
+
+	# output of genbank regions #
+	my $out = Bio::SeqIO->new(-format => "fasta", -fh => \*STDOUT);
 	
 	# opening genbanks & getting sequences #
 	foreach my $genbank_file (keys %genbank_loci_index){
@@ -86,33 +82,111 @@ sub get_leader_seq{
 		foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
 			
 			my $strand = shift @{$leader_loc_r->{$locus}};
-			foreach my $loc (@{$leader_loc_r->{$locus}}){
-#				print Dumper $loc; exit;
+			foreach my $loc (@{$leader_loc_r->{$locus}}){		# if both ends, must get both
 				
 				# determining leader region start-end
 				my $leader_start;
 				my $leader_end;
-			
-				if( $loc eq "start" ){
-					$leader_start = ${$array_se_r->{$locus}}[1] - $length;
-					$leader_end = ${$array_se_r->{$locus}}[1]; 
-					}
-				}
-			#elsif( $leader_loc eq "end" ){
-			#	
-			#	}
-			#else{
+				my $array_start = ${$array_se_r->{$locus}}[1];
+				my $array_end = ${$array_se_r->{$locus}}[2];
 				
-			#	}
+				die " LOGIC ERROR: strand is '-', but array start < end" 
+					if $array_start < $array_end && $strand eq "-";
 
-								#$leader_seqio = $seqio->trunc($region_start, $region_end);
-			#my $leader_seqio;
-			#if(${$array_se_r->{$locus}}[4] eq "+"){			# positive strand					
-			#	$leader_seqio = $seqio->trunc($leader_start, $leader_end);	
-			#	}
+				if($strand eq "+" && $loc eq "start" ){
+					$leader_start = $array_start - $length;
+					$leader_end = $array_start; 
+					}
+				elsif($strand eq "+" && $loc eq "end"){		# if "end"
+					$leader_start = $array_end;
+					$leader_end = $array_end + $length;
+					}
+				elsif($strand eq "-" && $loc eq "start"){	# start/end switched (end - end 
+					$leader_start = $array_end - $length;
+					$leader_end = $array_end;
+					}
+				elsif($strand eq "-" && $loc eq "end"){
+					$leader_start = $array_start;
+					$leader_end = $array_start + $length;			
+					}
+				else{ die " LOGIC ERROR: $!\n"; }
+				
+				
+				# parsing seq from genbank #
+				my $leader_seqio = $seqio->trunc($leader_start, $leader_end);					
+				$leader_seqio->display_id("lci.$locus");
+				$leader_seqio->desc(" $loc\__$leader_start\__$leader_end");
+								
+				$out->write_seq($leader_seqio);
+				}
+
 			}
 		}
 	
+	}
+
+sub check_gene_overlap{
+# checking to see if and genes overlap w/ leader region #
+# if yes, truncating leader region #
+	my ($seq, $region_start, $region_end, $leader_loc, $infile) = @_;
+	
+	# making an interval tree #
+	my $itree = Set::IntervalTree->new();
+	for my $feat ($seq->get_SeqFeatures){
+		next if $feat->primary_tag eq "source";
+
+		my $start = $feat->location->start;
+		my $end = $feat->location->end;
+		if($start <= $end){
+			$itree->insert($feat, $start - 1,  $end + 1);
+			}
+		else{
+			$itree->insert($feat, $end - 1,  $start + 1);		
+			}
+		}
+	
+	# checking for overlap #
+	my $trans = 0; my $last;
+	for my $i ($region_start..$region_end){
+		my $res = $itree->fetch($i, $i);
+		if(! $last){
+			if($$res[0]){ $last = 2; }
+			else{ $last = 1; } 
+			}
+		elsif($$res[0] && $last == 1){		# hitting overlap after no previous overlap (leader at end)
+			$trans = $i;
+			die " LOGIC ERROR: gene overlap at the wrong end of the leader region!\n"
+				unless $leader_loc eq "end"; 
+			last;
+			}
+		elsif( ! $$res[0] && $last ==2 ){	# no more overlap after previous overlap (leader at start)
+			$trans = $i - 1;
+			die " LOGIC ERROR: gene overlap at the wrong end of the leader region!\n"
+				unless $leader_loc eq "start"; 
+			last;
+			}
+		elsif($$res[0]){
+			$last = 2;
+			}
+		elsif(! $$res[0]){
+			$last = 1;
+			}
+		else{ die $!; }
+		}	
+		
+	# altering start / stop #
+	$trans -= $region_start if $trans;			# making index local to region (instead of genome)
+	if($trans){
+		print STDERR "WARNING: Gene(s) overlap the leader in \"$infile\" array. Truncating\n" unless $verbose;
+		
+		if($leader_loc eq "start"){				# gene overlaps at 5' end
+			$region_start -= $trans;			
+			}
+		elsif($leader_loc eq "end"){			# gene overlaps at the 3' end
+			$region_end -= $trans;
+			}
+		}
+	return $seq, $region_start, $region_end;
 	}
 
 sub get_DR_seq{
@@ -125,7 +199,7 @@ sub get_DR_seq{
 	foreach my $locus (keys %$array_se_r){
 		$sql->execute($locus);
 		my $ret = $sql->fetchall_arrayref();
-		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus});
+		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
 		}
 	
 		#print Dumper %leader_loc; exit;
@@ -134,12 +208,11 @@ sub get_DR_seq{
 
 sub determine_leader{
 # determing leader region #
-	my ($ret, $array_r) = @_;
+	my ($ret, $array_r, $locus) = @_;
 		#print Dumper $array_r; exit;	
 	
 	# getting halfway point in array #
 	my $array_half = ($$array_r[2] +  $$array_r[1]) / 2;
-		#print Dumper $array_half; exit;
 	
 	# counting groups for each half of the array #
 	my %group_cnt;
@@ -161,14 +234,15 @@ sub determine_leader{
 	if($$array_r[1] <= $$array_r[2]){ $strand = "+"; }			# + strand
 	else{ $strand = "-"; }
 		
-	# start or end? #		
-	if($first_cnt > $second_cnt){
+	# start or end? (based on + strand) #
+	if($first_cnt > $second_cnt){		
 		return [$strand, "start"];		# start & stop must be inverted if negative strand
 		}
-	elsif($first_cnt < $second_cnt){
+	elsif($first_cnt < $second_cnt){	# 
 		return [$strand, "end"];		
 		}
 	else{
+		print STDERR " WARNING: for Locus $locus, could not use direct repeat degeneracy determine leader region end. Writing both.";
 		return [$strand, "start", "end"];
 		}
 	}
@@ -207,11 +281,11 @@ __END__
 
 =head1 NAME
 
-template.pl -- script template
+CLdb_getLeaderRegion.pl -- getting leader region sequences
 
 =head1 SYNOPSIS
 
-template.pl [options] < input > output
+CLdb_getLeaderRegion.pl [options] < input > output
 
 =head2 options
 
@@ -225,7 +299,7 @@ template.pl [options] < input > output
 
 =head2 For more information:
 
-perldoc template.pl
+perldoc CLdb_getLeaderRegion.pl
 
 =head1 DESCRIPTION
 
@@ -238,11 +312,11 @@ The flow of execution is roughly:
 
 =head2 Usage method 1
 
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
+CLdb_getLeaderRegion.pl <read1.fastq> <read2.fastq> <output directory or basename>
 
 =head2 Usage method 2
 
-template.pl <library file> <output directory or basename>
+CLdb_getLeaderRegion.pl <library file> <output directory or basename>
 
 =head1 AUTHOR
 
