@@ -97,13 +97,19 @@ CLdb_array2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
 
 =head1 SYNOPSIS
 
-CLdb_array2fasta.pl [options] > array.fasta
+CLdb_array2fasta.pl [flags] > array.fasta
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -d 	sqlite3 database (required).
+=item -d 	CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
 
 =item -r 	Get direct repeats instead of spacers.
 
@@ -145,7 +151,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 

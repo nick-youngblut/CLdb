@@ -12,11 +12,10 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
-my $genbank_path = "./genbank/";
+my ($verbose, $database_file, $genbank_path);
 GetOptions(
 	   "database=s" => \$database_file,
-	   "path=s" => \$genbank_path, 
+	   "genbank=s" => \$genbank_path, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -26,6 +25,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
+$genbank_path = path_by_database($database_file) unless $genbank_path;
 $genbank_path = File::Spec->rel2abs($genbank_path);
 
 ### MAIN
@@ -96,6 +96,11 @@ sub get_genbank_names{
 	return $names_r;
 	}
 
+sub path_by_database{
+	my ($database_file) = @_;
+	my @parts = File::Spec->splitpath($database_file);
+	return join("/", $parts[1], "genbank");
+	}
 
 __END__
 
@@ -107,15 +112,21 @@ CLdb_addScaffolds.pl -- adding number of scaffolds in unmerged genbanks to loci 
 
 =head1 SYNOPSIS
 
-CLdb_addScaffolds.pl [options] 
+CLdb_addScaffolds.pl [flags] 
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -d 	sqlite3 database (required).
+=item -d 	CLdb database.
 
-=item -p 	Path to the genbank files. [./genbank/]
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -g 	Path to the genbank files. [$CLdb_HOME/genbank/]
 
 =item -v	Verbose output. [TRUE]
 
@@ -147,7 +158,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 

@@ -133,7 +133,7 @@ Cldb_loadGenes.pl [flags] < gene_table.txt
 
 =over
 
-=item -d 	CRISPR database.
+=item -d 	CLdb database.
 
 =back 
 
@@ -177,7 +177,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
