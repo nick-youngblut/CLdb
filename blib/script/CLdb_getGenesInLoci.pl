@@ -12,13 +12,14 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $genbank_path);
+my ($verbose, $database_file, $genbank_path, $quiet);
 my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "genbank=s" => \$genbank_path,
 	   "sql=s" => \$query,
-	   "verbose" => \$verbose,
+	   "verbose" => \$verbose,				# TRUE
+	   "quiet" => \$quiet, 					# turn off warnings
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -63,10 +64,9 @@ sub write_loci_tbl{
 	print join("\t", qw/Locus_ID Gene_Id Gene_start Gene_end Gene_length__AA In_Operon Gene_Alias Sequence/), "\n";
 	foreach my $loci (keys %$loci_tbl_r){
 		foreach my $feature (sort{$a<=>$b} keys %{$loci_tbl_r->{$loci}}){
-
 			unless (${$loci_tbl_r->{$loci}{$feature}}[2] =~ /fig\|.+peg/){		# db_xref must be fig|.+peg
 				print STDERR " WARNING: Locus$loci -> $feature does not have a FIG-PEG ID in a db_xref tag!\n"
-					unless $verbose;
+					unless $quiet;
 				next;
 				}
 			print join("\t", "lci.$loci", 
@@ -159,12 +159,41 @@ sub call_genbank_get_region{
 			
 		print STDERR "$cmd\n" unless $verbose;
 		open PIPE, $cmd or die $!;
+		
+		my %header;
+		my @col_sel = qw/start end db_xref product translation/;
 		while(<PIPE>){
 			chomp;
-			next if $. == 1;
+		
+			if($. == 1){
+				tr/A-Z/a-z/;					# header to lower case
+				my @line = split /\t/;			
+				for my $i (0..$#line){
+					$header{$line[$i]} = $i;
+					}
+				}
+			else{
+				my @line = split /\t/;			
+
+				# parsing & scrubing fig/peg # (eg. 'ITEP:') #
+				my $fig_peg;
+				my @fig_peg = split /::/, $line[$header{"db_xref"}];
+				map{ $line[$header{"db_xref"}] = $_ if /fig\|.+peg\.\d+/ } @fig_peg;		# should only be 1 fig-peg
+				$line[$header{"db_xref"}] =~ s/^[^:]+://;
 			
-			my @line = split /\t/;
-			$loci_tbl{$locus}{$line[0]} = [@line[1..$#line]]; 	# locusID=>feature_num = feature
+				# checking for existence of columns of interest #
+				my $next_bool;
+				foreach my $col (@col_sel){
+					unless($line[$header{$col}]){
+						print STDERR " WARNING: \"$col\" tag not found in feature: $_! Skipping feature\n";						
+						$next_bool = 1; last;
+						}
+					}
+				next if $next_bool;
+			
+				# loading hash; selecting just tags of interest #
+				$loci_tbl{$locus}{$line[$header{feature_num}]} = [@line[@header{@col_sel}]]; 	# locusID=>feature_num = feature
+				}
 			}
 		close PIPE;
 		}
@@ -206,7 +235,7 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -d 	CRISPR database file.
+=item -d 	CLdb database.
 
 =back
 
@@ -214,9 +243,11 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -s 	sql to refine loci table query. 
+=item -s 	sql to refine loci table query (see EXAMPLES). 
 
-=item -v	Verbose output. [FALSE]
+=item -q	Turn off all warnings.
+
+=item -v	Verbose output. [TRUE]
 
 =item -h	This help message
 
@@ -260,9 +291,13 @@ CLdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_info.txt
 
 CLdb_getGenesInLoci.pl -d CRISPR.sqlite | CLdb_loadGenes.pl -d CRISPR.sqlite
 
-=head2 Refining query to just 1 subtype
+=head2 Refining query to just the 'I-B' subtype
 
 CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
+
+=head2 Refining query to just taxon '6666666.40253'
+
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE taxon_id='6666666.40253'"
 
 =head1 AUTHOR
 
@@ -270,7 +305,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_ARRAY2FASTA 1"
-.TH CLDB_ARRAY2FASTA 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_ARRAY2FASTA 1 "2013-06-29" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,11 +133,13 @@
 CLdb_array2fasta.pl \-\- write CRISPR array spacers or direct repeats to fasta
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_array2fasta.pl [options] > array.fasta
-.SS "options"
-.IX Subsection "options"
-.IP "\-d 	sqlite3 database (required)." 4
-.IX Item "-d 	sqlite3 database (required)."
+CLdb_array2fasta.pl [flags] > array.fasta
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
 .PD 0
 .IP "\-r 	Get direct repeats instead of spacers." 4
 .IX Item "-r 	Get direct repeats instead of spacers."
@@ -172,7 +174,7 @@ CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

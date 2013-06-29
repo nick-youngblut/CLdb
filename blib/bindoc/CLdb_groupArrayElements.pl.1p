@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GROUPARRAYELEMENTS 1"
-.TH CLDB_GROUPARRAYELEMENTS 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GROUPARRAYELEMENTS 1 "2013-06-29" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,8 +136,8 @@ CLdb_groupArrayElements.pl \-\- group spacers and DRs by 100% sequence ID; add t
 CLdb_groupArrayElements.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	\s-1CRISPR\s0 database." 4
-.IX Item "-d 	CRISPR database."
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
@@ -147,8 +147,8 @@ CLdb_groupArrayElements.pl [flags]
 .IX Item "-d 	Cluster direct repeats"
 .IP "\-c 	CD-HIT-EST cluster cutoff. [1]" 4
 .IX Item "-c 	CD-HIT-EST cluster cutoff. [1]"
-.IP "\-p 	Directory where intermediate files are written. [./grouping/]" 4
-.IX Item "-p 	Directory where intermediate files are written. [./grouping/]"
+.IP "\-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]" 4
+.IX Item "-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]"
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
@@ -164,7 +164,7 @@ database using CD-HIT-EST and add the group \s-1ID\s0 of
 each spacer/DR to the \s-1CRISPR\s0 database.
 .PP
 Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
-are written to './grouping/' by default.
+are written to '$CLdb_HOME/grouping/' by default.
 .SS "Requires:"
 .IX Subsection "Requires:"
 cd-hit-est, CLdb_array2fasta.pl
@@ -181,7 +181,7 @@ CLdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s \-r
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

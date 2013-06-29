@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETGENESINLOCI 1"
-.TH CLDB_GETGENESINLOCI 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETGENESINLOCI 1 "2013-06-29" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,15 +136,17 @@ CLdb_getGenesInLoci.pl \-\- getting all genes in CRISPR Loci; output is a table 
 CLdb_getGenesInLoci.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	\s-1CRISPR\s0 database file." 4
-.IX Item "-d 	CRISPR database file."
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-s 	sql to refine loci table query." 4
-.IX Item "-s 	sql to refine loci table query."
-.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v	Verbose output. [FALSE]"
+.IP "\-s 	sql to refine loci table query (see \s-1EXAMPLES\s0)." 4
+.IX Item "-s 	sql to refine loci table query (see EXAMPLES)."
+.IP "\-q	Turn off all warnings." 4
+.IX Item "-q	Turn off all warnings."
+.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
+.IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
@@ -180,15 +182,18 @@ CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite > gene_info.txt
 .SS "Direct loading to \s-1CRISPR\s0 database"
 .IX Subsection "Direct loading to CRISPR database"
 CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite | CLdb_loadGenes.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Refining query to just 1 subtype"
-.IX Subsection "Refining query to just 1 subtype"
+.SS "Refining query to just the 'I\-B' subtype"
+.IX Subsection "Refining query to just the 'I-B' subtype"
 CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 subtype='I\-B'\*(R"
+.SS "Refining query to just taxon '6666666.40253'"
+.IX Subsection "Refining query to just taxon '6666666.40253'"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 taxon_id='6666666.40253'\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

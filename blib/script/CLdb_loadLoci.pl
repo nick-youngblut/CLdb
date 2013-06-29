@@ -166,7 +166,7 @@ CLdb_loadLoci.pl [options] < loci_table.txt
 
 =over
 
-=item -d 	sqlite3 database (required).
+=item -d 	CLdb database (required).
 
 =item -v	Verbose output. [TRUE]
 
@@ -197,7 +197,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 

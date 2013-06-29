@@ -284,7 +284,7 @@ CLdb_getLeaderRegion.pl [flags]
 
 =over
 
-=item -d 	CRISPR database.
+=item -d 	CLdb database.
 
 =back
 

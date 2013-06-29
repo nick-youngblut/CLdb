@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LOADARRAYS 1"
-.TH CLDB_LOADARRAYS 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LOADARRAYS 1 "2013-06-29" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,14 +133,16 @@
 CLdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadArrays.pl [options]
-.SS "options"
-.IX Subsection "options"
-.IP "\-d 	sqlite3 database (required)." 4
-.IX Item "-d 	sqlite3 database (required)."
+CLdb_loadArrays.pl [flags]
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
 .PD 0
-.IP "\-p 	Path to the genbank files. [./array/]" 4
-.IX Item "-p 	Path to the genbank files. [./array/]"
+.IP "\-a 	Path to the array table files. [$CLdb_HOME/array/]" 4
+.IX Item "-a 	Path to the array table files. [$CLdb_HOME/array/]"
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
@@ -152,7 +154,7 @@ perldoc CLdb_loadArrays.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the \s-1CRISPR\s0 database.
+the spacers and direct repeats into the CLdb database.
 .PP
 Array file names are obtained from the loci table in the
 \&\s-1CRISPR\s0 database.
@@ -166,7 +168,7 @@ CLdb_loadArrays.pl \-data \s-1CRISPR\s0.sqlite
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

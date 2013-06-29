@@ -12,11 +12,10 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
-my $array_path = "./array/";
+my ($verbose, $database_file, $array_path);
 GetOptions(
 	   "database=s" => \$database_file,
-	   "path=s" => \$array_path, 
+	   "array=s" => \$array_path, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -26,7 +25,9 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
+$array_path = path_by_database($database_file) unless $array_path;
 $array_path = File::Spec->rel2abs($array_path);
+
 
 ### MAIN
 # connect 2 db #
@@ -164,15 +165,21 @@ CLdb_loadArrays.pl -- loading direct repeats & spacers into CRISPR database
 
 =head1 SYNOPSIS
 
-CLdb_loadArrays.pl [options] 
+CLdb_loadArrays.pl [flags] 
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -d 	sqlite3 database (required).
+=item -d 	CLdb database.
 
-=item -p 	Path to the genbank files. [./array/]
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -a 	Path to the array table files. [$CLdb_HOME/array/]
 
 =item -v	Verbose output. [TRUE]
 
@@ -187,7 +194,7 @@ perldoc CLdb_loadArrays.pl
 =head1 DESCRIPTION
 
 Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the CRISPR database.
+the spacers and direct repeats into the CLdb database.
 
 Array file names are obtained from the loci table in the
 CRISPR database.
@@ -204,7 +211,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 

@@ -190,7 +190,7 @@ CLdb_groupArrayElements.pl [flags]
 
 =over
 
-=item -d 	CRISPR database.
+=item -d 	CLdb database.
 
 =back
 
@@ -204,7 +204,7 @@ CLdb_groupArrayElements.pl [flags]
 
 =item -c 	CD-HIT-EST cluster cutoff. [1]
 
-=item -p 	Directory where intermediate files are written. [./grouping/]
+=item -p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]
 
 =item -v	Verbose output
 
@@ -223,7 +223,7 @@ database using CD-HIT-EST and add the group ID of
 each spacer/DR to the CRISPR database.
 
 Spacer and DR fasta files and CD-HIT-EST files
-are written to './grouping/' by default.
+are written to '$CLdb_HOME/grouping/' by default.
 
 =head2 Requires:
 
@@ -245,7 +245,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CRISPR_db/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
