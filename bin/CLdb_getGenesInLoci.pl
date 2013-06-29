@@ -12,13 +12,14 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $genbank_path);
+my ($verbose, $database_file, $genbank_path, $quiet);
 my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "genbank=s" => \$genbank_path,
 	   "sql=s" => \$query,
-	   "verbose" => \$verbose,
+	   "verbose" => \$verbose,				# TRUE
+	   "quiet" => \$quiet, 					# turn off warnings
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -66,7 +67,7 @@ sub write_loci_tbl{
 
 			unless (${$loci_tbl_r->{$loci}{$feature}}[2] =~ /fig\|.+peg/){		# db_xref must be fig|.+peg
 				print STDERR " WARNING: Locus$loci -> $feature does not have a FIG-PEG ID in a db_xref tag!\n"
-					unless $verbose;
+					unless $quiet;
 				next;
 				}
 			print join("\t", "lci.$loci", 
@@ -214,9 +215,11 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -s 	sql to refine loci table query. 
+=item -s 	sql to refine loci table query (see EXAMPLES). 
 
-=item -v	Verbose output. [FALSE]
+=item -q	Turn off all warnings.
+
+=item -v	Verbose output. [TRUE]
 
 =item -h	This help message
 
