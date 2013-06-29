@@ -27,7 +27,7 @@ do{ my $x = [
                                     'conflicts',
                                     'recommends'
                                   ],
-         'base_dir' => '/home/nyoungb2/perl/projects/CRISPR_db',
+         'base_dir' => '/home/nyoungb2/perl/projects/CLdb',
          'allow_mb_mismatch' => 0,
          'xs_files' => undef,
          'destdir' => undef,
@@ -37,10 +37,10 @@ do{ my $x = [
          'test_file_exts' => [
                                '.t'
                              ],
-         'dist_name' => 'CRISPR_db',
+         'dist_name' => 'CLdb',
          'has_config_data' => undef,
          'install_base' => '/home/nyoungb2/perl5',
-         'module_name' => 'CRISPR_db',
+         'module_name' => 'CLdb',
          'recursive_test_files' => undef,
          'libdoc_dirs' => [
                             'blib/lib',
@@ -63,7 +63,7 @@ do{ my $x = [
          'debug' => undef,
          'meta_merge' => {},
          'get_options' => {},
-         'dist_version_from' => 'lib/CRISPR_db.pm',
+         'dist_version_from' => 'lib/CLdb.pm',
          '_added_to_INC' => [
                               '/home/nyoungb2/perl5/lib/perl5/x86_64-linux-gnu-thread-multi',
                               '/home/nyoungb2/perl5/lib/perl5',
@@ -94,7 +94,7 @@ do{ my $x = [
                              ],
          'release_status' => 'stable',
          'needs_compiler' => '',
-         'orig_dir' => '/home/nyoungb2/perl/projects/CRISPR_db',
+         'orig_dir' => '/home/nyoungb2/perl/projects/CLdb',
          'include_dirs' => [],
          'installdirs' => 'site',
          'mymetafile' => 'MYMETA.yml',

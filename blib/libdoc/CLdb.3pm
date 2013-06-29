@@ -123,77 +123,80 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLdb 3"
+.TH CLdb 3 "2013-06-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_getLeaderRegion.pl \-\- getting leader region sequences
+CLdb \- The great new CLdb!
+.SH "VERSION"
+.IX Header "VERSION"
+Version 0.01
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_getLeaderRegion.pl [flags]
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	\s-1CRISPR\s0 database." 4
-.IX Item "-d 	CRISPR database."
-.SS "options"
-.IX Subsection "options"
-.PD 0
-.IP "\-l 	Maximum length of leader region (bp). [400]" 4
-.IX Item "-l 	Maximum length of leader region (bp). [400]"
-.IP "\-q 	sql to refine loci query (see \s-1EXAMPLES\s0)." 4
-.IX Item "-q 	sql to refine loci query (see EXAMPLES)."
-.IP "\-v	Verbose output" 4
-.IX Item "-v	Verbose output"
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
-.SS "For more information:"
-.IX Subsection "For more information:"
-perldoc CLdb_getLeaderRegion.pl
-.SH "DESCRIPTION"
-.IX Header "DESCRIPTION"
-Get the suspected leader regions for \s-1CRISPR\s0 loci 
-in the \s-1CRISPR\s0 database.
+Quick summary of what the module does.
 .PP
-Leader regions are determined by direct repeat (\s-1DR\s0) degeneracy,
-which should occur at the trailer end.
-For example: leader half has 1 cluster due to \s-1DR\s0 conservation,
-while the trailer half has 3 clusters due to \s-1DR\s0 degeneracy). 
-This is determined by the 'repeat_group' column in the 
-Directrepeats table in the \s-1CRISPR\s0 database. Therefore, 
-CLdb_groupArrayElements.pl has to be run on the database 
-before running this script!
+Perhaps a little code snippet.
 .PP
-Both end regions of a \s-1CRISPR\s0 array are written if a \s-1CRISPR\s0
-array has equal numbers of \s-1DR\s0 clusters on each half.
-.PP
-The default leader region length is 400bp from the \s-1CRISPR\s0 array.
-.PP
-The leader region length will be truncated if any genes overlap in 
-that region.
-.PP
-Leader regions in the output fasta are named as: 
-\&\*(L"cli.ID\*(R" \*(L"start|end\*(R"_\|_\*(L"region_start\*(R"_\|_\*(L"region_end\*(R"
-.PP
-Leader region start & end are according to the + strand.
-.SH "EXAMPLES"
-.IX Header "EXAMPLES"
-.SS "Leader regions for all loci"
-.IX Subsection "Leader regions for all loci"
-CLdb_getLeaderRegion.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Leader regions for just subtype I\-B:"
-.IX Subsection "Leader regions for just subtype I-B:"
-CLdb_getLeaderRegions.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"\s-1WHERE\s0 subtype='I\-B'\*(R" > leader_I\-B.fna
+.Vb 1
+\&    use CRISPR_db;
+\&
+\&    my $foo = CRISPR_db\->new();
+\&    ...
+.Ve
+.SH "EXPORT"
+.IX Header "EXPORT"
+A list of functions that can be exported.  You can delete this section
+if you don't export anything, such as for a purely object-oriented module.
+.SH "SUBROUTINES/METHODS"
+.IX Header "SUBROUTINES/METHODS"
+.SS "function1"
+.IX Subsection "function1"
+.SS "function2"
+.IX Subsection "function2"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
-Nick Youngblut <nyoungb2@illinois.edu>
-.SH "AVAILABILITY"
-.IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-.SH "COPYRIGHT"
-.IX Header "COPYRIGHT"
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
+Nick Youngblut, \f(CW\*(C`<nyoungb2 at illinois.edu>\*(C'\fR
+.SH "BUGS"
+.IX Header "BUGS"
+Please report any bugs or feature requests to \f(CW\*(C`bug\-crispr_db at rt.cpan.org\*(C'\fR, or through
+the web interface at <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=CRISPR_db>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+.SH "SUPPORT"
+.IX Header "SUPPORT"
+You can find documentation for this module with the perldoc command.
+.PP
+.Vb 1
+\&    perldoc CRISPR_db
+.Ve
+.PP
+You can also look for information at:
+.IP "\(bu" 4
+\&\s-1RT:\s0 \s-1CPAN\s0's request tracker (report bugs here)
+.Sp
+<http://rt.cpan.org/NoAuth/Bugs.html?Dist=CRISPR_db>
+.IP "\(bu" 4
+AnnoCPAN: Annotated \s-1CPAN\s0 documentation
+.Sp
+<http://annocpan.org/dist/CRISPR_db>
+.IP "\(bu" 4
+\&\s-1CPAN\s0 Ratings
+.Sp
+<http://cpanratings.perl.org/d/CRISPR_db>
+.IP "\(bu" 4
+Search \s-1CPAN\s0
+.Sp
+<http://search.cpan.org/dist/CRISPR_db/>
+.SH "ACKNOWLEDGEMENTS"
+.IX Header "ACKNOWLEDGEMENTS"
+.SH "LICENSE AND COPYRIGHT"
+.IX Header "LICENSE AND COPYRIGHT"
+Copyright 2013 Nick Youngblut.
+.PP
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the \s-1GNU\s0 General Public License as published
+by the Free Software Foundation; or the Artistic License.
+.PP
+See <http://dev.perl.org/licenses/> for more information.

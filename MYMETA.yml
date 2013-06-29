@@ -1,5 +1,5 @@
 ---
-abstract: 'The great new CRISPR_db!'
+abstract: 'The great new CLdb!'
 author:
   - 'Nick Youngblut <nyoungb2@illinois.edu>'
 build_requires:
@@ -12,10 +12,10 @@ license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
-name: CRISPR_db
+name: CLdb
 provides:
-  CRISPR_db:
-    file: lib/CRISPR_db.pm
+  CLdb:
+    file: lib/CLdb.pm
     version: 0.01
 resources:
   license: http://dev.perl.org/licenses/
