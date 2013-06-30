@@ -69,7 +69,7 @@ sub write_loci_tbl{
 					unless $quiet;
 				next;
 				}
-			print join("\t", "lci.$loci", 
+			print join("\t", "cli.$loci", 
 				${$loci_tbl_r->{$loci}{$feature}}[2], 			# Gene_id (db_xref)
 				@{$loci_tbl_r->{$loci}{$feature}}[(0..1)], 		# start, end 
 				length ${$loci_tbl_r->{$loci}{$feature}}[4], 	# length (AA)
@@ -92,8 +92,8 @@ sub check_in_operon{
 			
 			# defining start - end #
 			## f = feature; o = operion; c = crispr array ##
-			my $f_start = ${$loci_tbl_r->{$locus}{$feature}}[0];
-			my $f_end = ${$loci_tbl_r->{$locus}{$feature}}[1];
+			my $f_start = int ${$loci_tbl_r->{$locus}{$feature}}[0];
+			my $f_end = int ${$loci_tbl_r->{$locus}{$feature}}[1];
 			
 			my $o_start = ${$loci_se_r->{$locus}}[3];
 			my $o_end = ${$loci_se_r->{$locus}}[4];			
@@ -101,7 +101,7 @@ sub check_in_operon{
 			my $c_start = ${$loci_se_r->{$locus}}[5];
 			my $c_end = ${$loci_se_r->{$locus}}[6];
 			
-	#			print Dumper $f_start, $f_end, $o_start, $o_end, $c_start, $c_end; 
+				#print Dumper $f_start, $f_end, $o_start, $o_end, $c_start, $c_end; 
 
 			# making all on the + strand #
 			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
@@ -112,12 +112,12 @@ sub check_in_operon{
 			## gene must fall in operon, without falling into crispr array ##
 			if($f_start >= $o_start && $f_end <= $o_end){	# gene in operon
 				if( ($f_start < $c_start && $f_end < $c_end) ||
-					($f_start > $c_start && $f_end > $c_end) ){		# not in crispr array
+					($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
 					push(@{$loci_tbl_r->{$locus}{$feature}}, 1);
 					}
-				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 1); }
+				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 0); }	# in crispr array, so not defined as in operon
 				}
-			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 1); }
+			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 0); }		# no in operon
 			}
 		}
 		#print Dumper %$loci_tbl_r; exit;
@@ -266,16 +266,19 @@ The output can be piped directly into
 CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
 
-Determining whether genes fall into the designated
-operon for the locus (and not in the CRISPR array)
-is done by determining if genes fall into the operon 
-range while falling outside of the CRISPR array range.
+Genes are designated as falling in the CAS operon
+('In_Operon' field in DB) if they fall inside
+the designated operon range (designated in Loci table)
+but not inside the CRISPR array range (also 
+designated in Loci table).
 
 =head2 WARNING:
 
 CDS features in genbanks must have db_xref tags with 
 the fig|peg ID (example: "fig|6666666.40253.peg.2362");
 otherwise, the CDS will not be written to the output table.
+Extra information can come before 'fig' (eg. 'ITEP:' or 'SEED:'),
+but it must end with a colon.
 
 =head2 Requires:
 
