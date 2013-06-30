@@ -195,7 +195,7 @@ sub get_DR_seq{
 		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
 		}
 	
-		print Dumper %leader_loc; exit;
+		#print Dumper %leader_loc; exit;
 	return \%leader_loc;
 	}
 
