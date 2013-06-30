@@ -146,13 +146,13 @@ sub check_gene_overlap{
 			}
 		elsif($$res[0] && $last == 1){		# hitting overlap after no previous overlap (leader at end)
 			$trans = $i;
-			die " LOGIC ERROR: gene overlap at the wrong end of the leader region!\n"
+			die " LOGIC ERROR: gene overlap at the wrong end of the leader region for cli.$locus!\n"
 				unless $leader_loc eq "end"; 
 			last;
 			}
 		elsif( ! $$res[0] && $last ==2 ){	# no more overlap after previous overlap (leader at start)
 			$trans = $i - 1;
-			die " LOGIC ERROR: gene overlap at the wrong end of the leader region!\n"
+			die " LOGIC ERROR: gene overlap at the wrong end of the leader region for cli.$locus!\n"
 				unless $leader_loc eq "start"; 
 			last;
 			}
@@ -190,10 +190,12 @@ sub get_DR_seq{
 	foreach my $locus (keys %$array_se_r){
 		$sql->execute($locus);
 		my $ret = $sql->fetchall_arrayref();
+		die " ERROR: no direct repeats found for cli.$locus!\n"
+			unless $$ret[0];
 		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
 		}
 	
-		#print Dumper %leader_loc; exit;
+		print Dumper %leader_loc; exit;
 	return \%leader_loc;
 	}
 
@@ -203,7 +205,7 @@ sub determine_leader{
 		#print Dumper $array_r; exit;	
 	
 	# getting halfway point in array #
-	my $array_half = ($$array_r[2] +  $$array_r[1]) / 2;
+	my $array_half = ($$array_r[1] +  $$array_r[2]) / 2;
 	
 	# counting groups for each half of the array #
 	my %group_cnt;
@@ -228,7 +230,7 @@ sub determine_leader{
 		return ["end"];		
 		}
 	else{
-		print STDERR " WARNING: for Locus $locus, could not use direct repeat degeneracy determine leader region end. Writing both.";
+		print STDERR " WARNING: for cli.$locus, could not use direct repeat degeneracy determine leader region end! Writing both.\n";
 		return ["start", "end"];
 		}
 	}
@@ -244,6 +246,7 @@ sub get_array_se{
 	foreach my $row (@$ret){
 		# moving array start, stop to positive strand #
 		if($$row[1] > $$row[2]){
+#				print STDERR " Changing cli.$$row[0] start-end to + strand\n";
 			my $tmp = $$row[1];
 			$$row[1] = $$row[2];
 			$$row[2] = $tmp;
