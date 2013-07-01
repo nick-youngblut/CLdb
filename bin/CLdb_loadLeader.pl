@@ -12,11 +12,12 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose, $database_file, $rm_gap);
 my $trim_length = 0;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "trim=i" => \$trim_length,
+	   "gap" => \$rm_gap,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -26,6 +27,12 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
+die " ERROR: provide the original leader fasta file!\n"
+	unless $ARGV[0];
+die " ERROR: provide the aligned leader fasta file!\n"
+	unless $ARGV[1];
+map{die " ERROR: $_ not found!\n" unless -e $_} @ARGV[0..1];
+
 
 ### MAIN
 # connect 2 db #
@@ -38,64 +45,195 @@ my $table_list_r = list_tables();
 check_for_loci_table($table_list_r);
 
 # load alignment #
-my $fasta_r = load_fasta();
+my $fasta_raw_r = load_fasta($ARGV[0]);
+my $fasta_aln_r = load_fasta($ARGV[1]);
 
-# getting leader info from fasta names #
-my $leader_info_r = parse_names($fasta_r); 
+# determining orientation of aligned sequence #
+my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
 
+# getting array start-end #
+##my $array_se_r = get_array_se($dbh, $ori_r);
 
-# determining side trimmed #
-my $side_r = which_side($leader_info_r);
-
+# determining trim start-end #
+trim_se($fasta_aln_r, $ori_r, $trim_length, $rm_gap);
 
 # updating / loading_db #
-#load_new_entries($dbh, $loci_r->{"new_entry"}, $header_r);
-#update_db($dbh, $loci_r, $header_r);
+load_leader($dbh, $fasta_aln_r);
 
 # disconnect to db #
 $dbh->disconnect();
 exit;
 
 ### Subroutines
-sub which_side{
-# which side is farthest from array? need to account for rev-comp during alignment #
-# mafft provides rev-comp name 
-	my ($leader_info_r) = @_;
-
-	foreach my $leader (@$leader_info_r){
-		
+sub load_leader{
+# loading leader info into db #
+	my ($dbh, $fasta_aln_r) = @_;
+	
+	my $cmd = "INSERT INTO LeaderSeqs(Locus_ID, Leader_start, Leader_end, Leader_sequence) values (?,?,?,?)";
+	my $sql = $dbh->prepare($cmd);
+	
+	my $cnt = 0;
+	foreach my $locus (keys %$fasta_aln_r){
+		(my $tmp_locus = $locus) =~ s/cli\.//;
+		$sql->execute($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[2], 
+							int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
+							$fasta_aln_r->{$locus}{"seq"});
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr for $locus\n";
+			}
+		else{ $cnt++; }
 		}
+	$dbh->commit;
+
+	print STDERR "...$cnt entries added/updated in database\n";
 	}
 
-sub parse_names{
-# parsing leader names to get leader start-stop info #
-	my ($fasta_r) = @_;
-
-	my %leader_info;
-	foreach my $name (keys %$fasta_r){
-		my @parts = split /  |__/, $name;
-		die " ERROR: leader sequence name not formatted correctly!\n"
-			unless scalar @parts == 4;
-		#$parts[0] =~ s/>cli\.//;
-		$leader_info{$name} = \@parts;
+sub trim_se{
+# modifying raw fasta to relect alignment #
+## trimming sequence and modifying start-end locations accordingly ##
+## trimming from leader end most distant from array ##
+	my ($fasta_aln_r, $ori_r, $trim_length, $rm_gap) = @_;
+	
+		#print Dumper $fasta_aln_r; exit;
+	
+	foreach my $locus (keys %$fasta_aln_r){
+		die " LOGIC ERROR: $locus not found in ori hash!\n"
+			unless exists $ori_r->{$locus};
+		
+		# getting seq info #
+		my $seq_len = length $fasta_aln_r->{$locus}{"seq"};
+		
+		# trimming sequences #
+		if($ori_r->{$locus} eq "norm"){
+			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 5' end (+ strand)
+				# trim seq #
+				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
+				# changing start position (moving up toward 3') #
+				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
+				${$fasta_aln_r->{$locus}{"meta"}}[2] += ($trim_length + $ngap);
+				}
+			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 3' end (+ strand)
+				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
+				# changing end position (moving back toward 5') #
+				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
+				${$fasta_aln_r->{$locus}{"meta"}}[3] -= ($trim_length + $ngap);				
+				}
+			else{ die $!; }
+			}
+		elsif($ori_r->{$locus} eq "rev" || $ori_r->{$locus} eq "rev-comp"){
+			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 3' end (+ strand)
+				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);						
+				# changing end position (moving back toward 5') #
+				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
+				${$fasta_aln_r->{$locus}{"meta"}}[3] -= ($trim_length + $ngap);			
+				}
+			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 5' end (+ strand)
+				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
+				# changing start position (moving up toward 3') #
+				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
+				${$fasta_aln_r->{$locus}{"meta"}}[2] += ($trim_length + $ngap);
+				}		
+			else{ die $!; }
+			}
+		else{ die $!; }
+		
+		# removing gaps if specified #
+		$fasta_aln_r->{$locus}{"seq"} =~ s/-//g if $rm_gap;
 		}
-		print Dumper %leader_info; exit;
-	return \%leader_info;
+		
+		#print Dumper %$fasta_aln_r; exit;
+	}
+
+sub count_gaps{
+	my $seq = shift;
+	my $ngap = 0;
+	$ngap++ while $seq =~ /-/g;
+	return $ngap;
+	}
+
+sub get_array_se{
+# getting the array start-end from loci table #
+	my ($dbh, $ori_r) = @_;
+	
+	my $cmd = "SELECT crispr_array_start, crispr_array_end FROM loci where locus_id = ?";
+	my $sql = $dbh->prepare($cmd);
+
+	my %array_se;
+	foreach my $locus (keys %$ori_r){
+		(my $tmp = $locus) =~ s/cli\.//;
+		$sql->execute($tmp);
+		my $ret = $sql->fetchall_arrayref();
+		die " ERROR: no array start-end info in Loci table for $locus!\n"
+			unless $$ret[0];
+		
+		$array_se{$locus} = $ret;
+		}
+
+		#print Dumper %array_se; exit;
+	return \%array_se; 
+	}
+	
+sub get_orientation{
+# which side is farthest from array? need to account for rev-comp during alignment #
+# mafft provides rev-comp name 
+	my ($fasta_raw_r, $fasta_aln_r) = @_;
+
+	my %ori;
+	foreach my $aln (keys %$fasta_aln_r){
+		die " ERROR: \"$aln\" not found in raw leader sequence file!\n"
+			unless exists $fasta_raw_r->{$aln}; 
+		# making permutations of aligned seq #
+		my $perms_r = make_perms($fasta_aln_r->{$aln}{"seq"});
+		
+		if($fasta_raw_r->{$aln}{"seq"} =~ /$$perms_r[0]/i){		# same orientation
+			print STDERR "$aln: normal orientation\n" if $verbose;
+			$ori{$aln} = "norm";
+			}
+		elsif($fasta_raw_r->{$aln}{"seq"} =~ /$$perms_r[1]/i){	# reversed in alignment
+			print STDERR "$aln: reverse orientation\n" if $verbose;
+			$ori{$aln} = "rev";
+			}
+		elsif($fasta_raw_r->{$aln}{"seq"} =~ /$$perms_r[2]/i){	# rev-comp in alignment
+			print STDERR "$aln: rev-comp orientation\n" if $verbose;		
+			$ori{$aln} = "rev-comp";
+			}
+		else{ die " ERROR: could not match aligned sequence of $aln with raw sequence!\n"; }
+		}
+	return \%ori;
+	}
+	
+sub make_perms{
+# removing gaps; rev; rev-comp of sequence #
+	my ($seq) = @_;
+	(my $no_gap = $seq) =~ s/-//g;
+	my $rev = reverse $no_gap;
+	(my $rev_comp = $rev) =~ tr/ACGTN?acgtn/TGCAN?tgcan/;
+	
+	return [$no_gap, $rev, $rev_comp];
 	}
 
 sub load_fasta{
 # loading fasta #
+	my $fasta_in = shift;
+	open IN, $fasta_in or die $!;	
 	my (%fasta, $tmpkey);
-	while(<>){
+	while(<IN>){
 		chomp;
  		 s/#.+//;
  		next if  /^\s*$/;	
+ 		
  		if(/>.+/){
- 			$fasta{$_} = "";
- 			$tmpkey = $_;	# changing key
+ 			my @line = split /  |__/;
+ 			$line[0] =~ s/.+(cli\.\d+).*/$1/;
+ 			die " ERROR: seq name: \"$_\" does not have identifiablle cli ID!\n"
+ 				unless $line[0] =~ /^cli\.\d+$/;
+ 			$fasta{$line[0]}{"meta"} = \@line;
+ 			
+ 			$tmpkey = $line[0];	# changing key
  			}
- 		else{$fasta{$tmpkey} .= $_; }
+ 		else{$fasta{$tmpkey}{"seq"} .= $_; }
 		}
+	close IN;
 		#print Dumper %fasta; exit;
 	return \%fasta;
 	} #end load_fasta
@@ -213,15 +351,25 @@ CLdb_loadLeader.pl -- adding/updating leader entries in to CRISPR_db
 
 =head1 SYNOPSIS
 
-CLdb_loadLeader.pl [options] < loci_table.txt
+CLdb_loadLeader.pl [flags] leader.fasta leader_aligned.fasta
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -d 	CLdb database (required).
+=item -d 	CLdb database.
 
-=item -v	Verbose output. [TRUE]
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -t 	Number of bp (& gaps) to trim of end of alignment. [0]
+
+=item -g 	Leave gaps in leader sequence entered into the DB? 
+
+=item -v	Verbose output. [FALSE]
 
 =item -h	This help message
 
@@ -233,16 +381,29 @@ perldoc CLdb_loadLeader.pl
 
 =head1 DESCRIPTION
 
-Load and/or update CRISPR loci table entries.
+After determining the actual leader region by aligning
+approximate leader regions written by CLdb_getLeaderRegions.pl,
+automatically trim and load leader sequences & start-end
+information into the CRISPR database.
 
-Loci entries will be added if no Locus_id is provided;
-otherwise, the entrie will be updated.
+Trimming will be done from the leader region end most
+distant from the CRISPR array. Reversing & 
+reverse-complementation of sequences during the alignment
+will be accounted for (that's why both the aligned and
+'raw' sequenced must be provided).
+
+Not all sequences in the aligned fasta need to be in
+the 'raw' leader fasta (eg. if both ends of the array
+were written because the side containing the leader
+region could not be determined from direct-repeat
+degeneracy.
+
 
 =head1 EXAMPLES
 
-=head2 Usage:
+=head2 Triming off the 50bp of unconserved alignment 
 
-CLdb_loadLeader.pl -d CRISPR.sqlite < loci.txt
+CLdb_loadLeader.pl -d ../CRISPR.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
 
 =head1 AUTHOR
 
