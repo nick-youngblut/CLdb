@@ -200,7 +200,7 @@ CLdb_groupArrayElements.pl [flags]
 
 =item -s 	Cluster spacers
 
-=item -d 	Cluster direct repeats
+=item -r 	Cluster direct repeats
 
 =item -c 	CD-HIT-EST cluster cutoff. [1]
 

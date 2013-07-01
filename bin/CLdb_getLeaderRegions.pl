@@ -307,7 +307,7 @@ CLdb_getLeaderRegion.pl [flags]
 
 =head2 For more information:
 
-perldoc CLdb_getLeaderRegion.pl
+perldoc CLdb_getLeaderRegions.pl
 
 =head1 DESCRIPTION
 

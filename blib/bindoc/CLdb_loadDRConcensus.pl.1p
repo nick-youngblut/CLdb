@@ -123,36 +123,82 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_MAKEDB 1"
-.TH CLDB_MAKEDB 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADDRCONCENSUS 1"
+.TH CLDB_LOADDRCONCENSUS 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_makeDB.pl \-\- Initial DB construction
+CLdb_loadDRConsensuss.pl \-\- determining DR consensus sequences & adding to database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_makeDB.pl [options] [DATABASE_name]
-.SS "options"
-.IX Subsection "options"
-.IP "\-r 	Replace existing database." 4
-.IX Item "-r 	Replace existing database."
+CLdb_loadDRConsensuss.pl [flags]
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
+.PD 0
+.IP "\-subtype" 4
+.IX Item "-subtype"
+.PD
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+sql to refine query (see \s-1EXAMPLES\s0).
+.IP "\-cutoff" 4
+.IX Item "-cutoff"
+Cutoff (threshold) using a residue in the consensus (%). [51]
+.IP "\-path" 4
+.IX Item "-path"
+Directory where mafft alignments are performed. [$CLdb_HOME/consensus/]
+.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v	Verbose output. [FALSE]"
 .PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_makeDB.pl
+perldoc CLdb_loadDRConsensuss.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make all of the CRISPR_db tables.
+Calculate the consensus sequence (\s-1IUPAC\s0 and
+threshold) for all direct repeats 
+in a \s-1CRISPR\s0 array.
+.PP
+For each array, \s-1DR\s0 sequences are aligned and
+then the consensus sequence is calculated with bioperl.
+.PP
+\fI\s-1IUPAC\s0 consensus\fR
+.IX Subsection "IUPAC consensus"
+.PP
+Base ambiguity letters are used.
+.PP
+\fIThreshold consensus\fR
+.IX Subsection "Threshold consensus"
+.PP
+The consensus residue must have a frequency of >= than '\-cutoff',
+otherwise a 'N' will be used.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Naming database 'CRISPR_db1'"
-.IX Subsection "Naming database 'CRISPR_db1'"
-CLdb_makeDB.pl CRISPR_db1
+.SS "Calculate & upload \s-1DB\s0 consensus sequences for all \s-1CRISPR\s0 arrays"
+.IX Subsection "Calculate & upload DB consensus sequences for all CRISPR arrays"
+CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite
+.SS "Calculate & upload \s-1DB\s0 consensus sequences for just locus_id '1'"
+.IX Subsection "Calculate & upload DB consensus sequences for just locus_id '1'"
+CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
+.SS "Calculate & upload \s-1DB\s0 consensus sequences for specific subtype & 2 taxon_id's"
+.IX Subsection "Calculate & upload DB consensus sequences for specific subtype & 2 taxon_id's"
+CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

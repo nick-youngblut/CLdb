@@ -112,6 +112,7 @@ do{ my $x = [
          'extra_compiler_flags' => [],
          'script_files' => [
                              './bin/CLdb_groupArrayElements.pl',
+                             './bin/CLdb_loadDRConcensus.pl',
                              './bin/CLdb_makeDB.pl',
                              './bin/CLdb_array2fasta.pl',
                              './bin/CLdb_getLeaderRegions.pl',

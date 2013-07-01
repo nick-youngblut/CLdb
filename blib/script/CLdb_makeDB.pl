@@ -99,7 +99,8 @@ DROP TABLE IF EXISTS DirectRepeatConsensus;
 
 CREATE TABLE DirectRepeatConsensus (
 Locus_ID	INTEGER	NOT NULL,
-Repeat_Consensus_Sequence	TEXT	NOT NULL,
+Consensus_Sequence_IUPAC	TEXT	NOT NULL,
+Consensus_Sequence_Threshold	TEXT	NOT NULL,
 UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
