@@ -69,7 +69,7 @@ sub write_arrays_fasta{
 	
 	foreach my $locus_id (keys %$arrays_r){
 		foreach my $x_id (keys %{$arrays_r->{$locus_id}}){
-			print join("\n", ">lci.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+			print join("\n", ">cli.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
 			}
 		}
 	}

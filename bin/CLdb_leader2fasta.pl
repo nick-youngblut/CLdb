@@ -14,10 +14,14 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
 my ($verbose, $database_file, $spacer_bool);
+my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
 	   "database=s" => \$database_file,
-	   "query=s" => \$extra_query, 
+	   "query=s" => \$extra_query,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -34,11 +38,24 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
-# getting arrays of interest from database #
-my $arrays_r = get_leaders($dbh, $extra_query);
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
+
+# getting leaderss of interest from database #
+my $leaders_r;
+if($join_sql){
+	$leaders_r = get_leaders_join($dbh, $extra_query, $join_sql);
+	}
+else{
+	$leaders_r = get_leaders($dbh, $extra_query);
+	}
 
 # writing fasta #
-write_leaders_fasta($arrays_r);
+write_leaders_fasta($leaders_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -46,42 +63,70 @@ exit;
 
 
 ### Subroutines
-sub write_arrays_fasta{
+sub write_leaders_fasta{
 # writing arrays as fasta
-	my ($arrays_r) = @_;
+	my ($leaders_r) = @_;
 	
-	foreach my $locus_id (keys %$arrays_r){
-		foreach my $x_id (keys %{$arrays_r->{$locus_id}}){
-			print join("\n", ">lci.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
-			}
+	foreach my $locus_id (keys %$leaders_r){
+		print join("\n", ">cli.$locus_id", $leaders_r->{$locus_id}), "\n";
 		}
 	}
 
-sub get_arrays{
-	my ($dbh, $spacer_bool, $extra_query) = @_;
+sub get_leaders{
+	my ($dbh, $extra_query) = @_;
 	
 	# make query #
-	my $query;
-	if($spacer_bool){		# direct repeat
-		$query = "SELECT Locus_ID, Repeat_ID, Repeat_sequence FROM directrepeats";
-		}
-	else{					# spacer
-		$query = "SELECT Locus_ID, Spacer_ID, Spacer_sequence FROM spacers";
-		}
+	my $query = "SELECT Locus_ID, Leader_sequence FROM LeaderSeqs";
 	$query = join(" ", $query, $extra_query);
 	
-	#print Dumper $query; exit;
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
 	
-	my %arrays;
+	my %leaders;
 	foreach my $row (@$ret){
-		$arrays{$$row[0]}{$$row[1]} = $$row[2];
+		$leaders{$$row[0]}= $$row[1];
 		}
 	
-	#	print Dumper %arrays; exit;
-	return \%arrays;
+	#	print Dumper %leaders; exit;
+	return \%leaders;
 	}
+	
+sub get_leaders_join{
+	my ($dbh, $extra_query, $join_sql) = @_;
+	
+	# make query #
+	my $query = "SELECT a.Locus_ID, a.Leader_sequence FROM as LeaderSeqs a, Loci b WHERE a.locus_id = b.locus_id $join_sql";
+	$query = join(" ", $query, $extra_query);
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	my %leaders;
+	foreach my $row (@$ret){
+		$leaders{$$row[0]} = $$row[1];
+		}
+	
+	#	print Dumper %leaders; exit;
+	return \%leaders;
+	}
+	
+sub join_query_opts{
+# joining query options for selecting loci #
+	my ($vals_r, $cat) = @_;
+
+	return "" unless @$vals_r;	
+	
+	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
+	}
+
 
 
 #my $query = "SELECT FROM locus_id";
@@ -92,11 +137,11 @@ __END__
 
 =head1 NAME
 
-CLdb_leader2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
+CLdb_leader2fasta.pl -- write CRISPR leader sequences in fasta format
 
 =head1 SYNOPSIS
 
-CLdb_leader2fasta.pl [flags] > array.fasta
+CLdb_leader2fasta.pl [flags] > leaders.fasta
 
 =head2 Required flags
 
@@ -110,9 +155,21 @@ CLdb_leader2fasta.pl [flags] > array.fasta
 
 =over
 
-=item -r 	Get direct repeats instead of spacers.
+=item -subtype
 
-=item -q 	Extra sql to refine which sequences are returned.
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query
+
+Extra sql to refine which sequences are returned.
 
 =item -h	This help message
 
@@ -124,11 +181,8 @@ perldoc CLdb_leader2fasta.pl
 
 =head1 DESCRIPTION
 
-Get spacer or direct repeat sequences from the CRISPR database
-and write them to a fasta.
-
-By default, all spacers or direct repeats (if '-r') will be written.
-The '-q' flag can be used to refine the query to certain sequences (see examples).
+Get leader sequences from the CRISPR database
+and write them in fasta format.
 
 =head1 EXAMPLES
 
@@ -143,6 +197,10 @@ CLdb_leader2fasta.pl -data CRISPR.sqlite -r
 =head2 Refine spacer sequence query:
 
 CLdb_leader2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
+
+=head2 Refine spacer query to a specific subtype & 2 taxon_id's
+
+CLdb_leader2fasta.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
