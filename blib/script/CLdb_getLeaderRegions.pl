@@ -192,6 +192,9 @@ sub get_DR_seq{
 		my $ret = $sql->fetchall_arrayref();
 		die " ERROR: no direct repeats found for cli.$locus!\n"
 			unless $$ret[0];
+		die " ERROR: no 'repeat_group' entries found!\n Run CLdb_groupArrayElements.pl before this script!\n\n"
+			unless $$ret[0][3];
+			
 		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
 		}
 	
@@ -210,6 +213,7 @@ sub determine_leader{
 	# counting groups for each half of the array #
 	my %group_cnt;
 	foreach my $DR (@$ret){		# each direct repeat
+		
 		# $DR = (repeat, start, end, group_ID)
 		if($$DR[1] < $array_half && $$DR[2] < $array_half){
 			$group_cnt{1}{$$DR[3]}++;
