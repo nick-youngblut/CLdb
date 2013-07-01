@@ -67,7 +67,8 @@ sub update_db{
 	
 	my $cnt = 0;
 	foreach my $locus_id (keys %$clust_r){
-		$sql->execute( $clust_r->{$locus_id}, $locus_id );
+		(my $locus_tmp = $locus_id) =~ s/cli\.//;
+		$sql->execute( $clust_r->{$locus_id}, $locus_tmp );
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr in: ", join("\t", $clust_r->{$locus_id}, $locus_id), "\n";
 			}
@@ -115,7 +116,7 @@ sub parse_cdhit{
 		}
 	close IN;
 
-		print Dumper %clusters; exit;
+		#print Dumper %clusters; exit;
 	return \%clusters;
 	}
 
