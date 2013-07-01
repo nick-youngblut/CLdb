@@ -115,7 +115,7 @@ sub parse_cdhit{
 		}
 	close IN;
 
-		print Dumper %clusters; exit;
+		#print Dumper %clusters; exit;
 	return \%clusters;
 	}
 

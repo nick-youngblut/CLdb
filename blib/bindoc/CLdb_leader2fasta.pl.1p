@@ -141,9 +141,12 @@ CLdb_leader2fasta.pl [flags] > leaders.fasta
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
+.IP "\-gap" 4
+.IX Item "-gap"
+.PD
+Remove gaps from the sequences? [\s-1FALSE\s0]
 .IP "\-subtype" 4
 .IX Item "-subtype"
-.PD
 Refine query to specific a subtype(s) (>1 argument allowed).
 .IP "\-taxon_id" 4
 .IX Item "-taxon_id"

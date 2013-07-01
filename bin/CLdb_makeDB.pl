@@ -110,7 +110,7 @@ Locus_ID	INTEGER	NOT NULL,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
 Leader_Sequence	TEXT	NOT NULL,
-Leader_Group	TEXT
+Leader_Group	TEXT,
 UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
