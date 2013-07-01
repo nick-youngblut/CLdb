@@ -101,7 +101,7 @@ sub get_gene_table{
 			}
 		}
 		#print Dumper %header; exit;
-		print Dumper %genes; exit; 
+		#print Dumper %genes; exit; 
 	return (\%genes, \%header);;
 	}
 

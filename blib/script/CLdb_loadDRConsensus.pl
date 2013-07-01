@@ -229,11 +229,11 @@ __END__
 
 =head1 NAME
 
-CLdb_loadDRConsensuss.pl -- determining DR consensus sequences & adding to database
+CLdb_loadDRConsensus.pl -- determining DR consensus sequences & adding to database
 
 =head1 SYNOPSIS
 
-CLdb_loadDRConsensuss.pl [flags]
+CLdb_loadDRConsensus.pl [flags]
 
 =head2 Required flags
 
@@ -279,7 +279,7 @@ Directory where mafft alignments are performed. [$CLdb_HOME/consensus/]
 
 =head2 For more information:
 
-perldoc CLdb_loadDRConsensuss.pl
+perldoc CLdb_loadDRConsensus.pl
 
 =head1 DESCRIPTION
 
@@ -303,15 +303,15 @@ otherwise a 'N' will be used.
 
 =head2 Calculate & upload DB consensus sequences for all CRISPR arrays
 
-CLdb_loadDRConsensuss.pl -d CRISPR.sqlite 
+CLdb_loadDRConsensus.pl -d CRISPR.sqlite 
 
 =head2 Calculate & upload DB consensus sequences for just locus_id '1'
 
-CLdb_loadDRConsensuss.pl -d CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb_loadDRConsensus.pl -d CRISPR.sqlite -q "where LOCUS_ID=1" 
 
 =head2 Calculate & upload DB consensus sequences for specific subtype & 2 taxon_id's
 
-CLdb_loadDRConsensuss.pl -d CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb_loadDRConsensus.pl -d CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
  
 =head1 AUTHOR
 

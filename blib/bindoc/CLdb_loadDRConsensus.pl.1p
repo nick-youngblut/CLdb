@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADDRCONCENSUS 1"
-.TH CLDB_LOADDRCONCENSUS 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADDRCONSENSUS 1"
+.TH CLDB_LOADDRCONSENSUS 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadDRConsensuss.pl \-\- determining DR consensus sequences & adding to database
+CLdb_loadDRConsensus.pl \-\- determining DR consensus sequences & adding to database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadDRConsensuss.pl [flags]
+CLdb_loadDRConsensus.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -168,7 +168,7 @@ Directory where mafft alignments are performed. [$CLdb_HOME/consensus/]
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadDRConsensuss.pl
+perldoc CLdb_loadDRConsensus.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Calculate the consensus sequence (\s-1IUPAC\s0 and
@@ -192,13 +192,13 @@ otherwise a 'N' will be used.
 .IX Header "EXAMPLES"
 .SS "Calculate & upload \s-1DB\s0 consensus sequences for all \s-1CRISPR\s0 arrays"
 .IX Subsection "Calculate & upload DB consensus sequences for all CRISPR arrays"
-CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite
+CLdb_loadDRConsensus.pl \-d \s-1CRISPR\s0.sqlite
 .SS "Calculate & upload \s-1DB\s0 consensus sequences for just locus_id '1'"
 .IX Subsection "Calculate & upload DB consensus sequences for just locus_id '1'"
-CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
+CLdb_loadDRConsensus.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
 .SS "Calculate & upload \s-1DB\s0 consensus sequences for specific subtype & 2 taxon_id's"
 .IX Subsection "Calculate & upload DB consensus sequences for specific subtype & 2 taxon_id's"
-CLdb_loadDRConsensuss.pl \-d \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
+CLdb_loadDRConsensus.pl \-d \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

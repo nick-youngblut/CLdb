@@ -96,6 +96,7 @@ sub get_gene_table{
 			}
 		else{
 			my @line = split /\t/;
+			$line[$header{"locus_id"}] =~ s/^cli\.//;
 			$genes{$line[$header{"locus_id"}]}{$line[$header{"gene_id"}]} = \@line;
 			}
 		}
