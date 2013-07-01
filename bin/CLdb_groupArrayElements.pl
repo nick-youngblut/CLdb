@@ -118,7 +118,7 @@ sub parse_cdhit{
 		# getting file an spacer number #
 		$line[2] =~ s/^>|\.\.\.$//g;			# name 
 		my @name_parts = split /__/, $line[2];
-		$name_parts[0] =~ s/^lci\.//i;
+		$name_parts[0] =~ s/^cli\.//i;
 		
 		# length #
 		$line[1] =~ s/nt//g;
