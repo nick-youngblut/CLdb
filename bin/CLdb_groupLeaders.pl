@@ -41,20 +41,16 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 my $dir = make_group_dir($database_file, $path); 
 
 # make fasta 
-my $spacer_fasta = call_array2fasta($dir, $database_file, "") if $spacer_bool;
-my $dr_fasta = call_array2fasta($dir, $database_file, "-r") if $dr_bool;
+my $leader_fasta = call_leader2fasta($dir, $database_file);
 
 # call cd-hit-est #
-my $spacer_cdhit_out = call_cdhit($spacer_fasta, $cluster) if $spacer_bool;
-my $dr_cdhit_out = call_cdhit($dr_fasta, $cluster) if $dr_bool;
+my $leader_cdhit_out = call_cdhit($leader_fasta, $cluster);
 
 # parse cd-hit-est output #
-my $spacer_clust_r = parse_cdhit($spacer_cdhit_out, $cluster) if $spacer_bool;
-my $dr_clust_r = parse_cdhit($dr_cdhit_out, $cluster) if $dr_bool;
+my $leader_clust_r = parse_cdhit($leader_cdhit_out, $cluster);
 
 # updating db #
-update_db($dbh, $spacer_clust_r, "spacers") if $spacer_bool;
-update_db($dbh, $dr_clust_r, "DR") if $dr_bool;
+update_db($dbh, $leader_clust_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -63,29 +59,22 @@ exit;
 ### Subroutines
 sub update_db{
 # update group column #
-	my ($dbh, $clust_r, $cat) = @_;
+	my ($dbh, $clust_r) = @_;
 
-	my $cmd;
-	if($cat eq "spacers"){
-		$cmd = "UPDATE spacers SET spacer_group = ? WHERE locus_id = ? and spacer_id = ?";
-		}
-	elsif($cat eq "DR"){
-		$cmd = "UPDATE directrepeats SET repeat_group = ? WHERE locus_id = ? and repeat_id = ?";
-		}
-	else{ die " LOGIC ERROR: $!\n"; }
+	my $cmd = "UPDATE LeaderSeqs SET leader_group = ? WHERE locus_id = ?";
 	
 	my $sql = $dbh->prepare($cmd);
 	
+	my $cnt = 0;
 	foreach my $locus_id (keys %$clust_r){
-		foreach my $x_id (keys %{$clust_r->{$locus_id}}){
-			$sql->execute( ($clust_r->{$locus_id}{$x_id}, $locus_id, $x_id) );
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr in: ", join("\t", $clust_r->{$locus_id}{$x_id}, $locus_id, $x_id), "\n";
-				}
+		$sql->execute( $clust_r->{$locus_id}, $locus_id );
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: ", join("\t", $clust_r->{$locus_id}, $locus_id), "\n";
 			}
+		else{ $cnt++; }
 		}
 	$dbh->commit;
-	print STDERR "...$cat groups added\n" unless $verbose;
+	print STDERR "...$cnt groups added\n" unless $verbose;
 	}
  
 sub parse_cdhit{
@@ -122,11 +111,11 @@ sub parse_cdhit{
 		$line[1] =~ s/nt//g;
 	
 		# loading hashes #
-		$clusters{$name_parts[0]}{$name_parts[1]} = $cluster_id;
+		$clusters{$name_parts[0]} = $cluster_id;
 		}
 	close IN;
 
-		#print Dumper %clusters; exit;
+		print Dumper %clusters; exit;
 	return \%clusters;
 	}
 
@@ -142,14 +131,12 @@ sub call_cdhit{
 	return $cdhit_out;
 	}
 
-sub call_array2fasta{
-# calling array2fasta to make fasta sequences of array elements #
-	my ($dir, $database_file, $flag) = @_;
+sub call_leader2fasta{
+# calling leader2fasta to make fasta sequences of array elements #
+	my ($dir, $database_file) = @_;
 	
-	my $outfile;
-	if($flag){ $outfile = "$dir/direct_repeats.fna"; }
-	else{ $outfile = "$dir/spacers.fna"; }
-	`CLdb_array2fasta.pl -d $database_file $flag > $outfile`;
+	my $outfile = "$dir/leaders.fna"; 
+	`CLdb_leader2fasta.pl -d $database_file -g > $outfile`;
 	
 	return $outfile;
 	}

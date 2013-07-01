@@ -13,7 +13,7 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $spacer_bool);
+my ($verbose, $database_file, $gap_rm);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
@@ -22,6 +22,7 @@ GetOptions(
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name, 
+	   "gaps" => \$gap_rm,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -86,6 +87,7 @@ sub get_leaders{
 	
 	my %leaders;
 	foreach my $row (@$ret){
+		$$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
 		$leaders{$$row[0]}= $$row[1];
 		}
 	
@@ -110,6 +112,7 @@ sub get_leaders_join{
 	
 	my %leaders;
 	foreach my $row (@$ret){
+		$$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
 		$leaders{$$row[0]} = $$row[1];
 		}
 	
@@ -154,6 +157,10 @@ CLdb_leader2fasta.pl [flags] > leaders.fasta
 =head2 Optional flags
 
 =over
+
+=item -gap
+
+Remove gaps from the sequences? [FALSE]
 
 =item -subtype
 

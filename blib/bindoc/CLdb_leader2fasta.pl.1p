@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_ARRAY2FASTA 1"
-.TH CLDB_ARRAY2FASTA 1 "2013-06-30" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LEADER2FASTA 1"
+.TH CLDB_LEADER2FASTA 1 "2013-06-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_array2fasta.pl \-\- write CRISPR array spacers or direct repeats to fasta
+CLdb_leader2fasta.pl \-\- write CRISPR leader sequences in fasta format
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_array2fasta.pl [flags] > array.fasta
+CLdb_leader2fasta.pl [flags] > leaders.fasta
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -141,12 +141,9 @@ CLdb_array2fasta.pl [flags] > array.fasta
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-repeat" 4
-.IX Item "-repeat"
-.PD
-Get direct repeats instead of spacers.
 .IP "\-subtype" 4
 .IX Item "-subtype"
+.PD
 Refine query to specific a subtype(s) (>1 argument allowed).
 .IP "\-taxon_id" 4
 .IX Item "-taxon_id"
@@ -157,36 +154,29 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 .IP "\-query" 4
 .IX Item "-query"
 Extra sql to refine which sequences are returned.
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
-.PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_array2fasta.pl
+perldoc CLdb_leader2fasta.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get spacer or direct repeat sequences from the \s-1CRISPR\s0 database
-and write them to a fasta.
-.PP
-By default, all spacers or direct repeats (if '\-r') will be written.
-The '\-q' flag can be used to refine the query to certain sequences (see examples).
+Get leader sequences from the \s-1CRISPR\s0 database
+and write them in fasta format.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Write all spacers to a fasta:"
 .IX Subsection "Write all spacers to a fasta:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite
+CLdb_leader2fasta.pl \-data \s-1CRISPR\s0.sqlite
 .SS "Write all direct repeats to a fasta:"
 .IX Subsection "Write all direct repeats to a fasta:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-r
+CLdb_leader2fasta.pl \-data \s-1CRISPR\s0.sqlite \-r
 .SS "Refine spacer sequence query:"
 .IX Subsection "Refine spacer sequence query:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
+CLdb_leader2fasta.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
 .SS "Refine spacer query to a specific subtype & 2 taxon_id's"
 .IX Subsection "Refine spacer query to a specific subtype & 2 taxon_id's"
-CLdb_array2fasta.pl \-da \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
+CLdb_leader2fasta.pl \-da \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

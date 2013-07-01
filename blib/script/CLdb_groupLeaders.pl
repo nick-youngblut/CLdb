@@ -17,8 +17,6 @@ my ($verbose, $database_file, $spacer_bool, $dr_bool, $path);
 my $cluster = 1;
 GetOptions(
 	   "database=s" => \$database_file,
-	   "spacer" => \$spacer_bool,
-	   "repeat" => \$dr_bool,
 	   "cluster=f" => \$cluster,
 	   "path=s" => \$path,
 	   "verbose" => \$verbose,
