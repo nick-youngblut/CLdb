@@ -1,5 +1,4 @@
 do{ my $x = {
-       'CRISPR_db-*' => 1,
        'blib' => 1,
        'CLdb-*' => 1
      };

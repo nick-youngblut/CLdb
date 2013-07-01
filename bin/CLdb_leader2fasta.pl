@@ -14,14 +14,9 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
 my ($verbose, $database_file, $spacer_bool);
-my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
 	   "database=s" => \$database_file,
-	   "repeat" => \$spacer_bool,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -39,23 +34,11 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
-# joining query options (for table join) #
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
 # getting arrays of interest from database #
-my $arrays_r;
-if($join_sql){		# table-join query
-	$arrays_r = get_arrays_join($dbh, $spacer_bool, $extra_query, $join_sql);
-	}
-else{				# simple query of all spacers/DR
-	$arrays_r = get_arrays($dbh, $spacer_bool, $extra_query);
-	}
+my $arrays_r = get_leaders($dbh, $extra_query);
 
 # writing fasta #
-write_arrays_fasta($arrays_r);
+write_leaders_fasta($arrays_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -99,48 +82,9 @@ sub get_arrays{
 	#	print Dumper %arrays; exit;
 	return \%arrays;
 	}
-	
-sub get_arrays_join{
-	my ($dbh, $spacer_bool, $extra_query, $join_sql) = @_;
-	
-	# make query #
-	my $query;
-	if($spacer_bool){		# direct repeat
-		$query = "SELECT a.Locus_ID, a.Repeat_ID, a.Repeat_sequence FROM directrepeats a, loci b WHERE a.locus_id = b.locus_id $join_sql";
-		}
-	else{					# spacer
-		$query = "SELECT a.Locus_ID, a.spacer_ID, a.spacer_sequence FROM spacers a, loci b WHERE a.locus_id = b.locus_id $join_sql";
-		}
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %arrays;
-	foreach my $row (@$ret){
-		$arrays{$$row[0]}{$$row[1]} = $$row[2];
-		}
-	
-	#	print Dumper %arrays; exit;
-	return \%arrays;
-	}
-	
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
-	}
 
 
+#my $query = "SELECT FROM locus_id";
 
 __END__
 
@@ -148,11 +92,11 @@ __END__
 
 =head1 NAME
 
-CLdb_array2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
+CLdb_leader2fasta.pl -- write CRISPR array spacers or direct repeats to fasta
 
 =head1 SYNOPSIS
 
-CLdb_array2fasta.pl [flags] > array.fasta
+CLdb_leader2fasta.pl [flags] > array.fasta
 
 =head2 Required flags
 
@@ -166,27 +110,9 @@ CLdb_array2fasta.pl [flags] > array.fasta
 
 =over
 
-=item -repeat
+=item -r 	Get direct repeats instead of spacers.
 
-Get direct repeats instead of spacers.
-
-=item -subtype
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query
-
-Extra sql to refine which sequences are returned.
-
-=item -v 	Verbose output. [FALSE]
+=item -q 	Extra sql to refine which sequences are returned.
 
 =item -h	This help message
 
@@ -194,7 +120,7 @@ Extra sql to refine which sequences are returned.
 
 =head2 For more information:
 
-perldoc CLdb_array2fasta.pl
+perldoc CLdb_leader2fasta.pl
 
 =head1 DESCRIPTION
 
@@ -208,19 +134,15 @@ The '-q' flag can be used to refine the query to certain sequences (see examples
 
 =head2 Write all spacers to a fasta:
 
-CLdb_array2fasta.pl -data CRISPR.sqlite 
+CLdb_leader2fasta.pl -data CRISPR.sqlite 
 
 =head2 Write all direct repeats to a fasta:
 
-CLdb_array2fasta.pl -data CRISPR.sqlite -r
+CLdb_leader2fasta.pl -data CRISPR.sqlite -r
 
 =head2 Refine spacer sequence query:
 
-CLdb_array2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
-
-=head2 Refine spacer query to a specific subtype & 2 taxon_id's
-
-CLdb_array2fasta.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb_leader2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
 
 =head1 AUTHOR
 

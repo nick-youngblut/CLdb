@@ -119,7 +119,9 @@ do{ my $x = [
                              './bin/CLdb_addScaffolds.pl',
                              './bin/CLdb_loadArrays.pl',
                              './bin/CLdb_getGenesInLoci.pl',
-                             './bin/CLdb_loadGenes.pl'
+                             './bin/CLdb_groupLeaders.pl',
+                             './bin/CLdb_loadGenes.pl',
+                             './bin/CLdb_loadLeaders.pl'
                            ],
          'build_script' => 'Build',
          'original_prefix' => {},

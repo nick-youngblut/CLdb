@@ -154,6 +154,12 @@ sub get_array_file_names{
 	return $names_r;
 	}
 
+sub path_by_database{
+	my ($database_file) = @_;
+	$database_file = File::Spec->rel2abs($database_file);
+	my @parts = File::Spec->splitpath($database_file);
+	return join("/", $parts[1], "array");
+	}
 
 __END__
 

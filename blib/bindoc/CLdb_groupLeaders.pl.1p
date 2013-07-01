@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_GETGENESINLOCI 1"
-.TH CLDB_GETGENESINLOCI 1 "2013-06-30" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_GROUPLEADERS 1"
+.TH CLDB_GROUPLEADERS 1 "2013-06-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_getGenesInLoci.pl \-\- getting all genes in CRISPR Loci; output is a table of gene information
+CLdb_groupArrayElements.pl \-\- group spacers and DRs by 100% sequence ID; add to database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_getGenesInLoci.pl [flags]
+CLdb_groupArrayElements.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -141,56 +141,41 @@ CLdb_getGenesInLoci.pl [flags]
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-s 	sql to refine loci table query (see \s-1EXAMPLES\s0)." 4
-.IX Item "-s 	sql to refine loci table query (see EXAMPLES)."
-.IP "\-q	Turn off all warnings." 4
-.IX Item "-q	Turn off all warnings."
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+.IP "\-s 	Cluster spacers" 4
+.IX Item "-s 	Cluster spacers"
+.IP "\-d 	Cluster direct repeats" 4
+.IX Item "-d 	Cluster direct repeats"
+.IP "\-c 	CD-HIT-EST cluster cutoff. [1]" 4
+.IX Item "-c 	CD-HIT-EST cluster cutoff. [1]"
+.IP "\-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]" 4
+.IX Item "-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]"
+.IP "\-v	Verbose output" 4
+.IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_getGenesInLoci.pl
+perldoc CLdb_groupArrayElements.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get all \s-1CDS\s0 features from >= genbanks that fall
-into \s-1CRISPR\s0 loci.
+Group the spacers and/or direct repeats in the \s-1CRISPR\s0
+database using CD-HIT-EST and add the group \s-1ID\s0 of
+each spacer/DR to the \s-1CRISPR\s0 database.
 .PP
-The output can be piped directly into
-CLdb_loadGenes.pl or the aliases (or other values)
-can be edited first.
-.PP
-Genes are designated as falling in the \s-1CAS\s0 operon
-('In_Operon' field in \s-1DB\s0) if they fall inside
-the designated operon range (designated in Loci table)
-but not inside the \s-1CRISPR\s0 array range (also 
-designated in Loci table).
-.SS "\s-1WARNING:\s0"
-.IX Subsection "WARNING:"
-\&\s-1CDS\s0 features in genbanks must have db_xref tags with 
-the fig|peg \s-1ID\s0 (example: \*(L"fig|6666666.40253.peg.2362\*(R");
-otherwise, the \s-1CDS\s0 will not be written to the output table.
-Extra information can come before 'fig' (eg. '\s-1ITEP:\s0' or '\s-1SEED:\s0'),
-but it must end with a colon.
+Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
+are written to '$CLdb_HOME/grouping/' by default.
 .SS "Requires:"
 .IX Subsection "Requires:"
-genbank_get_region.pl
+cd-hit-est, CLdb_array2fasta.pl
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Basic usage:"
-.IX Subsection "Basic usage:"
-CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite > gene_info.txt
-.SS "Direct loading to \s-1CRISPR\s0 database"
-.IX Subsection "Direct loading to CRISPR database"
-CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite | CLdb_loadGenes.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Refining query to just the 'I\-B' subtype"
-.IX Subsection "Refining query to just the 'I-B' subtype"
-CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 subtype='I\-B'\*(R"
-.SS "Refining query to just taxon '6666666.40253'"
-.IX Subsection "Refining query to just taxon '6666666.40253'"
-CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 taxon_id='6666666.40253'\*(R"
+.SS "Grouping spacers"
+.IX Subsection "Grouping spacers"
+CLdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s
+.SS "Grouping spacers & DRs"
+.IX Subsection "Grouping spacers & DRs"
+CLdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s \-r
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

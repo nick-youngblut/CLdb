@@ -347,11 +347,11 @@ __END__
 
 =head1 NAME
 
-CLdb_loadLeader.pl -- adding/updating leader entries in to CRISPR_db
+CLdb_loadLeaders.pl -- adding/updating leader entries in to CRISPR_db
 
 =head1 SYNOPSIS
 
-CLdb_loadLeader.pl [flags] leader.fasta leader_aligned.fasta
+CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =head2 Required flags
 
@@ -377,7 +377,7 @@ CLdb_loadLeader.pl [flags] leader.fasta leader_aligned.fasta
 
 =head2 For more information:
 
-perldoc CLdb_loadLeader.pl
+perldoc CLdb_loadLeaders.pl
 
 =head1 DESCRIPTION
 
@@ -403,7 +403,7 @@ degeneracy.
 
 =head2 Triming off the 50bp of unconserved alignment 
 
-CLdb_loadLeader.pl -d ../CRISPR.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
+CLdb_loadLeaders.pl -d ../CRISPR.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
 
 =head1 AUTHOR
 
