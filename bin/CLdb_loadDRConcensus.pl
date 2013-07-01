@@ -17,13 +17,15 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $path);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
+my $consensus_cutoff = 51;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
-	   "path=s" => \$path, 	   
+	   "path=s" => \$path,
+	   "cutoff=i" => \$consensus_cutoff,  
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -69,7 +71,7 @@ else{				# simple query of all spacers/DR
 my %DR_con;
 foreach my $locus (keys %arrays){
 	my $outfile = write_DR_fasta($arrays{$locus}, $dir, $locus);
-	call_mafft($outfile, \%DR_con, $locus);
+	call_mafft($outfile, \%DR_con, $locus, $consensus_cutoff);
 	}
 
 # loading consensus sequences to db #
@@ -84,15 +86,15 @@ sub add_entries{
 # adding entries to DR consensus table #
 	my ($dbh, $DR_con_r) = @_;
 	
-	my $cmd = "INSERT INTO DirectRepeatConsensus(Locus_ID, Repeat_Consensus_Sequence) values (?,?)";
+	my $cmd = "INSERT INTO DirectRepeatConsensus(Locus_ID, Consensus_Sequence_IUPAC, Consensus_Sequence_Threshold) values (?,?,?)";
 	
 	my $sql = $dbh->prepare($cmd);
 	
 	my $cnt = 0;
 	foreach my $locus_id (keys %$DR_con_r){
-		$sql->execute( $locus_id, $DR_con_r->{$locus_id} );
+		$sql->execute( $locus_id, $DR_con_r->{$locus_id}{"IUPAC"}, $DR_con_r->{$locus_id}{"Threshold"} );
 		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr in: ", join("\t", $locus_id, $DR_con_r->{$locus_id} ), "\n";
+			print STDERR "ERROR: $DBI::errstr for cli.$locus_id\n";
 			}
 		else{ $cnt++; }
 		}
@@ -101,40 +103,17 @@ sub add_entries{
 	print STDERR "...$cnt entries added/updated in database\n" unless $verbose;
 	}
 
-sub get_consensus{
-	my ($DR_con_r, $locus, $DR_fasta_r) = @_;
-
-	# counting number of each nucleotide at each position #
-	my %by_pos;	
-	foreach my $DR (keys %$DR_fasta_r){
-		$DR_fasta_r->{$DR} =~ tr/A-Z/a-z/;			# lower case
-		my @line = split //, $DR_fasta_r->{$DR};
-		for my $i (0..$#line){
-			$by_pos{$i}{$line[$i]}++;				# position, nucleotide
-			}
-		}
-		
-	# determining majority at each position #
-	my $con = "";
-	foreach my $pos (sort {$a<=>$b} keys %by_pos){
-		my $max_val = max (values %{$by_pos{$pos}});
-
-		#print Dumper $max_val; exit;
-		}
-	
-		
-	#print Dumper %by_pos; exit;
-	}
-
 sub call_mafft{
-	my ($outfile, $DR_con_r, $locus) = @_;
+	my ($outfile, $DR_con_r, $locus, $consensus_cutoff) = @_;
 	
 	my $alnIO = Bio::AlignIO->new(
 				-file => "mafft --quiet $outfile |",
 				-format => "fasta" );
 	
 	while(my $aln = $alnIO->next_aln){
-		$DR_con_r->{$locus} = $aln->consensus_iupac();
+		$DR_con_r->{$locus}{"IUPAC"} = $aln->consensus_iupac();
+		$DR_con_r->{$locus}{"Threshold"} = $aln->consensus_string($consensus_cutoff);		
+		$DR_con_r->{$locus}{"Threshold"} =~ s/\?/N/g;			# ambiguous letter = 'N'
 		last;	
 		}
 
@@ -250,11 +229,11 @@ __END__
 
 =head1 NAME
 
-CLdb_loadDRConsensuss.pl -- adding/updating DR consensus sequences
+CLdb_loadDRConsensuss.pl -- determining DR consensus sequences & adding to database
 
 =head1 SYNOPSIS
 
-CLdb_loadDRConsensuss.pl [flags] leader.fasta leader_aligned.fasta
+CLdb_loadDRConsensuss.pl [flags]
 
 =head2 Required flags
 
@@ -268,9 +247,29 @@ CLdb_loadDRConsensuss.pl [flags] leader.fasta leader_aligned.fasta
 
 =over
 
-=item -t 	Number of bp (& gaps) to trim of end of alignment. [0]
+=item -subtype
 
-=item -g 	Leave gaps in leader sequence entered into the DB? 
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query
+
+sql to refine query (see EXAMPLES).
+
+=item -cutoff
+
+Cutoff (threshold) using a residue in the consensus (%). [51]
+
+=item -path
+
+Directory where mafft alignments are performed. [$CLdb_HOME/consensus/]
 
 =item -v	Verbose output. [FALSE]
 
@@ -284,30 +283,36 @@ perldoc CLdb_loadDRConsensuss.pl
 
 =head1 DESCRIPTION
 
-After determining the actual leader region by aligning
-approximate leader regions written by CLdb_getLeaderRegions.pl,
-automatically trim and load leader sequences & start-end
-information into the CRISPR database.
+Calculate the consensus sequence (IUPAC and
+threshold) for all direct repeats 
+in a CRISPR array.
 
-Trimming will be done from the leader region end most
-distant from the CRISPR array. Reversing & 
-reverse-complementation of sequences during the alignment
-will be accounted for (that's why both the aligned and
-'raw' sequenced must be provided).
+For each array, DR sequences are aligned and
+then the consensus sequence is calculated with bioperl.
 
-Not all sequences in the aligned fasta need to be in
-the 'raw' leader fasta (eg. if both ends of the array
-were written because the side containing the leader
-region could not be determined from direct-repeat
-degeneracy.
+=head3 IUPAC consensus
 
+Base ambiguity letters are used.
+
+=head3 Threshold consensus
+
+The consensus residue must have a frequency of >= than '-cutoff',
+otherwise a 'N' will be used.
 
 =head1 EXAMPLES
 
-=head2 Triming off the 50bp of unconserved alignment 
+=head2 Calculate & upload DB consensus sequences for all CRISPR arrays
 
-CLdb_loadDRConsensuss.pl -d ../CRISPR.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
+CLdb_loadDRConsensuss.pl -d CRISPR.sqlite 
 
+=head2 Calculate & upload DB consensus sequences for just locus_id '1'
+
+CLdb_loadDRConsensuss.pl -d CRISPR.sqlite -q "where LOCUS_ID=1" 
+
+=head2 Calculate & upload DB consensus sequences for specific subtype & 2 taxon_id's
+
+CLdb_loadDRConsensuss.pl -d CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+ 
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
