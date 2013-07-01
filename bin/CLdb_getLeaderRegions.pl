@@ -135,14 +135,17 @@ sub check_gene_overlap{
 			$itree->insert($feat, $end - 1,  $start + 1);		
 			}
 		}
+		
+	# debuggin itree #	
+	#	print_itree($itree, 500);
 	
 	# checking for overlap #
 	my $trans = 0; my $last;
 	for my $i ($region_start..$region_end){
 		my $res = $itree->fetch($i, $i);
 		if(! $last){
-			if($$res[0]){ $last = 2; }
-			else{ $last = 1; } 
+			if($$res[0]){ $last = 2; }			# gene-leader overlap at start
+			else{ $last = 1; } 					# gene-leader overlap at end 
 			}
 		elsif($$res[0] && $last == 1){		# hitting overlap after no previous overlap (leader at end)
 			$trans = $i;
@@ -179,6 +182,17 @@ sub check_gene_overlap{
 		}
 	return $seq, $region_start, $region_end;
 	}
+	
+sub print_itree{
+	my ($itree, $end) = @_;
+	
+	for my $i (0..$end){
+		my $res = $itree->fetch($i, $i);
+#		print Dumper $$res[0] if $$res[0];
+#		print join("\t", "pos:$i", join("::", @$res)), "\n";
+		}
+	exit;
+	}	
 
 sub get_DR_seq{
 	my ($dbh, $array_se_r) = @_;
@@ -248,9 +262,8 @@ sub get_array_se{
 
 	my %array_se;
 	foreach my $row (@$ret){
-		# moving array start, stop to positive strand #
+		# moving array start-end to + strand #
 		if($$row[1] > $$row[2]){
-#				print STDERR " Changing cli.$$row[0] start-end to + strand\n";
 			my $tmp = $$row[1];
 			$$row[1] = $$row[2];
 			$$row[2] = $tmp;

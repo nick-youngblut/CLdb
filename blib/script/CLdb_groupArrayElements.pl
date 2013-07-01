@@ -124,7 +124,7 @@ sub parse_cdhit{
 		$line[1] =~ s/nt//g;
 	
 		# loading hashes #
-		$clusters{$name_parts[0]}{$name_parts[1]} = $cluster_id;
+		$clusters{$name_parts[0]}{$name_parts[1]} = $cluster_id + 1;			# groups start at 1
 		}
 	close IN;
 

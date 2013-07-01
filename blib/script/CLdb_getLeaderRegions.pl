@@ -213,7 +213,7 @@ sub determine_leader{
 	# counting groups for each half of the array #
 	my %group_cnt;
 	foreach my $DR (@$ret){		# each direct repeat
-		
+
 		# $DR = (repeat, start, end, group_ID)
 		if($$DR[1] < $array_half && $$DR[2] < $array_half){
 			$group_cnt{1}{$$DR[3]}++;
@@ -257,8 +257,8 @@ sub get_array_se{
 			}
 		$array_se{$$row[0]} = $row;
 		}
+		
 		#print Dumper %array_se; exit;
-
 	return \%array_se; 
 	}
 
