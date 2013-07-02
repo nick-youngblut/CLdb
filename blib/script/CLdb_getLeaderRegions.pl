@@ -14,7 +14,7 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose, $database_file, $overlap_check);
 my $extra_query = "";
 my $genbank_path = "";
 my $length = 400;
@@ -23,6 +23,7 @@ GetOptions(
 	   "query=s" => \$extra_query, 
 	   "genbank=s" => \$genbank_path,
 	   "length=i" => \$length,
+	   "overlap" => \$overlap_check,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -101,7 +102,8 @@ sub get_leader_seq{
 				else{ die " LOGIC ERROR: $!\n"; }
 				
 				# checking for gene overlap #
-				($seqio, $leader_start, $leader_end) = check_gene_overlap($seqio, $leader_start, $leader_end, $loc, $locus);
+				($seqio, $leader_start, $leader_end) = check_gene_overlap($seqio, $leader_start, $leader_end, $loc, $locus)
+					unless $overlap_check;
 				
 				# parsing seq from genbank #
 				my $leader_seqio = $seqio->trunc($leader_start, $leader_end);					
@@ -135,14 +137,77 @@ sub check_gene_overlap{
 			$itree->insert($feat, $end - 1,  $start + 1);		
 			}
 		}
+		
+	# debuggin itree #	
+	#	print_itree($itree, 500);
+
+	my $overlap_pos = 0;
+	if($leader_loc eq "start"){		# checking for 1st overlap from 3' - 5' end # 
+		for (my $i=$region_end; $i>=$region_start; $i--){
+			$overlap_pos = check_pos($itree, $i);
+			last if $overlap_pos;
+			}
+		}
+	elsif($leader_loc eq "end"){	# checking for 1st overlap from 5' - 3' end;
+		for (my $i=$region_start; $i<=$region_end; $i++){
+			$overlap_pos = check_pos($itree, $i);
+			last if $overlap_pos;
+			}
+		}
+	
+	sub check_pos{
+		my ($itree, $i) = @_;
+		my $res = $itree->fetch($i, $i);
+		return $i if $$res[0];
+		}
+		
+	# altering start-end #
+	if($overlap_pos){
+		print STDERR "WARNING: Gene(s) overlap the leader in cli.$locus array. Truncating\n" unless $verbose;
+		
+		if($leader_loc eq "start"){
+			$region_start = $overlap_pos;
+			}
+		elsif($leader_loc eq "end"){
+			$region_end = $overlap_pos;
+			}
+		die " LOGIC ERROR: region start is > region end! $!\n"
+			if $region_start > $region_end;
+		}
+		
+	return $seq, $region_start, $region_end;
+	}
+
+sub check_gene_overlap_old{
+# checking to see if and genes overlap w/ leader region #
+# if yes, truncating leader region #
+	my ($seq, $region_start, $region_end, $leader_loc, $locus) = @_;
+	
+	# making an interval tree #
+	my $itree = Set::IntervalTree->new();
+	for my $feat ($seq->get_SeqFeatures){
+		next if $feat->primary_tag eq "source";
+
+		my $start = $feat->location->start;
+		my $end = $feat->location->end;
+		if($start <= $end){
+			$itree->insert($feat, $start - 1,  $end + 1);
+			}
+		else{
+			$itree->insert($feat, $end - 1,  $start + 1);		
+			}
+		}
+		
+	# debuggin itree #	
+	#	print_itree($itree, 500);
 	
 	# checking for overlap #
 	my $trans = 0; my $last;
 	for my $i ($region_start..$region_end){
 		my $res = $itree->fetch($i, $i);
 		if(! $last){
-			if($$res[0]){ $last = 2; }
-			else{ $last = 1; } 
+			if($$res[0]){ $last = 2; }			# gene-leader overlap at start
+			else{ $last = 1; } 					# gene-leader overlap at end 
 			}
 		elsif($$res[0] && $last == 1){		# hitting overlap after no previous overlap (leader at end)
 			$trans = $i;
@@ -179,6 +244,16 @@ sub check_gene_overlap{
 		}
 	return $seq, $region_start, $region_end;
 	}
+	
+sub print_itree{
+	my ($itree, $end) = @_;
+	
+	for my $i (0..$end){
+		my $res = $itree->fetch($i, $i);
+		print join("\t", "pos:$i", join("::", @$res)), "\n";
+		}
+	exit;
+	}	
 
 sub get_DR_seq{
 	my ($dbh, $array_se_r) = @_;
@@ -248,9 +323,8 @@ sub get_array_se{
 
 	my %array_se;
 	foreach my $row (@$ret){
-		# moving array start, stop to positive strand #
+		# moving array start-end to + strand #
 		if($$row[1] > $$row[2]){
-#				print STDERR " Changing cli.$$row[0] start-end to + strand\n";
 			my $tmp = $$row[1];
 			$$row[1] = $$row[2];
 			$$row[2] = $tmp;
@@ -302,6 +376,8 @@ CLdb_getLeaderRegion.pl [flags]
 =item -l 	Maximum length of leader region (bp). [400]
 
 =item -q 	sql to refine loci query (see EXAMPLES).
+
+=item -o 	Check for overlapping genes (& trim region if overlap)? [TRUE]
 
 =item -v	Verbose output
 

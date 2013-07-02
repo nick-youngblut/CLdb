@@ -17,13 +17,15 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $overlap_check);
 my $extra_query = "";
 my $genbank_path = "";
-my $length = 400;
+my $length = 400;				# max length of leader region
+my $gene_len_cutoff = 60;		# 60 bp minimum to be considered a real gene
 GetOptions(
 	   "database=s" => \$database_file,
 	   "query=s" => \$extra_query, 
 	   "genbank=s" => \$genbank_path,
 	   "length=i" => \$length,
 	   "overlap" => \$overlap_check,
+	   "cutoff=i" => \$gene_len_cutoff,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -130,7 +132,21 @@ sub check_gene_overlap{
 
 		my $start = $feat->location->start;
 		my $end = $feat->location->end;
-		if($start <= $end){
+	
+		# filtering out short genes #
+		my @tags = grep(/translation/, $feat->get_all_tags);
+		my $gene_length = 0;
+		if(@tags){
+			my @tmp = $feat->get_tag_values("translation"); 	# amino acid 
+			$gene_length = (length $tmp[0]) * 3;
+			}
+		else{ 
+			$gene_length = length $feat->entire_seq->seq;		# nucleotide
+			}
+		next if $gene_length < $gene_len_cutoff;			# excluding short genes (probably not real) 		
+		
+		# loading tree #
+		if($start <= $end){			# all on + strand
 			$itree->insert($feat, $start - 1,  $end + 1);
 			}
 		else{
@@ -139,7 +155,7 @@ sub check_gene_overlap{
 		}
 		
 	# debuggin itree #	
-	#	print_itree($itree, 500);
+	#	print_itree($itree, $region_start, $region_end);
 
 	my $overlap_pos = 0;
 	if($leader_loc eq "start"){		# checking for 1st overlap from 3' - 5' end # 
@@ -246,13 +262,15 @@ sub check_gene_overlap_old{
 	}
 	
 sub print_itree{
-	my ($itree, $end) = @_;
+	my ($itree, $start, $end) = @_;
 	
-	for my $i (0..$end){
+	for my $i ($start..$end){
 		my $res = $itree->fetch($i, $i);
+		
 		print join("\t", "pos:$i", join("::", @$res)), "\n";
+		#if($i == 2037996){ print Dumper $$res[0]; exit; }
 		}
-	exit;
+	#exit;
 	}	
 
 sub get_DR_seq{
@@ -262,7 +280,7 @@ sub get_DR_seq{
 	my $sql = $dbh->prepare($cmd);
 	
 	my %leader_loc;
-	foreach my $locus (keys %$array_se_r){
+	foreach my $locus (keys %$array_se_r){		# each CRISPR locus
 		$sql->execute($locus);
 		my $ret = $sql->fetchall_arrayref();
 		die " ERROR: no direct repeats found for cli.$locus!\n"
@@ -280,7 +298,6 @@ sub get_DR_seq{
 sub determine_leader{
 # determing leader region #
 	my ($ret, $array_r, $locus) = @_;
-		#print Dumper $array_r; exit;	
 	
 	# getting halfway point in array #
 	my $array_half = ($$array_r[1] +  $$array_r[2]) / 2;
@@ -288,24 +305,26 @@ sub determine_leader{
 	# counting groups for each half of the array #
 	my %group_cnt;
 	foreach my $DR (@$ret){		# each direct repeat
-
 		# $DR = (repeat, start, end, group_ID)
 		if($$DR[1] < $array_half && $$DR[2] < $array_half){
-			$group_cnt{1}{$$DR[3]}++;
+			$group_cnt{1}{$$DR[3]} = 1;		
 			}
 		elsif($$DR[1] > $array_half && $$DR[2] > $array_half){
-			$group_cnt{2}{$$DR[3]}++;
+			$group_cnt{2}{$$DR[3]} = 1;
 			}
 		}
-		
-	my $first_cnt = scalar keys %{$group_cnt{1}};
-	my $second_cnt = scalar keys %{$group_cnt{2}};
+	my $first_cnt = scalar keys %{$group_cnt{1}};		# number of groups in 1st half
+	my $second_cnt = scalar keys %{$group_cnt{2}};		# number of groups in 2nd half
 
-	# start or end? (based on + strand) #
-	if($first_cnt > $second_cnt){		# leader at start
+
+	# getting leader end based on number of degeneracies #
+	## leader end should have less than trailer ##
+	## therefore, the side w/ the most groups is the trailer end ##
+ 	## based on + strand positioning ##
+	if($first_cnt < $second_cnt){		# > degeneracy at end, leader at start
 		return ["start"];		
 		}
-	elsif($first_cnt < $second_cnt){	# leader at end 
+	elsif($first_cnt > $second_cnt){	# > degeneracy at start, leader at end
 		return ["end"];		
 		}
 	else{
@@ -324,16 +343,18 @@ sub get_array_se{
 	my %array_se;
 	foreach my $row (@$ret){
 		# moving array start-end to + strand #
-		if($$row[1] > $$row[2]){
-			my $tmp = $$row[1];
-			$$row[1] = $$row[2];
-			$$row[2] = $tmp;
-			}
+		($$row[1], $$row[2]) = pos_strand_se($$row[1], $$row[2]);
 		$array_se{$$row[0]} = $row;
 		}
 		
 		#print Dumper %array_se; exit;
 	return \%array_se; 
+	}
+	
+sub pos_strand_se{
+	my ($start, $end) = @_;
+	if($start > $end){ return $end, $start; }
+	else{ return $start, $end; }
 	}
 
 sub make_leader_dir{
@@ -378,6 +399,8 @@ CLdb_getLeaderRegion.pl [flags]
 =item -q 	sql to refine loci query (see EXAMPLES).
 
 =item -o 	Check for overlapping genes (& trim region if overlap)? [TRUE]
+
+=item -c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]
 
 =item -v	Verbose output
 

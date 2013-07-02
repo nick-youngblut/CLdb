@@ -145,6 +145,8 @@ CLdb_getLeaderRegion.pl [flags]
 .IX Item "-l 	Maximum length of leader region (bp). [400]"
 .IP "\-q 	sql to refine loci query (see \s-1EXAMPLES\s0)." 4
 .IX Item "-q 	sql to refine loci query (see EXAMPLES)."
+.IP "\-o 	Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]" 4
+.IX Item "-o 	Check for overlapping genes (& trim region if overlap)? [TRUE]"
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
