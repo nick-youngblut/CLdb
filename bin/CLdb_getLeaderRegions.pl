@@ -109,8 +109,9 @@ sub get_leader_seq{
 				
 				# parsing seq from genbank #
 				my $leader_seqio = $seqio->trunc($leader_start, $leader_end);					
-				$leader_seqio->display_id("cli.$locus");
-				$leader_seqio->desc(" $loc\__$leader_start\__$leader_end");
+				$leader_seqio->display_id("cli.$locus\__$loc\__$leader_start\__$leader_end");
+				#$leader_seqio->desc(" $loc\__$leader_start\__$leader_end");
+				$leader_seqio->desc("");
 								
 				$out->write_seq($leader_seqio);
 				}
