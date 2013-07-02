@@ -166,11 +166,11 @@ __END__
 
 =head1 NAME
 
-CLdb_groupArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
+CLdb_groupLeaders.pl -- group leader sequences at 100% sequence ID; add to database
 
 =head1 SYNOPSIS
 
-CLdb_groupArrayElements.pl [flags] 
+CLdb_groupLeaders.pl [flags] 
 
 =head2 Required flags
 
@@ -186,8 +186,6 @@ CLdb_groupArrayElements.pl [flags]
 
 =item -s 	Cluster spacers
 
-=item -d 	Cluster direct repeats
-
 =item -c 	CD-HIT-EST cluster cutoff. [1]
 
 =item -p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]
@@ -200,30 +198,28 @@ CLdb_groupArrayElements.pl [flags]
 
 =head2 For more information:
 
-perldoc CLdb_groupArrayElements.pl
+perldoc CLdb_groupLeaders.pl
 
 =head1 DESCRIPTION
 
-Group the spacers and/or direct repeats in the CRISPR
+Group the leader sequences in the CRISPR
 database using CD-HIT-EST and add the group ID of
-each spacer/DR to the CRISPR database.
+each leader sequence to the CRISPR database.
 
-Spacer and DR fasta files and CD-HIT-EST files
+All leader sequences are grouped by default.
+
+Leader sequence fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
 
 =head2 Requires:
 
-cd-hit-est, CLdb_array2fasta.pl
+cd-hit-est, CLdb_leader2fasta.pl
 
 =head1 EXAMPLES
 
-=head2 Grouping spacers
+=head2 Grouping all leaders
 
-CLdb_groupArrayElements.pl -d CRISPR.sqlite -s
-
-=head2 Grouping spacers & DRs
-
-CLdb_groupArrayElements.pl -d CRISPR.sqlite -s -r
+CLdb_groupLeaders.pl -d CRISPR.sqlite -s
 
 =head1 AUTHOR
 
