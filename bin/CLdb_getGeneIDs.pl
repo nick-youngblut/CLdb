@@ -13,11 +13,14 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
+my (@subtype, @taxon_id, @taxon_name);
+my $extra_query = "";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
+	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -41,7 +44,7 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # query db #
-
+get_figs_join($dbh, $extra_query, $join_sql);
 
 # disconnect to db #
 $dbh->disconnect();
@@ -49,6 +52,32 @@ exit;
 
 
 ### Subroutines
+sub get_figs_join{
+	my ($dbh, $extra_query, $join_sql) = @_;
+
+#sqlite> select a.taxon_id, b.gene_id from loci a, genes b where a.locus_id = b.locus_id and a.subtype="I-B";
+	
+	# make query #
+	my $query = "SELECT  a.gene_id, b.taxon_name, b.taxon_id, b.locus_id from genes a, loci b where a.locus_id = b.locus_id $join_sql";
+	$query = join(" ", $query, $extra_query);
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	# writing out figs #
+	foreach my $row (@$ret){
+		next unless $$row[0];
+		$$row[3] =~ s/^cli\.|^/cli./;
+		print join("\t", @$row), "\n";
+		}
+	
+	}
+
 sub join_query_opts{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
@@ -68,15 +97,39 @@ __END__
 
 =head1 NAME
 
-template.pl -- script template
+CLdb_getGeneIDs.pl -- getting Gene_ID values (fig|peg) for particular CRISPR loci
 
 =head1 SYNOPSIS
 
-template.pl [options] < input > output
+CLdb_getGeneIDs.pl [flags] > Gene_IDs.txt
 
-=head2 options
+=head2 Required flags
 
 =over
+
+=item -d 	CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -subtype
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query
+
+Extra sql to refine which sequences are returned.
 
 =item -v	Verbose output
 
@@ -86,24 +139,42 @@ template.pl [options] < input > output
 
 =head2 For more information:
 
-perldoc template.pl
+perldoc CLdb_getGeneIDs.pl
 
 =head1 DESCRIPTION
 
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+Get Gene_IDs (FIG|PEG IDs) from the CRISPR database
+and write them to a table. Output columns are:
+
+=over
+
+=item * Gene_ID
+
+=item * Taxon_name
+
+=item * Taxon_ID
+
+=item * Locus_ID
+
+=back
+
+By default, all Gene_IDs will be written. Use the 
+flags for query refinement to get Gene_IDs for
+particular loci.
 
 =head1 EXAMPLES
 
-=head2 Usage method 1
+=head2 All Gene_IDs in Subtype I-B loci
 
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
+CLdb_getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" 
 
-=head2 Usage method 2
+=head2 All Gene_IDs in Subtype I-B & 2 particular Taxon_ID's
 
-template.pl <library file> <output directory or basename>
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+
+=head2 All Gene_IDs in Subtype I-B loci & pipe to ITEP to get clusters
+
+CLdb_getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" | db_getClustersContainingGenes.py | less
 
 =head1 AUTHOR
 
@@ -111,7 +182,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
