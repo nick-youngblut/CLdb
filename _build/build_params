@@ -116,6 +116,7 @@ do{ my $x = [
                              './bin/CLdb_array2fasta.pl',
                              './bin/CLdb_getLeaderRegions.pl',
                              './bin/CLdb_leader2fasta.pl',
+                             './bin/CLdb_getGeneIDs.pl',
                              './bin/CLdb_loadLoci.pl',
                              './bin/CLdb_addScaffolds.pl',
                              './bin/CLdb_loadDRConsensus.pl',

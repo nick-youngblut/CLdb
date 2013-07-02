@@ -14,7 +14,7 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $overlap_check);
+my ($verbose, $database_file, $overlap_check, $degeneracy_bool);
 my $extra_query = "";
 my $genbank_path = "";
 my $length = 400;				# max length of leader region
@@ -275,7 +275,7 @@ sub print_itree{
 
 sub get_DR_seq{
 	my ($dbh, $array_se_r) = @_;
-	
+
 	my $cmd = "SELECT repeat_id, repeat_start, repeat_end, repeat_group from DirectRepeats where Locus_ID = ?";
 	my $sql = $dbh->prepare($cmd);
 	
@@ -316,7 +316,10 @@ sub determine_leader{
 	my $first_cnt = scalar keys %{$group_cnt{1}};		# number of groups in 1st half
 	my $second_cnt = scalar keys %{$group_cnt{2}};		# number of groups in 2nd half
 
-
+	# writing degeneracy report to STDERR #
+	print STDERR join("\t", "degeneracies", "cli.$locus", $first_cnt, $second_cnt), "\n"
+			unless $verbose;
+	
 	# getting leader end based on number of degeneracies #
 	## leader end should have less than trailer ##
 	## therefore, the side w/ the most groups is the trailer end ##
@@ -438,6 +441,11 @@ Leader regions in the output fasta are named as:
 "cli.ID" "start|end"__"region_start"__"region_end"
 
 Leader region start & end are according to the + strand. 
+
+The number of repeat_groups on each side (5' & 3') of the
+CRISPR array will be printed to STDERR (unless '-v'). 
+The output values are: 'degeracies', 'locus_id', 
+'5-prime_number_repeat_groups', '3-prime_number_repeat_groups'
 
 =head1 EXAMPLES
 
