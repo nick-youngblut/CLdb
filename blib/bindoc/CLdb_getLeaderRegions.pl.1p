@@ -147,6 +147,8 @@ CLdb_getLeaderRegion.pl [flags]
 .IX Item "-q 	sql to refine loci query (see EXAMPLES)."
 .IP "\-o 	Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]" 4
 .IX Item "-o 	Check for overlapping genes (& trim region if overlap)? [TRUE]"
+.IP "\-c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]" 4
+.IX Item "-c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]"
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
