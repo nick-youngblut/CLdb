@@ -113,11 +113,11 @@ sub check_in_operon{
 			if($f_start >= $o_start && $f_end <= $o_end){	# gene in operon
 				if( ($f_start < $c_start && $f_end < $c_end) ||
 					($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
-					push(@{$loci_tbl_r->{$locus}{$feature}}, 1);
+					push(@{$loci_tbl_r->{$locus}{$feature}}, "YES");
 					}
-				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 0); }	# in crispr array, so not defined as in operon
+				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "NO"); }	# in crispr array, so not defined as in operon
 				}
-			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, 0); }		# no in operon
+			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "NO"); }		# no in operon
 			}
 		}
 		#print Dumper %$loci_tbl_r; exit;

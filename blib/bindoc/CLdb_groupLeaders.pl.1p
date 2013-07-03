@@ -124,16 +124,16 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GROUPLEADERS 1"
-.TH CLDB_GROUPLEADERS 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GROUPLEADERS 1 "2013-07-02" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_groupArrayElements.pl \-\- group spacers and DRs by 100% sequence ID; add to database
+CLdb_groupLeaders.pl \-\- group leader sequences at 100% sequence ID; add to database
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_groupArrayElements.pl [flags]
+CLdb_groupLeaders.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -143,8 +143,6 @@ CLdb_groupArrayElements.pl [flags]
 .PD 0
 .IP "\-s 	Cluster spacers" 4
 .IX Item "-s 	Cluster spacers"
-.IP "\-d 	Cluster direct repeats" 4
-.IX Item "-d 	Cluster direct repeats"
 .IP "\-c 	CD-HIT-EST cluster cutoff. [1]" 4
 .IX Item "-c 	CD-HIT-EST cluster cutoff. [1]"
 .IP "\-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]" 4
@@ -156,26 +154,25 @@ CLdb_groupArrayElements.pl [flags]
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_groupArrayElements.pl
+perldoc CLdb_groupLeaders.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Group the spacers and/or direct repeats in the \s-1CRISPR\s0
+Group the leader sequences in the \s-1CRISPR\s0
 database using CD-HIT-EST and add the group \s-1ID\s0 of
-each spacer/DR to the \s-1CRISPR\s0 database.
+each leader sequence to the \s-1CRISPR\s0 database.
 .PP
-Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
+All leader sequences are grouped by default.
+.PP
+Leader sequence fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
 .SS "Requires:"
 .IX Subsection "Requires:"
-cd-hit-est, CLdb_array2fasta.pl
+cd-hit-est, CLdb_leader2fasta.pl
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Grouping spacers"
-.IX Subsection "Grouping spacers"
-CLdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s
-.SS "Grouping spacers & DRs"
-.IX Subsection "Grouping spacers & DRs"
-CLdb_groupArrayElements.pl \-d \s-1CRISPR\s0.sqlite \-s \-r
+.SS "Grouping all leaders"
+.IX Subsection "Grouping all leaders"
+CLdb_groupLeaders.pl \-d \s-1CRISPR\s0.sqlite \-s
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

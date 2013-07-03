@@ -99,7 +99,7 @@ sub get_leaders_join{
 	my ($dbh, $extra_query, $join_sql) = @_;
 	
 	# make query #
-	my $query = "SELECT a.Locus_ID, a.Leader_sequence FROM as LeaderSeqs a, Loci b WHERE a.locus_id = b.locus_id $join_sql";
+	my $query = "SELECT a.Locus_ID, a.Leader_sequence FROM LeaderSeqs a, Loci b WHERE a.locus_id = b.locus_id $join_sql";
 	$query = join(" ", $query, $extra_query);
 	
 	# status #
