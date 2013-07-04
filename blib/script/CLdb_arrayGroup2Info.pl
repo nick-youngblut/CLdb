@@ -107,7 +107,6 @@ sub get_arrays_join{
 		$sql->execute($group);
 		while(my @row = $sql->fetchrow_array()){
 			$row[0] =~ s/^/Group/;
-			$row[2] =~ s/^/cli./;
 			print join("\t", @row), "\n";
 			}
 		}
