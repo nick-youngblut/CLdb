@@ -13,11 +13,15 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $genbank_path, $quiet);
+my ($all_genes, $existing, $conflicting);
 my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "genbank=s" => \$genbank_path,
 	   "sql=s" => \$query,
+	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
+	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
+	   "conflicting" => \$conflicting, 		# write out both entries for conflicts? [FALSE]
 	   "verbose" => \$verbose,				# TRUE
 	   "quiet" => \$quiet, 					# turn off warnings
 	   "help|?" => \&pod2usage # Help
@@ -45,6 +49,10 @@ my $loci_se_r = get_loci_start_end($dbh, $query);
 # getting CDS info for CDS features in loci regions #
 my $loci_tbl_r = call_genbank_get_region($loci_se_r, $genbank_path);
 
+# determine if CDS are already in gene table #
+## if exists & '-a', existing entry written ## 
+check_exists_in_gene_table($dbh, $loci_tbl_r, $all_genes, $conflicting) unless $existing; 
+
 # determine if CDS are in operons #
 check_in_operon($loci_se_r, $loci_tbl_r);
 
@@ -57,25 +65,79 @@ exit;
 
 
 ### Subroutines
+sub check_exists_in_gene_table{
+# determine if CDS are already in gene table #
+## if exists & '-a', existing entry written ## 
+	my ($dbh, $loci_tbl_r, $all_genes, $conflicting) = @_;
+	
+	# query gene table #
+	my $query = "SELECT Locus_ID,Gene_Start,Gene_End,Gene_ID,Gene_Alias,Gene_Length__AA,In_Operon from Genes";
+	my $genes_r = $dbh->selectall_arrayref($query);	
+
+	# loading hash w/ entries: locus=>gene_id #
+	my %exists;
+	map{ $exists{$$_[0]}{$$_[3]} = [@$_[1..$#$_]] } @$genes_r;
+	
+	# checking for existing #
+	foreach my $locus (sort keys %$loci_tbl_r){
+		foreach my $feat (keys %{$loci_tbl_r->{$locus}}){
+			my $gene_id = ${$loci_tbl_r->{$locus}{$feat}}[2];
+
+			if(exists $exists{ $locus }{ $gene_id } ){		# existing entry for gene
+				# just conflicting entries 
+				if($conflicting){				
+					$loci_tbl_r->{$locus}{"N$feat"} = $exists{$locus}{$gene_id};
+					}
+				# removing existing gene
+				else{		
+					delete $loci_tbl_r->{$locus}{$feat};				
+					# replacing existing 
+					if($all_genes){					
+						$loci_tbl_r->{$locus}{$feat} = $exists{$locus}{$gene_id};
+						}
+					}
+				}
+			else{
+				delete $loci_tbl_r->{$locus}{$feat} if $conflicting;		# just 
+				}
+			}
+		}
+		#print Dumper %$loci_tbl_r; exit;
+	}
+
 sub write_loci_tbl{
 # writing out loci table for manual editting of aliases #
 	my ($loci_tbl_r) = @_;
 
 	print join("\t", qw/Locus_ID Gene_Id Gene_start Gene_end Gene_length__AA In_Operon Gene_Alias Sequence/), "\n";
 	foreach my $loci (keys %$loci_tbl_r){
-		foreach my $feature (sort{$a<=>$b} keys %{$loci_tbl_r->{$loci}}){
+		foreach my $feature (keys %{$loci_tbl_r->{$loci}}){
 			unless (${$loci_tbl_r->{$loci}{$feature}}[2] =~ /fig\|.+peg/){		# db_xref must be fig|.+peg
 				print STDERR " WARNING: Locus$loci -> $feature does not have a FIG-PEG ID in a db_xref tag!\n"
 					unless $quiet;
 				next;
 				}
+			
+			# length already found? #
+			my ($len_AA, $seq);
+			if(${$loci_tbl_r->{$loci}{$feature}}[4] =~ /^\d+$/){			# existing entry; no sequence
+				$len_AA = ${$loci_tbl_r->{$loci}{$feature}}[4];
+				if($conflicting){ $seq = "existing_entry"; }
+				else{ $seq = ""; }
+				}
+			else{ 
+				$len_AA = length ${$loci_tbl_r->{$loci}{$feature}}[4]; 
+				$seq = ${$loci_tbl_r->{$loci}{$feature}}[4];
+				}
+			
+			# writing line #
 			print join("\t", "cli.$loci", 
 				${$loci_tbl_r->{$loci}{$feature}}[2], 			# Gene_id (db_xref)
 				@{$loci_tbl_r->{$loci}{$feature}}[(0..1)], 		# start, end 
-				length ${$loci_tbl_r->{$loci}{$feature}}[4], 	# length (AA)
+				$len_AA, 										# length (AA)
 				${$loci_tbl_r->{$loci}{$feature}}[5], 			# In Operon	
 				${$loci_tbl_r->{$loci}{$feature}}[3],
-				${$loci_tbl_r->{$loci}{$feature}}[4]
+				$seq											# sequence
 				), "\n";
 			}
 		}
@@ -84,6 +146,8 @@ sub write_loci_tbl{
 sub check_in_operon{
 # checing whether CDS features are in the designated operon locations #
 	my ($loci_se_r, $loci_tbl_r) = @_;
+	
+	#print Dumper $loci_tbl_r; exit;
 	
 	foreach my $locus (keys %$loci_tbl_r){
 		foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
@@ -198,7 +262,7 @@ sub call_genbank_get_region{
 		close PIPE;
 		}
 		#print Dumper %loci_tbl; exit;
-	return \%loci_tbl;
+	return \%loci_tbl;		#  locusID=>feature_num = \@feature
 	}
 
 sub get_loci_start_end{
@@ -243,9 +307,28 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -s 	sql to refine loci table query (see EXAMPLES). 
+=item -exist
 
-=item -q	Turn off all warnings.
+Do not write any genes already existing in the Genes table (unless '-a' used). [TRUE]
+
+=item -all
+
+All genes defined by the Loci table are written. 
+Any existing entries written in place of new entry.
+Not compatible with '-c' [FALSE]
+
+=item -conflict
+
+Just write out genes that are conflicting
+(new and old versions). Not compatible with '-a' [FALSE]
+
+=item -sql
+
+sql to refine loci table query (see EXAMPLES). 
+
+=item -quiet
+
+Turn off all warnings.
 
 =item -v	Verbose output. [TRUE]
 
@@ -265,6 +348,20 @@ into CRISPR loci.
 The output can be piped directly into
 CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
+
+=head2 Existing genes in Genes table ('-e', '-a', '-c')
+
+By default, only new genes (ie. not found already in
+Genes table) are written. This is to
+preserve the existing alias values, which may 
+have been manually editted. 
+
+All gene entries (new & existing) can be written
+using '-a'. To view conflicting gene entries,
+use '-c'. For '-c', existing entries will have 'existing_entry'
+in the 'Sequence' column.
+
+=head2 In_Operon
 
 Genes are designated as falling in the CAS operon
 ('In_Operon' field in DB) if they fall inside
@@ -301,6 +398,14 @@ CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
 =head2 Refining query to just taxon '6666666.40253'
 
 CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE taxon_id='6666666.40253'"
+
+=head2 Write out all entries (new & old; on conflict: old entry is written)
+
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite -a
+
+=head2 Write out all conflicting entries 
+
+CLdb_getGenesInLoci.pl -d CRISPR.sqlite -c
 
 =head1 AUTHOR
 
