@@ -13,15 +13,16 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $spacer_bool);
+my ($verbose, $database_file, $spacer_bool, $by_group);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
 	   "database=s" => \$database_file,
-	   "repeat" => \$spacer_bool,
+	   "repeat" => \$spacer_bool,			 # spacers or repeats?
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
+	   "group" => \$by_group,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -69,7 +70,12 @@ sub write_arrays_fasta{
 	
 	foreach my $locus_id (keys %$arrays_r){
 		foreach my $x_id (keys %{$arrays_r->{$locus_id}}){
-			print join("\n", ">cli.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+			if($by_group){
+				print join("\n", ">Group$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+				}
+			else{
+				print join("\n", ">cli.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+				}
 			}
 		}
 	}
@@ -80,10 +86,20 @@ sub get_arrays{
 	# make query #
 	my $query;
 	if($spacer_bool){		# direct repeat
-		$query = "SELECT Locus_ID, Repeat_ID, Repeat_sequence FROM directrepeats";
+		if($by_group){
+			$query = "SELECT Locus_ID, repeat_group, Repeat_sequence FROM directrepeats GROUP BY repeat_group";
+			}
+		else{
+			$query = "SELECT Locus_ID, Repeat_ID, Repeat_sequence FROM directrepeats";
+			}
 		}
 	else{					# spacer
-		$query = "SELECT Locus_ID, Spacer_ID, Spacer_sequence FROM spacers";
+		if($by_group){
+			$query .= "SELECT Locus_ID, spacer_group, Spacer_sequence FROM spacers GROUP BY spacer_group";		
+			}
+		else{
+			$query = "SELECT Locus_ID, Spacer_ID, Spacer_sequence FROM spacers";
+			}
 		}
 	$query = join(" ", $query, $extra_query);
 	
@@ -106,10 +122,20 @@ sub get_arrays_join{
 	# make query #
 	my $query;
 	if($spacer_bool){		# direct repeat
-		$query = "SELECT a.Locus_ID, a.Repeat_ID, a.Repeat_sequence FROM directrepeats a, loci b WHERE a.locus_id = b.locus_id $join_sql";
+		if($by_group){
+			$query = "SELECT a.Locus_ID, a.Repeat_group, a.Repeat_sequence FROM directrepeats a, loci b WHERE a.locus_id = b.locus_id $join_sql GROUP BY a.repeat_group";
+			}
+		else{
+			$query = "SELECT a.Locus_ID, a.Repeat_ID, a.Repeat_sequence FROM directrepeats a, loci b WHERE a.locus_id = b.locus_id $join_sql";
+			}
 		}
 	else{					# spacer
-		$query = "SELECT a.Locus_ID, a.spacer_ID, a.spacer_sequence FROM spacers a, loci b WHERE a.locus_id = b.locus_id $join_sql";
+		if($by_group){
+			$query = "SELECT a.Locus_ID, a.Spacer_group, a.spacer_sequence FROM spacers a, loci b WHERE a.locus_id = b.locus_id $join_sql GROUP BY a.spacer_group";
+			}
+		else{
+			$query = "SELECT a.Locus_ID, a.spacer_ID, a.spacer_sequence FROM spacers a, loci b WHERE a.locus_id = b.locus_id $join_sql";
+			}
 		}
 	$query = join(" ", $query, $extra_query);
 	
@@ -182,6 +208,10 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
+=item -group
+
+Get array elements de-replicated by group (ie. all uniqe sequences).
+
 =item -query
 
 Extra sql to refine which sequences are returned.
@@ -213,6 +243,10 @@ CLdb_array2fasta.pl -data CRISPR.sqlite
 =head2 Write all direct repeats to a fasta:
 
 CLdb_array2fasta.pl -data CRISPR.sqlite -r
+
+=head2 Write all unique spacers
+
+CLdb_array2fasta.pl -data CRISPR.sqlite -g
 
 =head2 Refine spacer sequence query:
 
