@@ -73,6 +73,7 @@ sub get_figs_join{
 	foreach my $row (@$ret){
 		next unless $$row[0];
 		$$row[3] =~ s/^cli\.|^/cli./;
+		map{$_ = "" unless $_} @$row;
 		print join("\t", @$row), "\n";
 		}
 	
