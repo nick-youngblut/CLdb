@@ -99,9 +99,14 @@ sub load_new_entries{
 	my $cmd = "INSERT INTO loci(" . join(",", @keys) . ") VALUES(?".",?"x$#keys . ")";
 	my $sql = $dbh->prepare($cmd);
 	foreach my $row (@$loci_new_r){
-		$sql->execute( @$row[@values] );	
+		# "" values changed to undef = null in sqlite #
+		my @null = @$row;
+		map{ undef $_ if $_ eq ""} @null;
+		
+		# loading #
+		$sql->execute( @null[@values] );	
 		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$row[@values]), "\n";
+			print STDERR "ERROR: $DBI::errstr in: '", join("\t", @$row[@values]), "'\n";
 			}
 		}
 	$dbh->commit;
@@ -126,6 +131,8 @@ sub load_loci_table{
 			}
 		else{
 			my @line = split /\t/;
+			
+			# locus ID #
 			if( exists $header{"locus_id"} && $line[$header{"locus_id"}] ){		# if updating lci
 				$loci{$line[$header{"locus_id"}]} = \@line;
 				}

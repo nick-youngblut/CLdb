@@ -19,7 +19,7 @@ GetOptions(
 	   );
 
 ### I/O error & defaults
-$ARGV[0] = "CRISPR.sqlite" unless $ARGV[0];
+$ARGV[0] = "CLdb.sqlite" unless $ARGV[0];
 
 ### MAIN
 my $sql = get_sql();
@@ -51,17 +51,18 @@ CREATE TABLE Loci (
 Locus_ID	INTEGER	PRIMARY KEY,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
-Subtype	TEXT	NOT NULL,
+Subtype	TEXT,
 Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
-Operon_Start	INTEGER	NOT NULL,
-Operon_End	INTEGER	NOT NULL,
-CRISPR_Array_Start	INTEGER	NOT NULL,
-CRISPR_Array_End	INTEGER	NOT NULL,
-Status	TEXT	NOT NULL,
+Operon_Start	INTEGER,
+Operon_End	INTEGER,
+CRISPR_Array_Start	INTEGER,
+CRISPR_Array_End	INTEGER,
+Operon_Status	TEXT	NOT NULL,
+CRISPR_Array_Status	TEXT	NOT NULL,
 Genbank	TEXT	NOT NULL,
 Array_File	TEXT	NOT NULL,
-Scaffolds	INTEGER,
+Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL
 );
@@ -133,6 +134,22 @@ UNIQUE (Locus_ID, Gene_ID)
 ON CONFLICT REPLACE
 );
 
+
+DROP TABLE IF EXISTS Draft;
+
+CREATE TABLE Draft (
+Locus_ID	INTEGER,
+Scaffold_name	TEXT	NOT NULL,
+Locus_Start	INTEGER	NOT NULL,
+Locus_End	INTEGER	NOT NULL,
+Operon_Start	INTEGER,
+Operon_End	INTEGER,
+CRISPR_Array_Start	INTEGER,
+CRISPR_Array_End	INTEGER,
+Genbank	TEXT	NOT NULL,
+UNIQUE (Locus_ID)
+ON CONFLICT REPLACE
+);
 
 COMMIT;
 
