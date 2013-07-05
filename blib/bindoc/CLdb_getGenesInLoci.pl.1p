@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETGENESINLOCI 1"
-.TH CLDB_GETGENESINLOCI 1 "2013-07-02" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETGENESINLOCI 1 "2013-07-04" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,12 +141,28 @@ CLdb_getGenesInLoci.pl [flags]
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-s 	sql to refine loci table query (see \s-1EXAMPLES\s0)." 4
-.IX Item "-s 	sql to refine loci table query (see EXAMPLES)."
-.IP "\-q	Turn off all warnings." 4
-.IX Item "-q	Turn off all warnings."
+.IP "\-exist" 4
+.IX Item "-exist"
+.PD
+Do not write any genes already existing in the Genes table (unless '\-a' used). [\s-1TRUE\s0]
+.IP "\-all" 4
+.IX Item "-all"
+All genes defined by the Loci table are written. 
+Any existing entries written in place of new entry.
+Not compatible with '\-c' [\s-1FALSE\s0]
+.IP "\-conflict" 4
+.IX Item "-conflict"
+Just write out genes that are conflicting
+(new and old versions). Not compatible with '\-a' [\s-1FALSE\s0]
+.IP "\-sql" 4
+.IX Item "-sql"
+sql to refine loci table query (see \s-1EXAMPLES\s0).
+.IP "\-quiet" 4
+.IX Item "-quiet"
+Turn off all warnings.
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
+.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
@@ -161,7 +177,19 @@ into \s-1CRISPR\s0 loci.
 The output can be piped directly into
 CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
+.SS "Existing genes in Genes table ('\-e', '\-a', '\-c')"
+.IX Subsection "Existing genes in Genes table ('-e', '-a', '-c')"
+By default, only new genes (ie. not found already in
+Genes table) are written. This is to
+preserve the existing alias values, which may 
+have been manually editted.
 .PP
+All gene entries (new & existing) can be written
+using '\-a'. To view conflicting gene entries,
+use '\-c'. For '\-c', existing entries will have 'existing_entry'
+in the 'Sequence' column.
+.SS "In_Operon"
+.IX Subsection "In_Operon"
 Genes are designated as falling in the \s-1CAS\s0 operon
 ('In_Operon' field in \s-1DB\s0) if they fall inside
 the designated operon range (designated in Loci table)
@@ -191,6 +219,12 @@ CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 subtype='I
 .SS "Refining query to just taxon '6666666.40253'"
 .IX Subsection "Refining query to just taxon '6666666.40253'"
 CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-s \*(L"\s-1WHERE\s0 taxon_id='6666666.40253'\*(R"
+.SS "Write out all entries (new & old; on conflict: old entry is written)"
+.IX Subsection "Write out all entries (new & old; on conflict: old entry is written)"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-a
+.SS "Write out all conflicting entries"
+.IX Subsection "Write out all conflicting entries"
+CLdb_getGenesInLoci.pl \-d \s-1CRISPR\s0.sqlite \-c
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

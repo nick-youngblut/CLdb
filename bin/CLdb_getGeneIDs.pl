@@ -176,6 +176,14 @@ CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.404
 
 CLdb_getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" | db_getClustersContainingGenes.py | less
 
+=head2 All Gene_IDs in Subtype I-B & 2 particular Taxon_ID's
+
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+
+=head2 Using '-q' to pick genes in operons (and in subtype 'I-B')
+
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND a.In_Operon='YES'"
+
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
