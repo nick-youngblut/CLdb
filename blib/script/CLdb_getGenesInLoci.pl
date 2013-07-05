@@ -170,18 +170,21 @@ sub check_in_operon{
 			# making all on the + strand #
 			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
 			($o_start, $o_end) = set_to_pos_strand($o_start, $o_end);
-			($c_start, $c_end) = set_to_pos_strand($c_start, $c_end);			
+			($c_start, $c_end) = set_to_pos_strand($c_start, $c_end) if $c_start && $c_end;		
 			
 			# determining location #
 			## gene must fall in operon, without falling into crispr array ##
 			if($f_start >= $o_start && $f_end <= $o_end){	# gene in operon
-				if( ($f_start < $c_start && $f_end < $c_end) ||
-					($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
-					push(@{$loci_tbl_r->{$locus}{$feature}}, "YES");
+				if($c_start && $c_end){					# check for overlap w/ CRISPR array if present
+					if( ($f_start < $c_start && $f_end < $c_end) ||
+						($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
+						push(@{$loci_tbl_r->{$locus}{$feature}}, "yes");
+						}
+					else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }	# in crispr array, so not defined as in operon				
 					}
-				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "NO"); }	# in crispr array, so not defined as in operon
+				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "yes"); }	# in operon, no CRISPR array
 				}
-			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "NO"); }		# no in operon
+			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }		# no in operon
 			}
 		}
 		#print Dumper %$loci_tbl_r; exit;
@@ -270,7 +273,8 @@ sub get_loci_start_end{
 	my ($dbh, $query) = @_;
 	
 	my %loci_se;
-	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank, Operon_start, Operon_end, CRISPR_Array_Start, CRISPR_Array_End from loci $query";
+	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank, Operon_start, Operon_end, CRISPR_Array_Start, CRISPR_Array_End from loci $query where Operon_start is not null or Operon_end is not null";
+
 	my $loci_se_r = $dbh->selectall_arrayref($cmd);	
 	die " ERROR: no locus start-end values found!\n" unless $loci_se_r;	
 

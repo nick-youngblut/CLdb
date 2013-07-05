@@ -113,6 +113,7 @@ do{ my $x = [
          'script_files' => [
                              './bin/CLdb_groupArrayElements.pl',
                              './bin/CLdb_makeDB.pl',
+                             './bin/CLdb_addScaffoldCount.pl',
                              './bin/CLdb_array2fasta.pl',
                              './bin/CLdb_arrayGroup2Info.pl',
                              './bin/CLdb_getLeaderRegions.pl',
@@ -120,7 +121,6 @@ do{ my $x = [
                              './bin/CLdb_getGeneIDs.pl',
                              './bin/CLdb_getRegionSequence.pl',
                              './bin/CLdb_loadLoci.pl',
-                             './bin/CLdb_addScaffolds.pl',
                              './bin/CLdb_loadDRConsensus.pl',
                              './bin/CLdb_loadArrays.pl',
                              './bin/CLdb_getGenesInLoci.pl',

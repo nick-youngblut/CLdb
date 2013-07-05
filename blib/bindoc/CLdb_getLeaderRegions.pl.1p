@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-07-02" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETLEADERREGIONS 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -193,9 +193,9 @@ The output values are: 'degeracies', 'locus_id',
 .SS "Leader regions for all loci"
 .IX Subsection "Leader regions for all loci"
 CLdb_getLeaderRegion.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Leader regions for just subtype I\-B:"
-.IX Subsection "Leader regions for just subtype I-B:"
-CLdb_getLeaderRegions.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"\s-1WHERE\s0 subtype='I\-B'\*(R" > leader_I\-B.fna
+.SS "Leader regions for just subtype I\-B (must have '\s-1AND\s0' in sql):"
+.IX Subsection "Leader regions for just subtype I-B (must have 'AND' in sql):"
+CLdb_getLeaderRegions.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"\s-1AND\s0 subtype='I\-B'\*(R" > leader_I\-B.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

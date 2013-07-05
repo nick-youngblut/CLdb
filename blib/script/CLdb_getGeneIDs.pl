@@ -73,6 +73,7 @@ sub get_figs_join{
 	foreach my $row (@$ret){
 		next unless $$row[0];
 		$$row[3] =~ s/^cli\.|^/cli./;
+		map{$_ = "" unless $_} @$row;
 		print join("\t", @$row), "\n";
 		}
 	
@@ -175,6 +176,14 @@ CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.404
 =head2 All Gene_IDs in Subtype I-B loci & pipe to ITEP to get clusters
 
 CLdb_getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" | db_getClustersContainingGenes.py | less
+
+=head2 All Gene_IDs in Subtype I-B & 2 particular Taxon_ID's
+
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+
+=head2 Using '-q' to pick genes in operons (and in subtype 'I-B')
+
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND a.In_Operon='yes'"
 
 =head1 AUTHOR
 

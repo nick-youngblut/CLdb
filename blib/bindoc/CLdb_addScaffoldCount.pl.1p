@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_ADDSCAFFOLDS 1"
-.TH CLDB_ADDSCAFFOLDS 1 "2013-07-01" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_ADDSCAFFOLDCOUNT 1"
+.TH CLDB_ADDSCAFFOLDCOUNT 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_addScaffolds.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
+CLdb_addScaffoldCount.pl \-\- adding number of scaffolds in unmerged genbanks to loci table
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_addScaffolds.pl [flags]
+CLdb_addScaffoldCount.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -150,7 +150,7 @@ CLdb_addScaffolds.pl [flags]
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_addScaffolds.pl
+perldoc CLdb_addScaffoldCount.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Add the number of scaffolds in the orginal, unmerged genbank file 
@@ -162,7 +162,7 @@ in the loci table.
 .IX Header "EXAMPLES"
 .SS "Usage:"
 .IX Subsection "Usage:"
-CLdb_addScaffolds.pl \-data \s-1CRISPR\s0.sqlite
+CLdb_addScaffoldCount.pl \-data \s-1CRISPR\s0.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

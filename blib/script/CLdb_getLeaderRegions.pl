@@ -341,7 +341,7 @@ sub get_array_se{
 # getting the array start-end from loci table #
 	my ($dbh, $extra_query) = @_;
 	
-	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank FROM loci $extra_query";
+	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $extra_query";
 	my $ret = $dbh->selectall_arrayref($cmd);
 
 	my %array_se;
@@ -454,9 +454,9 @@ The output values are: 'degeracies', 'locus_id',
 
 CLdb_getLeaderRegion.pl -d CRISPR.sqlite
 
-=head2 Leader regions for just subtype I-B:
+=head2 Leader regions for just subtype I-B (must have 'AND' in sql):
 
-CLdb_getLeaderRegions.pl -d CRISPR.sqlite -q "WHERE subtype='I-B'" > leader_I-B.fna
+CLdb_getLeaderRegions.pl -d CRISPR.sqlite -q "AND subtype='I-B'" > leader_I-B.fna
 
 =head1 AUTHOR
 

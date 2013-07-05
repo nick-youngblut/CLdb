@@ -146,7 +146,7 @@ sub get_array_file_names{
 # querying genbank names from sqlite loci table #
 	my ($dbh) = @_;
 	
-	my $cmd = "SELECT locus_id, array_file from loci";
+	my $cmd = "SELECT locus_id, array_file from loci where array_file is not null";
 	my $names_r = $dbh->selectall_arrayref($cmd);
 	
 	die " ERROR: no array file names found!\n" unless $names_r;

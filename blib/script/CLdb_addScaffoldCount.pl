@@ -55,7 +55,7 @@ sub update_db{
 # updating scaffold info #
 	my ($dbh, $scaf_cnt_r) = @_;
 	
-	my $cmd = "Update Loci SET scaffolds = ? where genbank = ?";
+	my $cmd = "Update Loci SET scaffold_count = ? where genbank = ?";
 	my $sql = $dbh->prepare($cmd);
 	foreach my $genbank (keys %$scaf_cnt_r){
 		
@@ -79,7 +79,7 @@ sub count_scaffolds{
 		
 	open IN, "$genbank_path/$genbank" or die $!;
 	while(<IN>){
-		$scaf_cnt_r->{$genbank}++ if /^\s*source\s+/;
+		$scaf_cnt_r->{$genbank}++ if /^ *source +/;
 		}
 	close IN;
 	}
@@ -88,10 +88,11 @@ sub get_genbank_names{
 # querying genbank names from sqlite loci table #
 	my ($dbh) = @_;
 	
-	my $cmd = "SELECT genbank from loci";
+	my $cmd = "SELECT distinct genbank from loci";
 	my $names_r = $dbh->selectall_arrayref($cmd);
 	
 	die " ERROR: no genbank names found!\n" unless $names_r;
+	
 		#print Dumper $names_r; exit;
 	return $names_r;
 	}
@@ -109,11 +110,11 @@ __END__
 
 =head1 NAME
 
-CLdb_addScaffolds.pl -- adding number of scaffolds in unmerged genbanks to loci table
+CLdb_addScaffoldCount.pl -- adding number of scaffolds in unmerged genbanks to loci table
 
 =head1 SYNOPSIS
 
-CLdb_addScaffolds.pl [flags] 
+CLdb_addScaffoldCount.pl [flags] 
 
 =head2 Required flags
 
@@ -137,7 +138,7 @@ CLdb_addScaffolds.pl [flags]
 
 =head2 For more information:
 
-perldoc CLdb_addScaffolds.pl
+perldoc CLdb_addScaffoldCount.pl
 
 =head1 DESCRIPTION
 
@@ -151,7 +152,7 @@ in the loci table.
 
 =head2 Usage:
 
-CLdb_addScaffolds.pl -data CRISPR.sqlite
+CLdb_addScaffoldCount.pl -data CRISPR.sqlite
 
 =head1 AUTHOR
 
