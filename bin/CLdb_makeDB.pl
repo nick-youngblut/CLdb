@@ -61,7 +61,7 @@ CRISPR_Array_End	INTEGER,
 Operon_Status	TEXT	NOT NULL,
 CRISPR_Array_Status	TEXT	NOT NULL,
 Genbank	TEXT	NOT NULL,
-Array_File	TEXT	NOT NULL,
+Array_File	TEXT,
 Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL
