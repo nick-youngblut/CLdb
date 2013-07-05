@@ -182,7 +182,7 @@ CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.404
 
 =head2 Using '-q' to pick genes in operons (and in subtype 'I-B')
 
-CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND a.In_Operon='YES'"
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND a.In_Operon='yes'"
 
 =head1 AUTHOR
 
