@@ -12,10 +12,9 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $genbank_path);
+my ($verbose, $database_file);
 GetOptions(
 	   "database=s" => \$database_file,
-	   "genbank=s" => \$genbank_path, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -25,7 +24,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
-$genbank_path = path_by_database($database_file) unless $genbank_path;
+my $genbank_path = path_by_database($database_file);
 $genbank_path = File::Spec->rel2abs($genbank_path);
 
 ### MAIN
@@ -128,8 +127,6 @@ CLdb_addScaffoldCount.pl [flags]
 
 =over
 
-=item -g 	Path to the genbank files. [$CLdb_HOME/genbank/]
-
 =item -v	Verbose output. [TRUE]
 
 =item -h	This help message
@@ -147,6 +144,8 @@ for each organism.
 
 Scaffolds are counted from 'source' in the genbank files provided
 in the loci table.
+
+Genbank files must be in $CLdb_HOME/genbank/
 
 =head1 EXAMPLES
 

@@ -14,7 +14,7 @@ use Bio::SeqIO;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $genbank_path);
+my ($verbose, $database_file);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $region_oi = "locus";
@@ -25,7 +25,6 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query, 
-	   "genbank=s" => \$genbank_path,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -35,7 +34,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
-$genbank_path = path_by_database($database_file) unless $genbank_path;
+my $genbank_path = path_by_database($database_file);
 $genbank_path = File::Spec->rel2abs($genbank_path);
 
 
@@ -219,10 +218,6 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 Extra sql to refine which sequences are returned.
 
-=item -genbank
-
-Path to the genbank files. [$CLdb_HOME/genbank/]
-
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -238,6 +233,8 @@ perldoc CLdb_getRegionSequence.pl
 Get nucleotide sequences for CRISPR locus regions of
 interest. Output in fasta format. Regions of interest
 can be the whole locus, the operon, or the CRISPR array.
+
+Genbank files must be in $CLdb_HOME/genbank/
 
 =head1 EXAMPLES
 

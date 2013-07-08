@@ -12,10 +12,9 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $array_path);
+my ($verbose, $database_file);
 GetOptions(
 	   "database=s" => \$database_file,
-	   "array=s" => \$array_path, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -25,7 +24,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
-$array_path = path_by_database($database_file) unless $array_path;
+my $array_path = path_by_database($database_file);
 $array_path = File::Spec->rel2abs($array_path);
 
 
@@ -185,8 +184,6 @@ CLdb_loadArrays.pl [flags]
 
 =over
 
-=item -a 	Path to the array table files. [$CLdb_HOME/array/]
-
 =item -v	Verbose output. [TRUE]
 
 =item -h	This help message
@@ -205,11 +202,13 @@ the spacers and direct repeats into the CLdb database.
 Array file names are obtained from the loci table in the
 CRISPR database.
 
+Array files must be in $CLdb_HOME/array/
+
 =head1 EXAMPLES
 
 =head2 Usage:
 
-CLdb_loadArrays.pl -data CRISPR.sqlite 
+CLdb_loadArrays.pl -d CLdb.sqlite 
 
 =head1 AUTHOR
 
