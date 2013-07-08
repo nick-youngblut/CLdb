@@ -35,9 +35,11 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 my $table_list_r = list_tables();
 check_for_loci_table($table_list_r);
 
-# loading loci table #
+# getting input loci table #
 my ($loci_r, $header_r) = load_loci_table();
 
+# striping off paths from file columns #
+remove_paths($loci_r, $header_r);
 
 # updating / loading_db #
 load_new_entries($dbh, $loci_r->{"new_entry"}, $header_r);
@@ -48,6 +50,26 @@ $dbh->disconnect();
 exit;
 
 ### Subroutines
+sub remove_paths{
+	my ($loci_r, $header_r) = @_;
+	
+	print STDERR "...Removing any paths in file names\n" unless $verbose;
+	
+	foreach my $entry_type (keys %$loci_r){
+		foreach my $row (@{$loci_r->{$entry_type}}){
+			if( $$row[$header_r->{"genbank"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"genbank"}] );
+				$$row[$header_r->{"genbank"}] = $parts[2];
+				} 
+			if( $$row[$header_r->{"array_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
+				$$row[$header_r->{"array_file"}] = $parts[2];			
+				}
+			}
+		}
+	
+	}
+
 sub update_db{
 # updating any entries with CLI identifiers #
 	my ($dbh, $loci_r, $header_r) = @_;
@@ -191,6 +213,11 @@ Load and/or update CRISPR loci table entries.
 
 Loci entries will be added if no Locus_id is provided;
 otherwise, the entrie will be updated.
+
+=head2 WARNING!
+
+File names in the loci table should match files in the 
+$CLdb_HOME/genbank/ & $CLdb_HOME/array/ directories.
 
 =head1 EXAMPLES
 

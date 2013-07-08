@@ -55,7 +55,6 @@ exit;
 sub get_figs_join{
 	my ($dbh, $extra_query, $join_sql) = @_;
 
-#sqlite> select a.taxon_id, b.gene_id from loci a, genes b where a.locus_id = b.locus_id and a.subtype="I-B";
 	
 	# make query #
 	my $query = "SELECT  genes.gene_id, loci.taxon_name, loci.taxon_id, loci.locus_id from genes, loci where genes.locus_id = loci.locus_id $join_sql";
