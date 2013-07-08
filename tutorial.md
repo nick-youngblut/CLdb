@@ -1,6 +1,37 @@
 CLdb (CRISPR Loci Database) tutorial
 ====================================
 
+last updated: 7/8/13
+
+
+Preparing genbank files for compatibility with ITEP
+---------------------------------------------------
+
+### Reasoning
+
+ITEP will add PEG IDs to each CDS feature in a genbank
+unless the PEGs are already provide (by SEED for example).
+
+The genbank files do not need PEG IDs for CLdb, but it
+can be helpful for analyses of CRISPR associated genes,
+especially for when location information is involved.
+
+### Pipeline
+
+#### alpha-numeric ordering of scaffolds
+
+	genbank_contig_reorder.pl < file.gbk > file.order.gbk
+
+#### adding ITEP PEGs
+
+	addItepIdsToGenbank.py -t file.order.gbk raw.txt file.order.ID.gbk
+	
+#### merging files for analyses requiring a closed genome
+
+	union -sequence file.order.ID.gbk  -outseq file_merged.gbk -osformat2 gb -feature
+
+
+
 Example run
 -----------
 

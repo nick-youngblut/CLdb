@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETGENESINLOCI 1"
-.TH CLDB_GETGENESINLOCI 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETGENESINLOCI 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -177,6 +177,8 @@ into \s-1CRISPR\s0 loci.
 The output can be piped directly into
 CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
+.PP
+Genbank files must be in \f(CW$CLdb_HOME\fR/genbank/
 .SS "Existing genes in Genes table ('\-e', '\-a', '\-c')"
 .IX Subsection "Existing genes in Genes table ('-e', '-a', '-c')"
 By default, only new genes (ie. not found already in

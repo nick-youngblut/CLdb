@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LOADLOCI 1"
-.TH CLDB_LOADLOCI 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LOADLOCI 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -153,6 +153,10 @@ Load and/or update \s-1CRISPR\s0 loci table entries.
 .PP
 Loci entries will be added if no Locus_id is provided;
 otherwise, the entrie will be updated.
+.SS "\s-1WARNING\s0!"
+.IX Subsection "WARNING!"
+File names in the loci table should match files in the 
+\&\f(CW$CLdb_HOME\fR/genbank/ & \f(CW$CLdb_HOME\fR/array/ directories.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Usage:"

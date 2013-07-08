@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_ADDSCAFFOLDCOUNT 1"
-.TH CLDB_ADDSCAFFOLDCOUNT 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_ADDSCAFFOLDCOUNT 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,8 +141,6 @@ CLdb_addScaffoldCount.pl [flags]
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-g 	Path to the genbank files. [$CLdb_HOME/genbank/]" 4
-.IX Item "-g 	Path to the genbank files. [$CLdb_HOME/genbank/]"
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
@@ -158,6 +156,8 @@ for each organism.
 .PP
 Scaffolds are counted from 'source' in the genbank files provided
 in the loci table.
+.PP
+Genbank files must be in \f(CW$CLdb_HOME\fR/genbank/
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Usage:"

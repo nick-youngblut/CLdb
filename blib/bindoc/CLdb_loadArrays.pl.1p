@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LOADARRAYS 1"
-.TH CLDB_LOADARRAYS 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LOADARRAYS 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,8 +141,6 @@ CLdb_loadArrays.pl [flags]
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-a 	Path to the array table files. [$CLdb_HOME/array/]" 4
-.IX Item "-a 	Path to the array table files. [$CLdb_HOME/array/]"
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
 .IP "\-h	This help message" 4
@@ -158,11 +156,13 @@ the spacers and direct repeats into the CLdb database.
 .PP
 Array file names are obtained from the loci table in the
 \&\s-1CRISPR\s0 database.
+.PP
+Array files must be in \f(CW$CLdb_HOME\fR/array/
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Usage:"
 .IX Subsection "Usage:"
-CLdb_loadArrays.pl \-data \s-1CRISPR\s0.sqlite
+CLdb_loadArrays.pl \-d CLdb.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

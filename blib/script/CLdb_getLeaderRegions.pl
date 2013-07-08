@@ -16,13 +16,11 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $overlap_check, $degeneracy_bool);
 my $extra_query = "";
-my $genbank_path = "";
 my $length = 400;				# max length of leader region
 my $gene_len_cutoff = 60;		# 60 bp minimum to be considered a real gene
 GetOptions(
 	   "database=s" => \$database_file,
 	   "query=s" => \$extra_query, 
-	   "genbank=s" => \$genbank_path,
 	   "length=i" => \$length,
 	   "overlap" => \$overlap_check,
 	   "cutoff=i" => \$gene_len_cutoff,
@@ -36,7 +34,7 @@ die " ERROR: provide a database file name!\n"
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
 $database_file = File::Spec->rel2abs($database_file);
-$genbank_path = path_by_database($database_file) unless $genbank_path;
+my $genbank_path = path_by_database($database_file);
 
 
 ### MAIN
@@ -447,6 +445,8 @@ The number of repeat_groups on each side (5' & 3') of the
 CRISPR array will be printed to STDERR (unless '-v'). 
 The output values are: 'degeracies', 'locus_id', 
 '5-prime_number_repeat_groups', '3-prime_number_repeat_groups'
+
+Genbank files must be in $CLdb_HOME/genbank/
 
 =head1 EXAMPLES
 

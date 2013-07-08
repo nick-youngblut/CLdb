@@ -12,12 +12,11 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $genbank_path, $quiet);
+my ($verbose, $database_file, $quiet);
 my ($all_genes, $existing, $conflicting);
 my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
-	   "genbank=s" => \$genbank_path,
 	   "sql=s" => \$query,
 	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
 	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
@@ -33,7 +32,7 @@ die " ERROR: provide a database file name!\n"
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
 my $db_path = get_database_path($database_file);
-$genbank_path = "$db_path/genbank" unless $genbank_path;
+my $genbank_path = "$db_path/genbank";
 $genbank_path = File::Spec->rel2abs($genbank_path);
 
 
@@ -352,6 +351,8 @@ into CRISPR loci.
 The output can be piped directly into
 CLdb_loadGenes.pl or the aliases (or other values)
 can be edited first.
+
+Genbank files must be in $CLdb_HOME/genbank/
 
 =head2 Existing genes in Genes table ('-e', '-a', '-c')
 

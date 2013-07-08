@@ -55,10 +55,9 @@ exit;
 sub get_figs_join{
 	my ($dbh, $extra_query, $join_sql) = @_;
 
-#sqlite> select a.taxon_id, b.gene_id from loci a, genes b where a.locus_id = b.locus_id and a.subtype="I-B";
 	
 	# make query #
-	my $query = "SELECT  a.gene_id, b.taxon_name, b.taxon_id, b.locus_id from genes a, loci b where a.locus_id = b.locus_id $join_sql";
+	my $query = "SELECT  genes.gene_id, loci.taxon_name, loci.taxon_id, loci.locus_id from genes, loci where genes.locus_id = loci.locus_id $join_sql";
 	$query = join(" ", $query, $extra_query);
 	
 	# status #
@@ -183,7 +182,7 @@ CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.404
 
 =head2 Using '-q' to pick genes in operons (and in subtype 'I-B')
 
-CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND a.In_Operon='yes'"
+CLdb_getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND genes.In_Operon='yes'"
 
 =head1 AUTHOR
 

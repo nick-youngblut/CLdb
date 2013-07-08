@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-07-05" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETLEADERREGIONS 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -188,6 +188,8 @@ The number of repeat_groups on each side (5' & 3') of the
 \&\s-1CRISPR\s0 array will be printed to \s-1STDERR\s0 (unless '\-v'). 
 The output values are: 'degeracies', 'locus_id', 
 \&'5\-prime_number_repeat_groups', '3\-prime_number_repeat_groups'
+.PP
+Genbank files must be in \f(CW$CLdb_HOME\fR/genbank/
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Leader regions for all loci"
