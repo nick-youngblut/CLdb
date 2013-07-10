@@ -109,6 +109,8 @@ sub get_arrays{
 	
 	my %arrays;
 	foreach my $row (@$ret){
+		die " ERROR: not spacer/repeat group found!\n\tWas CLdb_groupArrayElements.pl run?\n"
+			unless $$row[1]; 
 		$arrays{$$row[0]}{$$row[1]} = $$row[2];
 		}
 	
