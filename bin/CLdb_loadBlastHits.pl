@@ -134,6 +134,9 @@ sub get_blast_hits{
 		die " ERROR: blast hit table should have 12-13 columns!\n"
 			unless $#line == 11 || $#line == 12;
 		
+		# removing group from groupID #
+		$line[0] =~ s/^Group//;
+		
 		# parsing subject if needed #
 		if($delimiter){
 			my @t_s = split /$delimiter/, $line[1], 2;
