@@ -186,6 +186,29 @@ UNIQUE (Taxon_ID, Taxon_name, Scaffold_name)
 ON CONFLICT REPLACE
 );
 
+
+DROP TABLE IF EXISTS spacer_hclust;
+
+CREATE TABLE spacer_hclust (
+Spacer_ID	TEXT	NOT NULL,
+Cutoff	REAL	NOT NULL,
+Cluster_ID	INTEGER	NOT NULL,
+UNIQUE (Spacer_ID, Cutoff, Cluster_ID)
+ON CONFLICT REPLACE
+);
+
+
+DROP TABLE IF EXISTS directrepeat_hclust;
+
+CREATE TABLE directrepeat_hclust (
+Repeat_ID	TEXT	NOT NULL,
+Cutoff	REAL	NOT NULL,
+Cluster_ID	INTEGER	NOT NULL,
+UNIQUE (Repeat_ID, Cutoff, Cluster_ID)
+ON CONFLICT REPLACE
+);
+
+
 COMMIT;
 
 HERE
