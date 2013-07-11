@@ -281,14 +281,39 @@ perldoc CLdb_spacerBlast.pl
 
 =head1 DESCRIPTION
 
+A wrapper around other CLdb scripts for blasting all or
+a subset of spacer groups.
 
+=head2 The script's procedure is:
+
+=over
+
+=item * Select spacer & direct repeat (DR) groups (can refine to particular taxa & subtypes)
+
+=item * BLASTn-short of spacer & DR groups against provide subjects (e.g. genomes)
+
+=item * Determining which spacer blast hits are hitting CRISPR arrays (if DRs hit adjacent)
+
+=item * Adding the blast hits and subjects (sequences with a hit) to CLdb
+
+=back
+
+=head2 '-subject' flag
+
+Provide either a subject fasta file and optionally a Taxon_ID and Taxon_Name,
+or provide a tab-delimited file (3 columns) with subject fasta files and
+optionally Taxon_IDs and Taxon_Names.
+
+Example "-subject ecoli.fna 666666.452 escherichia_coli"
+
+The Taxon_IDs and Taxon_names can be used, for example, to see if CRISPR
+spacers are hitting other places in the same genome (and not in other CRISPR arrays).
 
 =head1 EXAMPLES
 
-=head2 Usage:
+=head2 Spacer blast of subtype I-B I-C spacers against Ecoli
 
-CLdb_spacerBlast.pl <read1.fastq> <read2.fastq> <output directory or basename>
-
+CLdb_spacerBlast.pl -da CLdb.sqlite -subtype I-B I-C -subject ecoli.fna 666666.452 Escherichia_coli
 
 =head1 AUTHOR
 
@@ -296,7 +321,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
