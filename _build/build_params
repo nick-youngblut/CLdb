@@ -125,6 +125,7 @@ do{ my $x = [
                              './bin/CLdb_getRegionSequence.pl',
                              './bin/CLdb_spacerBlast.pl',
                              './bin/CLdb_loadLoci.pl',
+                             './bin/CLdb_hclusterArrays.pl',
                              './bin/CLdb_loadDRConsensus.pl',
                              './bin/CLdb_loadArrays.pl',
                              './bin/CLdb_getGenesInLoci.pl',

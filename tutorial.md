@@ -125,6 +125,10 @@ Example database setup
 
 	$ CLdb_groupArrayElements.pl -d CLdb.sqlite -s -r 
 
+#### pseudo-hierarchical clustering of spacers & DRs (good for plotting loci)
+
+	$ CLdb_hclusterArrays -d CLdb.sqlite -s -r 
+
 #### calculating direct repeat consensus sequences
 
 	$ CLdb_loadDRConsensus.pl -da CLdb.sqlite
