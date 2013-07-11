@@ -123,87 +123,46 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_ARRAYGROUP2INFO 1"
-.TH CLDB_ARRAYGROUP2INFO 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_SPACERBLASTDRFILTER 1"
+.TH CLDB_SPACERBLASTDRFILTER 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_arrayGroup2Info.pl \-\- get Info on spacer or repeat groups
+CLdb_spacerBlastDRFilter.pl \-\- filter spacer blast using direct\-repeat blast
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_arrayGroup2Info.pl [flags] < groups.txt > array_info.txt
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+CLdb_spacerBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+.SS "options"
+.IX Subsection "options"
+.IP "\-r 	Range allowable between spacer & \s-1DR\s0 blast hit (bp). [30]" 4
+.IX Item "-r 	Range allowable between spacer & DR blast hit (bp). [30]"
 .PD 0
-.IP "\-repeat" 4
-.IX Item "-repeat"
-.PD
-Get direct repeats instead of spacers.
-.IP "\-column" 4
-.IX Item "-column"
-The group column in the input table (index by 1). [1]
-.IP "\-subtype" 4
-.IX Item "-subtype"
-Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine which sequences are returned.
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
+.IP "\-a 	Do not filter hit. Instead, add an In_Array column (yes|no). [\s-1FALSE\s0]" 4
+.IX Item "-a 	Do not filter hit. Instead, add an In_Array column (yes|no). [FALSE]"
+.IP "\-v	Verbose output" 4
+.IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_arrayGroup2Info.pl
+perldoc CLdb_spacerBlastDRFilter.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get info for spacer or direct-repeat groups.
-For instance, getting all spacers for spacer groups
-that blasted to a genome.
+Filter out spacer blast hits to \s-1CRISPR\s0 arrays by
+removing all spacer blast hits that hit adjacent
+to 2 direct repeat blast hits.
 .PP
-The input is a list of group IDs (integers or 'GroupINTEGER').
-.PP
-A table is returned with the following columns:
-.IP "\(bu" 4
-Spacer/Repeat_group
-.IP "\(bu" 4
-Spacer/Repeat_ID
-.IP "\(bu" 4
-Locus_ID
-.IP "\(bu" 4
-Taxon_name
-.IP "\(bu" 4
-Taxon_id
-.IP "\(bu" 4
-Subtype
+Use '\-a' if you want all hits including spacer
+hits to an array (last column will designate whether
+spacer hit falls in a \s-1CRISPR\s0 array).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Get all info for Spacer_group 1"
-.IX Subsection "Get all info for Spacer_group 1"
-echo 1 | CLdb_arrayGroup2Info.pl \-d CLdb.sqlite > spacerG1_info.txt
-.SS "Get all info for a list of repeat groups"
-.IX Subsection "Get all info for a list of repeat groups"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite \-r < repeat_groups.txt > array_info.txt
-.SS "Get just subtype 'I\-B' info for a list of spacer groups > array_info.txt"
-.IX Subsection "Get just subtype 'I-B' info for a list of spacer groups > array_info.txt"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite \-sub I\-B < spacer_groups.txt > array_info.txt
-.SS "Get info for table of \s-1BLAST\s0 hits where spacer groups were the query"
-.IX Subsection "Get info for table of BLAST hits where spacer groups were the query"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
+.SS "Basic Usage:"
+.IX Subsection "Basic Usage:"
+CLdb_spacerBlastDRFilter.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

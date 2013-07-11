@@ -83,8 +83,9 @@ sub call_CLdb_loadBlastHits{
 	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
 	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];
-		#print Dumper $cmd; exit;
-	system($cmd);
+	
+	print Dumper $cmd; exit;
+	
 	}
 
 sub call_CLdb_spacerBlastDRFilter{
@@ -221,53 +222,15 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlast.pl -- wrapper for spacer blasting
+template.pl -- script template
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlast.pl [flags] < input > output
+template.pl [options] < input > output
 
-=head2 Required flags
-
-=over
-
-=item -database
-
-CLdb database.
-
-=item -subject
-
-Either subject file or 1-3 arguments (see DESCRIPTION).
-
-=back
-
-=head2 Optional flags
+=head2 options
 
 =over
-
-=item -subtype
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query
-
-Extra sql to refine which sequences are returned.
-
-=item -blast
-
-BLASTn parameters (besides required flags). [-evalue 0.00001]
-
-=item -range
-
-Range allowable between spacer & DR blast hit (bp). [30]
 
 =item -v	Verbose output
 
@@ -277,18 +240,24 @@ Range allowable between spacer & DR blast hit (bp). [30]
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlast.pl
+perldoc template.pl
 
 =head1 DESCRIPTION
 
-
+The flow of execution is roughly:
+   1) Step 1
+   2) Step 2
+   3) Step 3
 
 =head1 EXAMPLES
 
-=head2 Usage:
+=head2 Usage method 1
 
-CLdb_spacerBlast.pl <read1.fastq> <read2.fastq> <output directory or basename>
+template.pl <read1.fastq> <read2.fastq> <output directory or basename>
 
+=head2 Usage method 2
+
+template.pl <library file> <output directory or basename>
 
 =head1 AUTHOR
 

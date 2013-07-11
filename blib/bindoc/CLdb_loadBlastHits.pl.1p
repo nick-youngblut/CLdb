@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_ARRAYGROUP2INFO 1"
-.TH CLDB_ARRAYGROUP2INFO 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADBLASTHITS 1"
+.TH CLDB_LOADBLASTHITS 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_arrayGroup2Info.pl \-\- get Info on spacer or repeat groups
+CLdb_loadBlastHits.pl \-\- loading spacer BLASTn hits (& subject sequences)
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_arrayGroup2Info.pl [flags] < groups.txt > array_info.txt
+CLdb_loadBlastHits.pl [flags] < blast_table.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -141,69 +141,46 @@ CLdb_arrayGroup2Info.pl [flags] < groups.txt > array_info.txt
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
-.IP "\-repeat" 4
-.IX Item "-repeat"
+.IP "\-subject" 4
+.IX Item "-subject"
 .PD
-Get direct repeats instead of spacers.
-.IP "\-column" 4
-.IX Item "-column"
-The group column in the input table (index by 1). [1]
-.IP "\-subtype" 4
-.IX Item "-subtype"
-Refine query to specific a subtype(s) (>1 argument allowed).
+Subject used for blasting.
 .IP "\-taxon_id" 4
 .IX Item "-taxon_id"
-Refine query to specific a taxon_id(s) (>1 argument allowed).
+Taxon_ID of subject (\s-1FIG\s0 \s-1ID\s0)
 .IP "\-taxon_name" 4
 .IX Item "-taxon_name"
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine which sequences are returned.
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
+Taxon_name of subject (taxonomic classification)
+.IP "\-delimiter" 4
+.IX Item "-delimiter"
+Character(s) delimiting taxon_id/taxon_name & scaffold of subject.
+Example: column2 in \s-1BLAST\s0 file = \*(L"E.coli_\|_scaffold1\*(R"
+.IP "\-hits" 4
+.IX Item "-hits"
+Load just scaffolds with spacer blast hits? [\s-1TRUE\s0]
+.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
+.IX Item "-v	Verbose output. [TRUE]"
 .PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_arrayGroup2Info.pl
+perldoc CLdb_loadBlastHits.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get info for spacer or direct-repeat groups.
-For instance, getting all spacers for spacer groups
-that blasted to a genome.
+Loading spacer \s-1BLAST\s0 results into CLdb for further analysis.
 .PP
-The input is a list of group IDs (integers or 'GroupINTEGER').
-.PP
-A table is returned with the following columns:
-.IP "\(bu" 4
-Spacer/Repeat_group
-.IP "\(bu" 4
-Spacer/Repeat_ID
-.IP "\(bu" 4
-Locus_ID
-.IP "\(bu" 4
-Taxon_name
-.IP "\(bu" 4
-Taxon_id
-.IP "\(bu" 4
-Subtype
+Either a Taxon_ID or or Taxon_name must be provided.
+If the taxon_id or taxon_name is in the 'subject' column
+of the blast table, provide \*(L"\s-1SUBJECT\s0\*(R" for \-taxon_id or \-taxon_name.
+If the ID/name is in the 2nd part of the subject name,
+provide \*(L"\s-1SUBJECT_2\s0\*(R".
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Get all info for Spacer_group 1"
-.IX Subsection "Get all info for Spacer_group 1"
-echo 1 | CLdb_arrayGroup2Info.pl \-d CLdb.sqlite > spacerG1_info.txt
-.SS "Get all info for a list of repeat groups"
-.IX Subsection "Get all info for a list of repeat groups"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite \-r < repeat_groups.txt > array_info.txt
-.SS "Get just subtype 'I\-B' info for a list of spacer groups > array_info.txt"
-.IX Subsection "Get just subtype 'I-B' info for a list of spacer groups > array_info.txt"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite \-sub I\-B < spacer_groups.txt > array_info.txt
-.SS "Get info for table of \s-1BLAST\s0 hits where spacer groups were the query"
-.IX Subsection "Get info for table of BLAST hits where spacer groups were the query"
-CLdb_arrayGroup2Info.pl \-d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
+.SS "Usage:"
+.IX Subsection "Usage:"
+CLdb_loadBlastHits.pl \-da CLdb.sqlite \-subject 1.F.A.1A.3_peg_merged.fna < spacers_1.F.A.1A.3_blast.txt \-taxon_name \*(L"1.F.A.1A.3\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

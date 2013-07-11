@@ -30,6 +30,8 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
+print STDERR " WARNING: neither '-s' nor '-r' flags used. No grouping will be performed!\n"
+	unless $spacer_bool || $dr_bool;
 $database_file = File::Spec->rel2abs($database_file);
 $path = File::Spec->rel2abs($path) if $path;
 

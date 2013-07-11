@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETLEADERREGIONS 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,7 +133,7 @@
 CLdb_getLeaderRegion.pl \-\- getting leader region sequences
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_getLeaderRegion.pl [flags]
+CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4

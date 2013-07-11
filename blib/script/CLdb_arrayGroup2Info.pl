@@ -137,7 +137,7 @@ CLdb_arrayGroup2Info.pl -- get Info on spacer or repeat groups
 
 =head1 SYNOPSIS
 
-CLdb_arrayGroup2Info.pl [flags] < groups.txt > array.fasta
+CLdb_arrayGroup2Info.pl [flags] < groups.txt > array_info.txt
 
 =head2 Required flags
 
@@ -215,15 +215,19 @@ A table is returned with the following columns:
 
 =head2 Get all info for Spacer_group 1
 
-echo 1 | CLdb_arrayGroup2Info.pl -d CRISPR.sqlite 
+echo 1 | CLdb_arrayGroup2Info.pl -d CLdb.sqlite > spacerG1_info.txt
 
 =head2 Get all info for a list of repeat groups
 
-CLdb_arrayGroup2Info.pl -d CRISPR.sqlite -r < repeat_groups.txt
+CLdb_arrayGroup2Info.pl -d CLdb.sqlite -r < repeat_groups.txt > array_info.txt
 
-=head2 Get just subtype 'I-B' info for a list of spacer groups
+=head2 Get just subtype 'I-B' info for a list of spacer groups > array_info.txt
 
-CLdb_arrayGroup2Info.pl -d CRISPR.sqlite -sub I-B < spacer_groups.txt
+CLdb_arrayGroup2Info.pl -d CLdb.sqlite -sub I-B < spacer_groups.txt > array_info.txt
+
+=head2 Get info for table of BLAST hits where spacer groups were the query
+
+CLdb_arrayGroup2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
 
 =head1 AUTHOR
 
