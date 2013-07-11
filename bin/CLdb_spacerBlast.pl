@@ -18,6 +18,7 @@ my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
 my $blast_params = "-evalue 0.00001";
 my $extra_query = "";
+my $range = 30;		# spacer-DR blast hit overlap (bp)
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -26,6 +27,7 @@ GetOptions(
 	   "query=s" => \$extra_query, 
 	   "blast=s" => \$blast_params,
 	   "subject=s{,}" => \@subject_in,		# blast subject
+	   "range=i" => \$range,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -35,7 +37,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
-die " ERROR: provide >= 1 blast subject fasta file\n"
+die " ERROR: provide a blast_subject file or 1 subject (& taxon_id) (& taxon_name)\n"
 	unless @subject_in;
 	
 my $db_path = get_database_path($database_file);
@@ -47,6 +49,9 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# loading subject #
+my $sub_in_r = load_subject(\@subject_in);
+
 # making blast directory #
 my $blast_dir = make_blast_dir($db_path);
 
@@ -55,33 +60,114 @@ my $spacer_fasta = call_CLdb_array2fasta($database_file, \@subtype, \@taxon_id, 
 my $DR_fasta = call_CLdb_array2fasta($database_file, \@subtype, \@taxon_id, \@taxon_name, $extra_query, "repeat", $blast_dir);
 
 # blasting #
-foreach my $subject (@subject_in){
+foreach my $subject (@$sub_in_r){
+	# make blast db #
 	my $blast_db = make_blast_db($subject, $blast_dir);
-	spacer_blast($spacer_fasta, $blast_params, $blast_db, $blast_dir);
+	
+	# blasting #
+	my $spacer_blast_out = spacer_blast($spacer_fasta, $blast_params, $blast_db, $blast_dir);
+	my $DR_blast_out = DR_blast($DR_fasta, $blast_params, $blast_db, $blast_dir);
+
+	# filtering blast #
+	my $filt_blast_out = call_CLdb_spacerBlastDRFilter($blast_dir, $spacer_blast_out, $DR_blast_out, $range);
+	
+	# loading blast into db #
+	call_CLdb_loadBlastHits($filt_blast_out, $database_file, $subject);
 	}
 
 
 ### Subroutines
+sub call_CLdb_loadBlastHits{
+	my ($filt_blast_out, $database_file, $subject) = @_;
+
+	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
+	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
+	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];
+	
+	print Dumper $cmd; exit;
+	
+	}
+
+sub call_CLdb_spacerBlastDRFilter{
+# calling CLdb_spacerBlastDRFilter for adding spacer blasts to database #
+	my ($blast_dir, $spacer_blast_out, $DR_blast_out, $range) = @_;
+	
+	(my $out = $spacer_blast_out) =~ s/\.[^.]+$|$/_filt.txt/;
+	my $cmd = "CLdb_spacerBlastDRFilter.pl -a -r $range $spacer_blast_out $DR_blast_out > $out";
+		#print Dumper $cmd; exit;
+	`$cmd`;
+	
+	return $out;
+	}
+
+sub DR_blast{
+	my ($DR_fasta, $blast_params, $blast_db, $blast_dir) = @_;
+	
+	my $out = "$blast_dir/DR_blast.txt";
+	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $DR_fasta > $out $blast_params";
+		#print Dumper $cmd; exit;
+	`$cmd`;
+	
+	return $out;
+	}
+
 sub spacer_blast{
 	my ($spacer_fasta, $blast_params, $blast_db, $blast_dir) = @_;
-	
-	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta > $blast_dir/spacer_blast.txt $blast_params";
+
+	my $out = "$blast_dir/spacer_blast.txt";
+	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta > $out $blast_params";
 		#print Dumper $cmd; exit;
-	system("$cmd");
+	`$cmd`;
+	
+	return $out;
 	}
 
 sub make_blast_db{
 # making blastdb for subject #
 	my ($subject, $blast_dir) = @_;
 	
-	my @parts = File::Spec->splitpath(File::Spec->rel2abs($subject));
+	die " ERROR: $$subject[0] not found!\n" unless -e $$subject[0];
+	
+	my @parts = File::Spec->splitpath(File::Spec->rel2abs($$subject[0]));
 	(my $out = $parts[2]) =~ s/\.[^.]+$|$/_blast.db/;
 	$out = join("/", $blast_dir, $out);
 	
-	my $cmd = "makeblastdb -dbtype nucl -in $subject -out $out";
+	my $cmd = "makeblastdb -dbtype nucl -in $$subject[0] -out $out";
 	`$cmd`;
 	
 	return $out;
+	}
+
+sub load_subject{
+# loading subject, either a file or 1-3 arguments #
+# return @@: subject_fasta_file, taxon_id, taxon_name #
+	my ($subject_in_r) = @_;
+	
+	unless($$subject_in_r[1]){
+		my @tmp = $$subject_in_r[0];
+		$subject_in_r = \@tmp;
+		}
+	
+	if(scalar @$subject_in_r == 1 && -e $$subject_in_r[0]){		# possibly file
+		open IN, $$subject_in_r[0] or die $!;
+		my @subjects;
+		
+		while(<IN>){
+			chomp;
+			if($.==1 && /^>/){		# fasta; no subject file 
+				return [$subject_in_r];
+				}
+			
+			next if /^\s*$/;
+			my @line = split /\t/;
+			push @subjects, \@line;
+			}
+		return \@subjects;
+		}
+	else{
+		return [$subject_in_r];
+		}
+
 	}
 
 sub call_CLdb_array2fasta{
