@@ -124,18 +124,44 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SPACERBLAST 1"
-.TH CLDB_SPACERBLAST 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SPACERBLAST 1 "2013-07-11" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-template.pl \-\- script template
+CLdb_spacerBlast.pl \-\- wrapper for spacer blasting
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-template.pl [options] < input > output
-.SS "options"
-.IX Subsection "options"
+CLdb_spacerBlast.pl [flags] < input > output
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-database" 4
+.IX Item "-database"
+CLdb database.
+.IP "\-subject" 4
+.IX Item "-subject"
+Either subject file or 1\-3 arguments (see \s-1DESCRIPTION\s0).
+.SS "Optional flags"
+.IX Subsection "Optional flags"
+.IP "\-subtype" 4
+.IX Item "-subtype"
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine which sequences are returned.
+.IP "\-blast" 4
+.IX Item "-blast"
+BLASTn parameters (besides required flags). [\-evalue 0.00001]
+.IP "\-range" 4
+.IX Item "-range"
+Range allowable between spacer & \s-1DR\s0 blast hit (bp). [30]
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
 .PD 0
@@ -144,27 +170,42 @@ template.pl [options] < input > output
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc template.pl
+perldoc CLdb_spacerBlast.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+A wrapper around other CLdb scripts for blasting all or
+a subset of spacer groups.
+.SS "The script's procedure is:"
+.IX Subsection "The script's procedure is:"
+.IP "\(bu" 4
+Select spacer & direct repeat (\s-1DR\s0) groups (can refine to particular taxa & subtypes)
+.IP "\(bu" 4
+BLASTn-short of spacer & \s-1DR\s0 groups against provide subjects (e.g. genomes)
+.IP "\(bu" 4
+Determining which spacer blast hits are hitting \s-1CRISPR\s0 arrays (if DRs hit adjacent)
+.IP "\(bu" 4
+Adding the blast hits and subjects (sequences with a hit) to CLdb
+.SS "'\-subject' flag"
+.IX Subsection "'-subject' flag"
+Provide either a subject fasta file and optionally a Taxon_ID and Taxon_Name,
+or provide a tab-delimited file (3 columns) with subject fasta files and
+optionally Taxon_IDs and Taxon_Names.
+.PP
+Example \*(L"\-subject ecoli.fna 666666.452 escherichia_coli\*(R"
+.PP
+The Taxon_IDs and Taxon_names can be used, for example, to see if \s-1CRISPR\s0
+spacers are hitting other places in the same genome (and not in other \s-1CRISPR\s0 arrays).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage method 1"
-.IX Subsection "Usage method 1"
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
-.SS "Usage method 2"
-.IX Subsection "Usage method 2"
-template.pl <library file> <output directory or basename>
+.SS "Spacer blast of subtype I\-B I\-C spacers against Ecoli"
+.IX Subsection "Spacer blast of subtype I-B I-C spacers against Ecoli"
+CLdb_spacerBlast.pl \-da CLdb.sqlite \-subtype I\-B I\-C \-subject ecoli.fna 666666.452 Escherichia_coli
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

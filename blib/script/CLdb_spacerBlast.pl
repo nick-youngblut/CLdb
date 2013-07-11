@@ -83,9 +83,8 @@ sub call_CLdb_loadBlastHits{
 	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
 	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];
-	
-	print Dumper $cmd; exit;
-	
+		#print Dumper $cmd; exit;
+	system($cmd);
 	}
 
 sub call_CLdb_spacerBlastDRFilter{
@@ -222,15 +221,53 @@ __END__
 
 =head1 NAME
 
-template.pl -- script template
+CLdb_spacerBlast.pl -- wrapper for spacer blasting
 
 =head1 SYNOPSIS
 
-template.pl [options] < input > output
+CLdb_spacerBlast.pl [flags] < input > output
 
-=head2 options
+=head2 Required flags
 
 =over
+
+=item -database
+
+CLdb database.
+
+=item -subject
+
+Either subject file or 1-3 arguments (see DESCRIPTION).
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -subtype
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query
+
+Extra sql to refine which sequences are returned.
+
+=item -blast
+
+BLASTn parameters (besides required flags). [-evalue 0.00001]
+
+=item -range
+
+Range allowable between spacer & DR blast hit (bp). [30]
 
 =item -v	Verbose output
 
@@ -240,24 +277,43 @@ template.pl [options] < input > output
 
 =head2 For more information:
 
-perldoc template.pl
+perldoc CLdb_spacerBlast.pl
 
 =head1 DESCRIPTION
 
-The flow of execution is roughly:
-   1) Step 1
-   2) Step 2
-   3) Step 3
+A wrapper around other CLdb scripts for blasting all or
+a subset of spacer groups.
+
+=head2 The script's procedure is:
+
+=over
+
+=item * Select spacer & direct repeat (DR) groups (can refine to particular taxa & subtypes)
+
+=item * BLASTn-short of spacer & DR groups against provide subjects (e.g. genomes)
+
+=item * Determining which spacer blast hits are hitting CRISPR arrays (if DRs hit adjacent)
+
+=item * Adding the blast hits and subjects (sequences with a hit) to CLdb
+
+=back
+
+=head2 '-subject' flag
+
+Provide either a subject fasta file and optionally a Taxon_ID and Taxon_Name,
+or provide a tab-delimited file (3 columns) with subject fasta files and
+optionally Taxon_IDs and Taxon_Names.
+
+Example "-subject ecoli.fna 666666.452 escherichia_coli"
+
+The Taxon_IDs and Taxon_names can be used, for example, to see if CRISPR
+spacers are hitting other places in the same genome (and not in other CRISPR arrays).
 
 =head1 EXAMPLES
 
-=head2 Usage method 1
+=head2 Spacer blast of subtype I-B I-C spacers against Ecoli
 
-template.pl <read1.fastq> <read2.fastq> <output directory or basename>
-
-=head2 Usage method 2
-
-template.pl <library file> <output directory or basename>
+CLdb_spacerBlast.pl -da CLdb.sqlite -subtype I-B I-C -subject ecoli.fna 666666.452 Escherichia_coli
 
 =head1 AUTHOR
 
@@ -265,7 +321,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+sharchaea.life.uiuc.edu:/home/git/CLdb/
 
 =head1 COPYRIGHT
 
