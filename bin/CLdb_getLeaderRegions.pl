@@ -382,7 +382,7 @@ CLdb_getLeaderRegion.pl -- getting leader region sequences
 
 =head1 SYNOPSIS
 
-CLdb_getLeaderRegion.pl [flags]
+CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 
 =head2 Required flags
 

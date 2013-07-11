@@ -151,6 +151,41 @@ UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 
+
+DROP TABLE IF EXISTS blast_hits;
+
+CREATE TABLE blast_hits (
+Spacer_group	TEXT	NOT NULL,
+Taxon_ID	TEXT,
+Taxon_name	TEXT,
+Subject	TEXT	NOT NULL,
+pident	REAL	NOT NULL,
+length	INTEGER	NOT NULL,
+mismatch	INTEGER	NOT NULL,
+gapopen	INTEGER	NOT NULL,
+qstart	INTEGER	NOT NULL,
+qend	INTEGER	NOT NULL,
+sstart	INTEGER	NOT NULL,
+send	INTEGER	NOT NULL,
+evalue	TEXT	NOT NULL,
+bitscore	INTEGER	NOT NULL,
+CRISPR_array	TEXT,
+UNIQUE( Spacer_group, Taxon_ID, Taxon_name, Subject, sstart, send)
+ON CONFLICT REPLACE
+);
+
+
+DROP TABLE IF EXISTS blast_subject;
+
+CREATE TABLE blast_subject (
+Taxon_ID	TEXT,
+Taxon_name	TEXT,
+Scaffold_name	TEXT	NOT NULL,
+Scaffold_sequence	TEXT	NOT NULL,
+UNIQUE (Taxon_ID, Taxon_name, Scaffold_name)
+ON CONFLICT REPLACE
+);
+
 COMMIT;
 
 HERE

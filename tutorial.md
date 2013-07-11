@@ -1,7 +1,7 @@
 CLdb (CRISPR Loci Database) tutorial
 ====================================
 
-last updated: 7/8/13
+last updated: 7/10/13
 
 
 Preparing genbank files for compatibility with ITEP
@@ -32,12 +32,10 @@ especially for when location information is involved.
 
 
 
-Example run
------------
+Example database setup
+======================
 
-### Setup
-
-	CLdb setup requires the following files:
+#### Files required
 
 * Loci table (tab-delimited); columns need:
 
@@ -87,7 +85,6 @@ Example run
 	* FIG-PEG IDs for CDS features in db_xref tags (e.g. "fig|6666666.40253.peg.2362")
 
 
-### EXAMPLE RUN
 
 #### Directory setup
 
@@ -102,33 +99,103 @@ Example run
 		# place/symlink array files in this directory
 
 
+
+### Initial DB construction 
+
 #### making the tables in the database
 
 	$ CLdb_makeDB.pl -r
 
 #### loading the loci table
 
-	$ CLdb_loadLoci.pl -d CRISPR.sqlite < loci.txt
+	$ CLdb_loadLoci.pl -d CLdb.sqlite < loci.txt
 
 #### adding number of scaffolds to the loci table
 
-	$ CLdb_addScaffolds.pl -d CRISPR.sqlite
+	$ CLdb_addScaffolds.pl -d CLdb.sqlite
+
+
+### Spacers and direct repeats
 
 #### loading arrays and direct repeats to their respective tables
 
-	$ CLdb_loadArrays.pl -d CRISPR.sqlite
+	$ CLdb_loadArrays.pl -d CLdb.sqlite
 
 #### grouping spacers and direct repeats (groups with same sequence)
 
-	$ CLdb_groupArrayElements.pl -d CRISPR.sqlite -s -r 
+	$ CLdb_groupArrayElements.pl -d CLdb.sqlite -s -r 
+
+#### calculating direct repeat consensus sequences
+
+	$ CLdb_loadDRConsensus.pl -da CLdb.sqlite
+
+
+### CRISPR-associated genes
 
 #### getting genes in CRISPR locus region (defined in Loci table)
 
-	$ CLdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_table.txt
+	$ CLdb_getGenesInLoci.pl -d CLdb.sqlite > gene_table.txt
 		# <optional> manually currate the 'gene_alias' column values
 	
 #### loading genes into the Genes table 
 
-	$ CLdb_loadGenes.pl -d CRISPR.sqlite < gene_table.txt
+	$ CLdb_loadGenes.pl -d CLdb.sqlite < gene_table.txt
+
+
+### Leader region
+	
+#### getting potential leader regions
+
+	CLdb_getLeaderRegions.pl -d CLdb.sqlite > possible_leaders.fna
+
+##### getting potential leader regions for just 1 subtype
+	
+	CLdb_getLeaderRegions.pl -d CLdb.sqlite -q "AND subtype='I-B'" > leaders_IB.fna
+
+##### identifying leaders
+
+	mafft --adjustdirection leaders_IB.fna > leaders_IB_aln.fna
+		# if 2 leaders written for a locus, remove the 1 that does not align
+		# determine where leader conservation ends 
+			# for example: conservation ends 50bp from end of alignment
+			# this will be trimmed off of the leader region when added to the database
+		
+#### loading identified leader regions
+
+	CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
+		# '-t 50' = trim off the last 50bp of unconserved sequence in the alignment
+		# both the aligned and unaligned sequenced are needed because mafft can alter orientation during alignment (--adjustdirect)
+
+#### grouping leaders (100% sequence identity)
+
+	CLdb_groupLeaders.pl -da CLdb.sqlite
+
+
+
+
+
+Workflows
+=========
+
+### Getting a fasta of all spacers
+
+	$ CLdb_array2fasta.pl -d CLdb.sqlite > spacers.fna
+	
+### Getting a fasta of all spacers for a particular subtype
+
+	$ CLdb_array2fasta.pl -d CLdb.sqlite -sub "I-B" > spacers_IB.fna
+
+### Getting a fasta of all spacers for 2 subtypes
+
+	$ CLdb_array2fasta.pl -d CLdb.sqlite -sub "I-B" "I-C" > spacers_IB_IC.fna
+
+### Getting a fasta of all direct repeats
+
+	$ CLdb_array2fasta.pl -d CLdb.sqlite -r > DR.fna
+
+### Getting information for spacer/DR groups IDs (Example: from table of BLAST hits)
+	
+	$ CLdb_arrayGroup2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
+	
 
 
