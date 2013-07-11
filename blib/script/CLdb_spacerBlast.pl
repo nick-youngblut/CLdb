@@ -61,6 +61,13 @@ my $DR_fasta = call_CLdb_array2fasta($database_file, \@subtype, \@taxon_id, \@ta
 
 # blasting #
 foreach my $subject (@$sub_in_r){
+	print STDERR "### BLAST subject: \"$$subject[0]\" ###\n";
+	
+	unless ($$subject[1] || $$subject[2]){
+		print STDERR " WARNING: no Taxon_ID or Taxon_Name provided for $$subject[0]! Skipping!\n";
+		next;
+		}
+	
 	# make blast db #
 	my $blast_db = make_blast_db($subject, $blast_dir);
 	
@@ -300,11 +307,13 @@ a subset of spacer groups.
 
 =head2 '-subject' flag
 
-Provide either a subject fasta file and optionally a Taxon_ID and Taxon_Name,
+Provide either a subject fasta file and a Taxon_ID and/or a Taxon_Name,
 or provide a tab-delimited file (3 columns) with subject fasta files and
-optionally Taxon_IDs and Taxon_Names.
+a Taxon_IDs and/or Taxon_Names (columns: fasta_file, Taxon_id, Taxon_Name).
 
-Example "-subject ecoli.fna 666666.452 escherichia_coli"
+Example1 "-subject ecoli.fna 666666.452 escherichia_coli"
+
+Example2 "-subject ecoli.fna '' escherichia_coli"
 
 The Taxon_IDs and Taxon_names can be used, for example, to see if CRISPR
 spacers are hitting other places in the same genome (and not in other CRISPR arrays).

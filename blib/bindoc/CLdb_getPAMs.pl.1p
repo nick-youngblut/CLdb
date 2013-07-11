@@ -123,29 +123,27 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_SPACERBLAST 1"
-.TH CLDB_SPACERBLAST 1 "2013-07-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_GETPAMS 1"
+.TH CLDB_GETPAMS 1 "2013-07-11" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_spacerBlast.pl \-\- wrapper for spacer blasting
+CLdb_getPAMs.pl \-\- getting PAMs from spacer blast hits
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_spacerBlast.pl [flags] < input > output
+CLdb_getPAMs.pl [flags] > PAM\-spacer.fan
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-database" 4
-.IX Item "-database"
-CLdb database.
-.IP "\-subject" 4
-.IX Item "-subject"
-Either subject file or 1\-3 arguments (see \s-1DESCRIPTION\s0).
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "options"
+.IX Subsection "options"
+.PD 0
 .IP "\-subtype" 4
 .IX Item "-subtype"
+.PD
 Refine query to specific a subtype(s) (>1 argument allowed).
 .IP "\-taxon_id" 4
 .IX Item "-taxon_id"
@@ -155,53 +153,62 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 .IP "\-query" 4
 .IX Item "-query"
-Extra sql to refine which sequences are returned.
-.IP "\-blast" 4
-.IX Item "-blast"
-BLASTn parameters (besides required flags). [\-evalue 0.00001]
-.IP "\-range" 4
-.IX Item "-range"
-Range allowable between spacer & \s-1DR\s0 blast hit (bp). [30]
-.IP "\-v	Verbose output" 4
-.IX Item "-v	Verbose output"
+Extra sql to refine the query.
+.IP "\-staxon_id" 4
+.IX Item "-staxon_id"
+\&\s-1BLAST\s0 subject taxon_id (>1 argument allowed)
+.IP "\-staxon_name" 4
+.IX Item "-staxon_name"
+\&\s-1BLAST\s0 subject taxon_name (>1 argument allowed)
+.IP "\-x" 4
+.IX Item "-x"
+Extension beyond spacer blast to check for PAMs (bp). [20]
+.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v	Verbose output. [FALSE]"
 .PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_spacerBlast.pl
+perldoc CLdb_getPAMs.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-A wrapper around other CLdb scripts for blasting all or
-a subset of spacer groups.
-.SS "The script's procedure is:"
-.IX Subsection "The script's procedure is:"
-.IP "\(bu" 4
-Select spacer & direct repeat (\s-1DR\s0) groups (can refine to particular taxa & subtypes)
-.IP "\(bu" 4
-BLASTn-short of spacer & \s-1DR\s0 groups against provide subjects (e.g. genomes)
-.IP "\(bu" 4
-Determining which spacer blast hits are hitting \s-1CRISPR\s0 arrays (if DRs hit adjacent)
-.IP "\(bu" 4
-Adding the blast hits and subjects (sequences with a hit) to CLdb
-.SS "'\-subject' flag"
-.IX Subsection "'-subject' flag"
-Provide either a subject fasta file and a Taxon_ID and/or a Taxon_Name,
-or provide a tab-delimited file (3 columns) with subject fasta files and
-a Taxon_IDs and/or Taxon_Names (columns: fasta_file, Taxon_id, Taxon_Name).
+Get sequences of spacer blast hits plus adjacent nucleotides
+to look for PAMs. Only spacer blast hits that were not found
+to fall into a \s-1CRISPR\s0 array are queried.
+.SS "Output"
+.IX Subsection "Output"
+The spacer blast hit sequence is capitalized, while the 
+extended region around the hit is lower case.
 .PP
-Example1 \*(L"\-subject ecoli.fna 666666.452 escherichia_coli\*(R"
+Spacer-PAM sequences are named as following:
+\&\*(L"Spacer_group\*(R"_\|_\|_\*(L"Subject_Taxon_ID\*(R"_\|_\|_\*(L"Subject_Taxon_name\*(R"_\|_\|_\*(L"Subject_scaffold_name\*(R"_\|_\|_\*(L"blast_hit_start\*(R"_\|_\|_\*(L"blast_hit_end\*(R"
 .PP
-Example2 \*(L"\-subject ecoli.fna '' escherichia_coli\*(R"
+\&\*(L"Subject\*(R" = subject in the spacer blast.
 .PP
-The Taxon_IDs and Taxon_names can be used, for example, to see if \s-1CRISPR\s0
-spacers are hitting other places in the same genome (and not in other \s-1CRISPR\s0 arrays).
+\&\*(L"\s-1NULL\s0\*(R" will be used if \*(L"Subject_Taxon_ID\*(R" or \*(L"Subject_Taxon_name\*(R"
+is not present in CLdb.
+.SS "Requirements for analysis"
+.IX Subsection "Requirements for analysis"
+.IP "\(bu" 4
+Spacer blasting must be done prior
+.IP "\(bu" 4
+Subject sequences of spacer blast hits must be in CLdb
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Spacer blast of subtype I\-B I\-C spacers against Ecoli"
-.IX Subsection "Spacer blast of subtype I-B I-C spacers against Ecoli"
-CLdb_spacerBlast.pl \-da CLdb.sqlite \-subtype I\-B I\-C \-subject ecoli.fna 666666.452 Escherichia_coli
+.SS "Spacer-PAMs for all hits"
+.IX Subsection "Spacer-PAMs for all hits"
+CLdb_getPAMs.pl \-d CLdb.sqlite
+.SS "Spacer-PAMs for just subtype I\-B"
+.IX Subsection "Spacer-PAMs for just subtype I-B"
+CLdb_getPAMs.pl \-d CLdb.sqlite \-subtype I\-B" > spacer_PAM_I\-B.fna
+.SS "Spacer-PAMs for just subtype I\-B, smaller extendion"
+.IX Subsection "Spacer-PAMs for just subtype I-B, smaller extendion"
+CLdb_getPAMs.pl \-d CLdb.sqlite \-subtype I\-B" \-x 10 > spacer_PAM_I\-B.fna
+.SS "Spacer-PAMs to just 2 subject taxon_names"
+.IX Subsection "Spacer-PAMs to just 2 subject taxon_names"
+CLdb_getPAMs.pl \-d CLdb.sqlite \-staxon_name ecoli salmonela > spacer_PAM_E\-S.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

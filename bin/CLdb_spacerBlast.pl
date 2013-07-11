@@ -232,7 +232,7 @@ CLdb_spacerBlast.pl -- wrapper for spacer blasting
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlast.pl [flags] < input > output
+CLdb_spacerBlast.pl [flags]
 
 =head2 Required flags
 

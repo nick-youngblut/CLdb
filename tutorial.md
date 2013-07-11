@@ -197,5 +197,25 @@ Workflows
 	
 	$ CLdb_arrayGroup2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
 	
+### Spacer BLASTs
 
+	$ CLdb_spacerBlast.pl -d CLdb.sqlite -subject A_woodii.fna 931626.1 "Acetobacterium woodii"
+		
+		# "A_woodii.fna" is the fasta of the genome that will be BLASTed against
+		
+		# "931626.1" is the taxon_id (FIG_ID)
+		
+		# "Acetobacterium woodii" is the taxon_name
+	
+	# blastn-short is used to BLAST selected spacer groups against the genome
+	
+	# the blast results are then stored in CLdb
+	
+### Get PAMs (from spacer BLASTs) for 1 CRISPR subtype
+
+	$ CLdb_getPAMs.pl -da CLdb.sqlite -subtype I-B 
+		
+		# Spacer BLASTing must be performed first
+		
+		# 
 
