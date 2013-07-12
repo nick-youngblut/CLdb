@@ -131,7 +131,8 @@ do{ my $x = [
                              './bin/CLdb_getGenesInLoci.pl',
                              './bin/CLdb_groupLeaders.pl',
                              './bin/CLdb_loadGenes.pl',
-                             './bin/CLdb_loadLeaders.pl'
+                             './bin/CLdb_loadLeaders.pl',
+                             './bin/CLdb_DRconsensus2fasta.pl'
                            ],
          'build_script' => 'Build',
          'original_prefix' => {},

@@ -196,6 +196,10 @@ Workflows
 ### Getting a fasta of all direct repeats
 
 	$ CLdb_array2fasta.pl -d CLdb.sqlite -r > DR.fna
+	
+### Getting a fasta of all direct repeat consensus sequences
+
+	$ CLdb_DBconsensus2fasta.pl -d CLdb.sqlite > DR_consensus.fna
 
 ### Getting information for spacer/DR groups IDs (Example: from table of BLAST hits)
 	
