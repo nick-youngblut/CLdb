@@ -123,46 +123,80 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADARRAYS 1"
-.TH CLDB_LOADARRAYS 1 "2013-07-18" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_GETSPACERPAIRWISEBLAST 1"
+.TH CLDB_GETSPACERPAIRWISEBLAST 1 "2013-07-18" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
+CLdb_getSpacerPairwiseBlast.pl \-\- getting pairwise spacer blast hits in CLdb
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadArrays.pl [flags]
+CLdb_getSpacerPairwiseBlast.pl [flags] > spacer\-spacer_blasts.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
 .IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+.SS "options"
+.IX Subsection "options"
 .PD 0
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+.IP "\-subtype" 4
+.IX Item "-subtype"
+.PD
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine the query.
+.IP "\-overlap" 4
+.IX Item "-overlap"
+Check for spacer overlap. See \s-1DESCRIPTION\s0. [0 1]
+.IP "\-percentID" 4
+.IX Item "-percentID"
+PercentID cutoff for blast hits (>=). [90]
+.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v	Verbose output. [FALSE]"
+.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadArrays.pl
+perldoc CLdb_getSpacerPairwiseBlast.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the CLdb database.
+Get spacer-spacer BLASTn-short hits among spacers
+in CLdb.
+.SS "Overlap"
+.IX Subsection "Overlap"
+Overlap = blast_hit_length / spacer_length
 .PP
-Array file names are obtained from the loci table in the
-\&\s-1CRISPR\s0 database.
-.PP
-Array files must be in \f(CW$CLdb_HOME\fR/array/
+\&'\-overlap' defines the cutoff; the min overlap for the query
+or spacer is used. Two values are required: min_overlap &
+max_overlap. For example: '\-overlap 0 0.99' will select
+all spacer blasts that only partially overlap.
+.SS "Output"
+.IX Subsection "Output"
+The output is in standard blast+ \-outfmt 6 format, 
+except 2 columns are appended: 
+query_spacer_overlap, subject_spacer_overlap
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-CLdb_loadArrays.pl \-d CLdb.sqlite
+.SS "All spacer-spacer blasts"
+.IX Subsection "All spacer-spacer blasts"
+CLdb_getSpacerPairwiseBlast.pl \-d CLdb.sqlite
+.SS "All spacer-spacer blasts for just subtype I\-B"
+.IX Subsection "All spacer-spacer blasts for just subtype I-B"
+CLdb_getSpacerPairwiseBlast.pl \-d CLdb.sqlite \-subtype I\-B
+.SS "All spacer-spacer blasts that only partially overlap"
+.IX Subsection "All spacer-spacer blasts that only partially overlap"
+CLdb_getSpacerPairwiseBlast.pl \-d CLdb.sqlite \-o 0 0.99
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
