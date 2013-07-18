@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_ARRAY2FASTA 1"
-.TH CLDB_ARRAY2FASTA 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_ARRAY2FASTA 1 "2013-07-18" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -156,7 +156,7 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 .IP "\-group" 4
 .IX Item "-group"
-Get array elements de-replicated by group (ie. all uniqe sequences).
+Get array elements de-replicated by group (ie. all unique sequences).
 .IP "\-query" 4
 .IX Item "-query"
 Extra sql to refine which sequences are returned.
@@ -180,19 +180,19 @@ The '\-q' flag can be used to refine the query to certain sequences (see example
 .IX Header "EXAMPLES"
 .SS "Write all spacers to a fasta:"
 .IX Subsection "Write all spacers to a fasta:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite
+CLdb_array2fasta.pl \-d CLdb.sqlite
 .SS "Write all direct repeats to a fasta:"
 .IX Subsection "Write all direct repeats to a fasta:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-r
+CLdb_array2fasta.pl \-d CLdb.sqlite \-r
 .SS "Write all unique spacers"
 .IX Subsection "Write all unique spacers"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-g
+CLdb_array2fasta.pl \-d CLdb.sqlite \-g
 .SS "Refine spacer sequence query:"
 .IX Subsection "Refine spacer sequence query:"
-CLdb_array2fasta.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
+CLdb_array2fasta.pl \-d CLdb.sqlite \-q \*(L"\s-1AND\s0 loci.Locus_ID=1\*(R"
 .SS "Refine spacer query to a specific subtype & 2 taxon_id's"
 .IX Subsection "Refine spacer query to a specific subtype & 2 taxon_id's"
-CLdb_array2fasta.pl \-da \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
+CLdb_array2fasta.pl \-d CLdb.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

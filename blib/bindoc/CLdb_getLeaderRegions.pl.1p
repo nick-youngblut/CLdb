@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-07-10" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETLEADERREGIONS 1 "2013-07-18" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,14 +141,16 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 .SS "options"
 .IX Subsection "options"
 .PD 0
-.IP "\-l 	Maximum length of leader region (bp). [400]" 4
-.IX Item "-l 	Maximum length of leader region (bp). [400]"
+.IP "\-l 	Maximum length of leader region (bp). [1000]" 4
+.IX Item "-l 	Maximum length of leader region (bp). [1000]"
 .IP "\-q 	sql to refine loci query (see \s-1EXAMPLES\s0)." 4
 .IX Item "-q 	sql to refine loci query (see EXAMPLES)."
 .IP "\-o 	Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]" 4
 .IX Item "-o 	Check for overlapping genes (& trim region if overlap)? [TRUE]"
-.IP "\-c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]" 4
-.IX Item "-c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]"
+.IP "\-c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]" 4
+.IX Item "-c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]"
+.IP "\-b 	Get sequence on both sides of the array regardless of degeneracies? [\s-1FALSE\s0]" 4
+.IX Item "-b 	Get sequence on both sides of the array regardless of degeneracies? [FALSE]"
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
@@ -174,7 +176,7 @@ before running this script!
 Both end regions of a \s-1CRISPR\s0 array are written if a \s-1CRISPR\s0
 array has equal numbers of \s-1DR\s0 clusters on each half.
 .PP
-The default leader region length is 400bp from the \s-1CRISPR\s0 array.
+The default leader region length is 1000bp from the \s-1CRISPR\s0 array.
 .PP
 The leader region length will be truncated if any genes overlap in 
 that region.
