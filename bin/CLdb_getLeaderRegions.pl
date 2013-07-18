@@ -14,16 +14,17 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $overlap_check, $degeneracy_bool);
+my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check);
 my $extra_query = "";
-my $length = 400;				# max length of leader region
-my $gene_len_cutoff = 60;		# 60 bp minimum to be considered a real gene
+my $length = 1000;				# max length of leader region
+my $gene_len_cutoff = 90;		# bp minimum to be considered a real gene
 GetOptions(
 	   "database=s" => \$database_file,
 	   "query=s" => \$extra_query, 
 	   "length=i" => \$length,
 	   "overlap" => \$overlap_check,
-	   "cutoff=i" => \$gene_len_cutoff,
+	   "cutoff=i" => \$gene_len_cutoff,	
+	   "both" => \$degen_check,			# use degeneracies to determine leader side? [FALSE]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -286,8 +287,14 @@ sub get_DR_seq{
 			unless $$ret[0];
 		die " ERROR: no 'repeat_group' entries found!\n Run CLdb_groupArrayElements.pl before this script!\n\n"
 			unless $$ret[0][3];
-			
-		$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
+		
+		# determining leader based on degeneracies #
+		if($degen_check){			# skipping if opted 
+			$leader_loc{$locus} = ["start", "end"];
+			}
+		else{	
+			$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
+			}
 		}
 	
 		#print Dumper %leader_loc; exit;
@@ -396,13 +403,15 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 
 =over
 
-=item -l 	Maximum length of leader region (bp). [400]
+=item -l 	Maximum length of leader region (bp). [1000]
 
 =item -q 	sql to refine loci query (see EXAMPLES).
 
 =item -o 	Check for overlapping genes (& trim region if overlap)? [TRUE]
 
-=item -c 	Gene length cutoff for counting gene in overlap assessment (bp). [60]
+=item -c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
+
+=item -b 	Get sequence on both sides of the array regardless of degeneracies? [FALSE]
 
 =item -v	Verbose output
 
@@ -431,7 +440,7 @@ before running this script!
 Both end regions of a CRISPR array are written if a CRISPR
 array has equal numbers of DR clusters on each half.
 
-The default leader region length is 400bp from the CRISPR array.
+The default leader region length is 1000bp from the CRISPR array.
 
 The leader region length will be truncated if any genes overlap in 
 that region. 
