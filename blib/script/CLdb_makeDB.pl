@@ -209,6 +209,27 @@ ON CONFLICT REPLACE
 );
 
 
+DROP TABLE IF EXISTS spacer_pairwise_blast;
+
+CREATE TABLE spacer_pairwise_blast (
+Query_locus_ID	INTEGER	NOT NULL,
+Query_spacer_ID	TEXT	NOT NULL,
+Subject_locus_ID	INTEGER	NOT NULL,
+Subject_spacer_ID	TEXT	NOT NULL,
+pident	REAL	NOT NULL,
+length	INTEGER	NOT NULL,
+mismatch	INTEGER	NOT NULL,
+gapopen	INTEGER	NOT NULL,
+qstart	INTEGER	NOT NULL,
+qend	INTEGER	NOT NULL,
+sstart	INTEGER	NOT NULL,
+send	INTEGER	NOT NULL,
+evalue	TEXT	NOT NULL,
+bitscore	INTEGER	NOT NULL,
+UNIQUE( Query_locus_ID, Query_spacer_ID, Subject_locus_ID, Subject_spacer_ID )
+ON CONFLICT REPLACE
+);
+
 COMMIT;
 
 HERE
