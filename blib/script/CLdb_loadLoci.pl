@@ -38,6 +38,9 @@ check_for_loci_table($table_list_r);
 # getting input loci table #
 my ($loci_r, $header_r) = load_loci_table();
 
+# checking for required headers #
+check_headers($header_r);
+
 # striping off paths from file columns #
 remove_paths($loci_r, $header_r);
 
@@ -67,7 +70,6 @@ sub remove_paths{
 				}
 			}
 		}
-	
 	}
 
 sub update_db{
@@ -137,14 +139,44 @@ sub load_new_entries{
 		unless $verbose;
 	}
 
+sub check_headers{
+	my ($header_r) = @_;
+	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status crispr_array_status genbank author/;
+	
+	my @not_found;
+	foreach (@req){
+		unless (exists $header_r->{$_}){
+			push @not_found, $_;
+			}
+		}
+	
+	if(@not_found){
+		print STDERR "ERROR: Required columns not found in loci table!\n\n";
+		print STDERR "### Required columns not found (capitalization does not matter) ###\n";
+		print STDERR join(",\n", sort @not_found), "\n";
+		print STDERR "\n### Headers found in the loci table (capitalization does not matter) ###\n";
+		print STDERR join(",\n", sort keys %$header_r), "\n";
+		exit;
+		}
+	
+	}
+
 sub load_loci_table{
+	# checking line breaks #
+	my @table = <>;
+	map{ s/\r$//; s/\r/\n/g; push @table, split /\n/;  } @table;
+	shift @table;
+
+	# loading into a hash #
 	my %loci;
 	my %header;
-	while(<>){
+	my $line_cnt = 0;
+	foreach (@table){
 		chomp;
+		$line_cnt++;
 		next if /^\s*$/;
 
-		if($. == 1){ # loading header
+		if($line_cnt == 1){ # loading header
 			tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
 			my @line = split /\t/;
 			for my $i (0..$#line){
@@ -164,6 +196,7 @@ sub load_loci_table{
 			}
 		}
 		#print Dumper %loci; exit; 
+		#print Dumper %header; exit;
 	return (\%loci, \%header);;
 	}
 
@@ -189,13 +222,19 @@ CLdb_loadLoci.pl -- adding/updating loci entries in to CRISPR_db
 
 =head1 SYNOPSIS
 
-CLdb_loadLoci.pl [options] < loci_table.txt
+CLdb_loadLoci.pl [flags] < loci_table.txt
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -d 	CLdb database (required).
+=item -d 	CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
 
 =item -v	Verbose output. [TRUE]
 
@@ -215,6 +254,8 @@ Loci entries will be added if no Locus_id is provided;
 otherwise, the entrie will be updated.
 
 =head2 WARNING!
+
+The loci table must be in tab-delimited format.
 
 File names in the loci table should match files in the 
 $CLdb_HOME/genbank/ & $CLdb_HOME/array/ directories.

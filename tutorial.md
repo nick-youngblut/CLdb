@@ -49,15 +49,17 @@ Example database setup
 
 	* Locus_End
 
-	* Operon_Start
+	* Operon_Start*
 
-	* Operon_End
+	* Operon_End*
 
-	* CRISPR_Array_Start
+	* CRISPR_Array_Start*
 
-	* CRISPR_Array_End
+	* CRISPR_Array_End*
 
-	* Status
+	* Array_status**
+	
+	* Operon_status\***
 
 	* Genbank
 
@@ -67,6 +69,14 @@ Example database setup
 
 	* File_Creation_Date
 
+"*" blank values allowed
+
+"**" Possible values: "present", "absent"
+
+"\***" Possible values: "intact", "absent", "broken", "shuffled"
+
+	"broken" = some genes missing
+	"shuffled" = gene order
 
 * Array table files (tab-delimited; copy and paste from CRISPRFinder); columns needed:
 
@@ -85,6 +95,7 @@ Example database setup
 	* FIG-PEG IDs for CDS features in db_xref tags (e.g. "fig|6666666.40253.peg.2362")
 
 
+***
 
 #### Directory setup
 
@@ -101,7 +112,7 @@ Example database setup
 
 * place/symlink array files in this directory
 
-
+***
 
 ### Initial DB construction 
 
@@ -117,6 +128,7 @@ Example database setup
 
 	$ CLdb_addScaffolds.pl -d CLdb.sqlite
 
+***
 
 ### Spacers and direct repeats
 
@@ -142,6 +154,8 @@ Example database setup
 
 * used for plotting & checking for paritial overlap of spacers
 
+***
+
 ### CRISPR-associated genes
 
 #### getting genes in CRISPR locus region (defined in Loci table)
@@ -154,6 +168,7 @@ Example database setup
 
 	$ CLdb_loadGenes.pl -d CLdb.sqlite < gene_table.txt
 
+***
 
 ### Leader region
 	
@@ -197,11 +212,12 @@ Example database setup
 
 Workflows
 =========
+## Get a fasta
 
 ### Getting a fasta of all spacers
 
 	$ CLdb_array2fasta.pl -d CLdb.sqlite > spacers.fna
-	
+
 ### Getting a fasta of all spacers for a particular subtype
 
 	$ CLdb_array2fasta.pl -d CLdb.sqlite -sub "I-B" > spacers_IB.fna
@@ -218,11 +234,9 @@ Workflows
 
 	$ CLdb_DBconsensus2fasta.pl -d CLdb.sqlite > DR_consensus.fna
 
-### Getting information for spacer/DR groups IDs (Example: from table of BLAST hits)
-	
-	$ CLdb_arrayGroup2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
-	
-### Spacer BLASTs against subject genomes or other databases
+***
+
+### Spacer BLASTs vs subject genomes or other databases
 
 	$ CLdb_spacerBlast.pl -d CLdb.sqlite -subject A_woodii.fna 931626.1 "Acetobacterium woodii"
 		
@@ -236,13 +250,23 @@ Workflows
 	
 * the blast results are then stored in CLdb
 
+***
+
+### Getting information for spacer/DR groups IDs (Example: from table of BLAST hits)
+	
+	$ CLdb_arrayGroup2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
+
+***
+
 ### Get PAMs (from spacer BLASTs) for 1 CRISPR subtype
 
 	$ CLdb_getPAMs.pl -da CLdb.sqlite -subtype I-B 
 		
-* Spacer BLASTing must be performed first
-	
-### Get spacer-spacer blast hits
+* Spacer vs subject BLASTs must be performed first
+
+***
+
+## Get spacer-spacer blast hits
 
 ##### All pairwise blast hits
 	

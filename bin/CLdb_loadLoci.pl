@@ -164,8 +164,9 @@ sub check_headers{
 sub load_loci_table{
 	# checking line breaks #
 	my @table = <>;
-	map{ s/\r$//; s/\r/\n/g; push @table, split /\n/;  } @table;
-	shift @table;
+	my @tmp;
+	map{ s/\r$//; s/\r/\n/g; s/\n+/\n/g; push @tmp, split /\n/;  } @table;
+	@table = @tmp;
 
 	# loading into a hash #
 	my %loci;

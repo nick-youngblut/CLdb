@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LOADLOCI 1"
-.TH CLDB_LOADLOCI 1 "2013-07-08" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LOADLOCI 1 "2013-07-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,11 +133,13 @@
 CLdb_loadLoci.pl \-\- adding/updating loci entries in to CRISPR_db
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadLoci.pl [options] < loci_table.txt
-.SS "options"
-.IX Subsection "options"
-.IP "\-d 	CLdb database (required)." 4
-.IX Item "-d 	CLdb database (required)."
+CLdb_loadLoci.pl [flags] < loci_table.txt
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
 .PD 0
 .IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v	Verbose output. [TRUE]"
@@ -155,6 +157,8 @@ Loci entries will be added if no Locus_id is provided;
 otherwise, the entrie will be updated.
 .SS "\s-1WARNING\s0!"
 .IX Subsection "WARNING!"
+The loci table must be in tab-delimited format.
+.PP
 File names in the loci table should match files in the 
 \&\f(CW$CLdb_HOME\fR/genbank/ & \f(CW$CLdb_HOME\fR/array/ directories.
 .SH "EXAMPLES"
