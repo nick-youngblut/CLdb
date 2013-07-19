@@ -12,39 +12,61 @@ use File::Spec;
 #pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $replace);
+my @tables = ("leaderseqs", "genes");
 GetOptions(
 	   "replace" => \$replace,
+	   "tables=s{,}" => \@tables,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 ### I/O error & defaults
 $ARGV[0] = "CLdb.sqlite" unless $ARGV[0];
+map{tr/A-Z/a-z/} @tables if @tables;		# lower case table names
 
 ### MAIN
-my $sql = get_sql();
-make_db($sql, $ARGV[0]);
+my $sql_r = get_sql();
+make_db($sql_r, $ARGV[0], \@tables);
 
 ### Subroutines
 sub make_db{
-	my ($sql, $db_name) = @_;
-	if(-e $db_name){
-		if($replace){ unlink $db_name; }
-		else{ die " ERROR: $db_name already exists! Use '-r' to replace\n"; }
-		}
-			
-	open PIPE, "| sqlite3 $db_name" or die $!;
-	print PIPE $sql; 
-	close PIPE;
+	my ($sql_r, $db_name, $tables_r) = @_;
 	
+	# checking if tables specified exists, deleted if yes, dying if no #
+	foreach my $table (@$tables_r){
+		if(exists $sql_r->{$table}){
+			delete $sql_r->{$table};
+			}
+		else{
+			print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
+			print STDERR "### tables in sql (ie. the tables that will be created) ###\n";
+			print STDERR join(",\n", keys %$sql_r), "\n";
+			exit;
+			}
+		}
+	
+	# checking for overwrite of database #
+	if(-e $db_name){
+		die " ERROR: $db_name already exists! Use '-r' to replace\n" unless $replace
+		}
+	
+	# adding tables #
+	foreach my $table (keys %$sql_r){
+		open PIPE, "| sqlite3 $db_name" or die $!;
+		print PIPE "BEGIN TRANSACTION;\n";
+		print PIPE $sql_r->{$table}; 				# making table
+		print PIPE "COMMIT;\n";
+		close PIPE;
+		}
+		
 	print STDERR "...sqlite3 database tables created\n";
 	}
 
 sub get_sql{
-	my $sql = <<HERE;
-/* creating tables */
-BEGIN TRANSACTION;
+	my %sql; 		# all tables individually 
 
+	$sql{"loci"} = <<HERE;
+/* creating tables */
 DROP TABLE IF EXISTS Loci;
 
 CREATE TABLE Loci (
@@ -67,7 +89,10 @@ File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL
 );
 
+HERE
 
+
+	$sql{"spacers"} = <<HERE;
 DROP TABLE IF EXISTS Spacers;
 
 CREATE TABLE Spacers (
@@ -81,7 +106,10 @@ UNIQUE (Locus_ID, Spacer_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"directrepeats"} = <<HERE;
 DROP TABLE IF EXISTS DirectRepeats;
 
 CREATE TABLE DirectRepeats (
@@ -95,7 +123,10 @@ UNIQUE (LOCUS_ID, Repeat_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"directrepeatconsensus"} = <<HERE;
 DROP TABLE IF EXISTS DirectRepeatConsensus;
 
 CREATE TABLE DirectRepeatConsensus (
@@ -106,7 +137,10 @@ UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"leaderseqs"} = <<HERE;
 DROP TABLE IF EXISTS LeaderSeqs;
 
 CREATE TABLE LeaderSeqs (
@@ -119,7 +153,10 @@ UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"genes"} = <<HERE;
 DROP TABLE IF EXISTS Genes;
 
 CREATE TABLE Genes (
@@ -134,7 +171,10 @@ UNIQUE (Locus_ID, Gene_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"draft"} = <<HERE;
 DROP TABLE IF EXISTS Draft;
 
 CREATE TABLE Draft (
@@ -151,7 +191,10 @@ UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"blast_hits"} = <<HERE;
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
@@ -174,7 +217,10 @@ UNIQUE( Spacer_group, Taxon_ID, Taxon_name, Subject, sstart, send)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"blast_subject"} = <<HERE;
 DROP TABLE IF EXISTS blast_subject;
 
 CREATE TABLE blast_subject (
@@ -186,7 +232,10 @@ UNIQUE (Taxon_ID, Taxon_name, Scaffold_name)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"spacer_hclust"} = <<HERE;
 DROP TABLE IF EXISTS spacer_hclust;
 
 CREATE TABLE spacer_hclust (
@@ -197,7 +246,10 @@ UNIQUE (Spacer_ID, Cutoff, Cluster_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"directrepeat_hclust"} = <<HERE;
 DROP TABLE IF EXISTS directrepeat_hclust;
 
 CREATE TABLE directrepeat_hclust (
@@ -208,7 +260,10 @@ UNIQUE (Repeat_ID, Cutoff, Cluster_ID)
 ON CONFLICT REPLACE
 );
 
+HERE
 
+
+	$sql{"spacer_pairwise_blast"} = <<HERE;
 DROP TABLE IF EXISTS spacer_pairwise_blast;
 
 CREATE TABLE spacer_pairwise_blast (
@@ -230,11 +285,9 @@ UNIQUE( Query_locus_ID, Query_spacer_ID, Subject_locus_ID, Subject_spacer_ID )
 ON CONFLICT REPLACE
 );
 
-COMMIT;
-
 HERE
 
-	return $sql;
+	return \%sql;
 	}
 
 __END__
@@ -255,6 +308,8 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =item -r 	Replace existing database.
 
+=item -t 	Table(s) to keep as is (if they exist). ["leaderseqs" "genes"]
+
 =item -h	This help message
 
 =back
@@ -265,13 +320,27 @@ perldoc CLdb_makeDB.pl
 
 =head1 DESCRIPTION
 
-Make all of the CRISPR_db tables.
+Make all of the CL_db tables.
+
+The default database name is "CLdb.sqlite"
+
+=head2 '-t' flag
+
+This is needed if you want to keep 'manual' information 
+in tables while still being able to remake the rest
+of the database. By default, all leader sequences and gene alias info
+is saved because manual processing was involved.
+Capitalization of table names doesn't matter. 
 
 =head1 EXAMPLES
 
-=head2 Naming database 'CRISPR_db1'
+=head2 Naming database 'CLdb_test'
 
-CLdb_makeDB.pl CRISPR_db1
+CLdb_makeDB.pl CLdb_test
+
+=head2 Remaking a database and keeping old "spacers" table
+
+CLdb_makeDB.pl -r -t "spacers"
 
 =head1 AUTHOR
 
