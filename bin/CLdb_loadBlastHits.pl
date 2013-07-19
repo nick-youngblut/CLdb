@@ -43,6 +43,10 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# checking for existence of blast_hits table #
+my $table_list_r = list_tables($dbh);
+check_for_blast_table($table_list_r);
+
 # getting taxon names & IDs from database #
 my ($taxon_info_r, $taxa_r) = get_db_taxon_info($dbh);
 
@@ -214,6 +218,17 @@ sub get_db_taxon_info{
 	return $ret, \%taxa;		# taxon_id, taxon_name
 	}
 
+sub check_for_blast_table{
+	my ($table_list_r) = @_;
+	die " ERROR: loci table not found in database!\n"
+		unless grep(/^blast_hits$/i, @$table_list_r);
+	}
+
+sub list_tables{
+	my $dbh = shift;
+	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
+	return [keys %$all];
+	}
 
 __END__
 
