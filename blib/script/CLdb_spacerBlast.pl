@@ -87,6 +87,7 @@ foreach my $subject (@$sub_in_r){
 sub call_CLdb_loadBlastHits{
 	my ($filt_blast_out, $database_file, $subject) = @_;
 
+		#my $cmd = "~/perl/projects/CLdb/bin/CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
 	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];

@@ -123,6 +123,7 @@ do{ my $x = [
                              './bin/CLdb_getPAMs.pl',
                              './bin/CLdb_getGeneIDs.pl',
                              './bin/CLdb_loadBlastHits.pl',
+                             './bin/CLdb_positionByScaffold.pl',
                              './bin/CLdb_getRegionSequence.pl',
                              './bin/CLdb_spacerBlast.pl',
                              './bin/CLdb_loadLoci.pl',

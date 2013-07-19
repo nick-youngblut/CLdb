@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_MAKEDB 1"
-.TH CLDB_MAKEDB 1 "2013-07-18" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_MAKEDB 1 "2013-07-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -139,6 +139,9 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 .IP "\-r 	Replace existing database." 4
 .IX Item "-r 	Replace existing database."
 .PD 0
+.ie n .IP "\-t 	Table(s) to keep as is (if they exist). [""leaderseqs"" ""genes""]" 4
+.el .IP "\-t 	Table(s) to keep as is (if they exist). [``leaderseqs'' ``genes'']" 4
+.IX Item "-t 	Table(s) to keep as is (if they exist). [leaderseqs genes]"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
@@ -147,12 +150,25 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 perldoc CLdb_makeDB.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make all of the CRISPR_db tables.
+Make all of the CL_db tables.
+.PP
+The default database name is \*(L"CLdb.sqlite\*(R"
+.SS "'\-t' flag"
+.IX Subsection "'-t' flag"
+This is needed if you want to keep 'manual' information 
+in tables while still being able to remake the rest
+of the database. By default, all leader sequences and gene alias info
+is saved because manual processing was involved.
+Capitalization of table names doesn't matter.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Naming database 'CRISPR_db1'"
-.IX Subsection "Naming database 'CRISPR_db1'"
-CLdb_makeDB.pl CRISPR_db1
+.SS "Naming database 'CLdb_test'"
+.IX Subsection "Naming database 'CLdb_test'"
+CLdb_makeDB.pl CLdb_test
+.ie n .SS "Remaking a database and keeping old ""spacers"" table"
+.el .SS "Remaking a database and keeping old ``spacers'' table"
+.IX Subsection "Remaking a database and keeping old spacers table"
+CLdb_makeDB.pl \-r \-t \*(L"spacers\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
