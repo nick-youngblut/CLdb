@@ -50,7 +50,14 @@ foreach my $unmerged (keys %$gen_list_r){
 	my ($scaf_index_r, $needs_blasting_r) = find_same_length($gen_list_r, $unmerged_r, $merged_r);
 	
 	# determine if sequences are the same (either identical or rev-comp)
+	find_same_sequence($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r);
 
+	# checking to make sure all scaffolds accounted for #
+	if(%{$needs_blasting_r->{"merged"}}){
+		print STDERR " ERROR: not all 1-to-1 connects made. Ambiguous contigs:\n\t";
+		print STDERR join(",\n\t", keys %{$needs_blasting_r->{"unmerged"}}), "\n\n";
+		exit;
+		}
 	
 	# making an interval tree relating absolute location to scaffold-based location #
 	my $itree = make_loc_itree($scaf_index_r, $merged_r, $unmerged_r);
@@ -91,6 +98,55 @@ exit;
 
 
 ### Subroutines
+sub find_same_sequence{
+# checking contigs by same sequence; should match all contigs #
+## sequences should match exactly & 1-to-1 ##
+	my ($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r) = @_;
+
+	#print Dumper $scaf_index_r; exit;
+	#print Dumper $needs_blasting_r; exit;
+	#print Dumper $merged_r; exit;
+	
+	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
+		foreach my $unmerged_contig (keys %{$needs_blasting_r->{"unmerged"}}){
+			if ($merged_r->{$merged_contig}{"seq"} eq $unmerged_r->{$unmerged_contig}{"seq"}){
+				push( @{$scaf_index_r->{$merged_contig}}, $unmerged_contig);
+				#print Dumper $unmerged_contig;
+				#print Dumper $merged_contig;
+				#print Dumper $unmerged_contig;
+				#print Dumper $merged_r->{$merged_contig}{"seq"};
+				#print Dumper $unmerged_r->{$unmerged_contig}{"seq"};
+				
+				}
+		#	else{
+				#print Dumper $merged_r->{$merged_contig}{"seq"};
+		#		#print Dumper $unmerged_r->{$unmerged_contig}{"seq"}
+		#		}
+			}
+		}
+	
+	# checking problem contigs for 1 to 1 associations #
+	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
+		if( exists $scaf_index_r->{$merged_contig} ){
+			if(scalar @{$scaf_index_r->{$merged_contig}} == 1){
+				# deleting merged #
+				delete $needs_blasting_r->{"merged"}{$merged_contig};
+			
+				# deleting unmerged #
+				foreach my $unmerged_contig (@{$scaf_index_r->{$merged_contig}}){
+					delete $needs_blasting_r->{"unmerged"}{$unmerged_contig};
+					}
+				}
+			else{
+				die " ERROR: Scaffold->\"$merged_contig\" has same sequence as >=2 scaffolds in unmerged genbank!\n";
+				}
+			}
+		else{		# no sequenc hit
+			die " ERROR: Scaffold->\"$merged_contig\" has no identical sequence in unmerged genbank!\n";
+			}
+		}
+	}
+
 sub list_tables{
 	my $dbh = shift;
 	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
@@ -305,7 +361,6 @@ sub make_loc_itree{
 	return $itree;
 	}
 
-
 sub print_itree{
 	my ($itree, $start, $end) = @_;
 	
@@ -323,10 +378,12 @@ sub find_same_length{
 	
 	my %scaf_index;
 	foreach my $mcontig (keys %$merged_r){				# merged => unmerged
+		# comparing merged & unmerged contig lengths #
 		foreach my $ucontig (keys %$unmerged_r){
 			push( @{$scaf_index{$mcontig}}, $ucontig) if
 				$merged_r->{$mcontig}{"length"} == $unmerged_r->{$ucontig}{"length"};
 			}
+		# checking that contig had at least on hit #
 		unless (exists $scaf_index{$mcontig} ){
 			die " ERROR: Contig$mcontig did not have a match in the merged genbank!\n";
 			}
@@ -335,19 +392,19 @@ sub find_same_length{
 	# making list of taxa that need blasting #
 	my %needs_blasting;
 	foreach my $contig (keys %scaf_index){
-		if(scalar @{$scaf_index{$contig}} > 1){
-			push (@{$needs_blasting{"merged"}}, $contig);
+		if(scalar @{$scaf_index{$contig}} > 1){			# if to many associations
+			$needs_blasting{"merged"}{$contig} = 1;
 			foreach ( @{$scaf_index{$contig}} ){
-				push (@{$needs_blasting{"unmerged"}}, $_);
+				$needs_blasting{"unmerged"}{$_} = 1;
 				}
-			delete $scaf_index{$contig};
+			delete $scaf_index{$contig};				# deleting from index; non 1-to-1
 			}
 		elsif( scalar @{$scaf_index{$contig}} < 1){
 			die " LOGIC ERROR: $!\n";
 			}
 		}
 	
-		#print Dumper %needs_blasting;
+		#print Dumper %needs_blasting; exit;
 		#print Dumper %scaf_index; exit;	
 	return \%scaf_index, \%needs_blasting;
 	}
@@ -367,6 +424,7 @@ sub parse_unmerged_genbank{
 			$unmerged{$contig_id}{"length"} = abs($unmerged{$contig_id}{"end"} -
 															$unmerged{$contig_id}{"start"});
 			$unmerged{$contig_id}{"seq"} = $source->seq->seq;
+			$unmerged{$contig_id}{"seq"} =~ tr/A-Z/a-z/;
 			$unmerged{$contig_id}{"id"} = $contig_id;
 			}
 		}
@@ -392,6 +450,7 @@ sub parse_merged_genbank{
 			$merged{$source_cnt}{"length"} = abs($merged{$source_cnt}{"end"} -
 														$merged{$source_cnt}{"start"});
 			$merged{$source_cnt}{"seq"} = $source->seq->seq;
+			$merged{$source_cnt}{"seq"} =~ tr/A-Z/a-z/;
 			$source_cnt++;
 			}		
 		}
@@ -438,17 +497,23 @@ __END__
 
 =head1 NAME
 
-CLdb_makeDB.pl -- Initial DB construction
+CLdb_positionByScaffold.pl -- Initial DB construction
 
 =head1 SYNOPSIS
 
-CLdb_makeDB.pl [options] [DATABASE_name]
+CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -r 	Replace existing database.
+=item -d 	CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
 
 =item -h	This help message
 
@@ -456,17 +521,39 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =head2 For more information:
 
-perldoc CLdb_makeDB.pl
+perldoc CLdb_positionByScaffold.pl
 
 =head1 DESCRIPTION
 
-Make all of the CRISPR_db tables.
+Convert merged genbank position information (merged with EMBOSS 'union')
+to scaffold-based position info. 
+
+=head2 Input
+
+The input must be a 2 column tab-delimited table:
+'unmerged_genbank_file_name', 'merged_genbank_file_name'
+
+Example of unmerged genbank file format: RAST genbank output for a draft genome.
+
+=head2 Matching unmerged and merged scaffolds
+
+All scaffold start-end info is obtained form the 'source' tags
+in both the unmerged and merged genbank files. 1-to-1
+connections between scaffolds are determined in a number of steps:
+
+=over 
+
+=item 1) Comparing scaffold lengths.
+
+=item 2) Comparing scaffold sequences. No duplicate scaffolds allowed!
+
+=back
 
 =head1 EXAMPLES
 
-=head2 Naming database 'CRISPR_db1'
+=head2 Normal usage:
 
-CLdb_makeDB.pl CRISPR_db1
+CLdb_positionByScaffold.pl -d CLdb.sqlite < unmerged_merged.txt
 
 =head1 AUTHOR
 
