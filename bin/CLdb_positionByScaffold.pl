@@ -33,12 +33,15 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# listing tables #
+my $tables_r = list_tables($dbh);
+
 # loading genbanks #
 my $gen_list_r = get_genbank_list();
 my $gen_io_r = load_genbank_io($gen_list_r);
 
 # making merged => unmerged location index #
-foreach my $unmerged (keys %$gen_list_r){
+foreach my $unmerged (keys %$gen_list_r){			
 	# getting scaffold lengths & sequence #
 	my $unmerged_r = parse_unmerged_genbank($gen_list_r, $gen_io_r, $unmerged);
 	my $merged_r = parse_merged_genbank($gen_list_r, $gen_io_r, $gen_list_r->{$unmerged});
@@ -47,6 +50,7 @@ foreach my $unmerged (keys %$gen_list_r){
 	my ($scaf_index_r, $needs_blasting_r) = find_same_length($gen_list_r, $unmerged_r, $merged_r);
 	
 	# determine if sequences are the same (either identical or rev-comp)
+
 	
 	# making an interval tree relating absolute location to scaffold-based location #
 	my $itree = make_loc_itree($scaf_index_r, $merged_r, $unmerged_r);
@@ -54,6 +58,30 @@ foreach my $unmerged (keys %$gen_list_r){
 	# getting values from database #
 	my $loci_r = get_loci_oi($dbh, $gen_list_r->{$unmerged});
 	
+	# getting associated tables #
+	my %tables_oi;
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
+		if exists $tables_r->{"spacers"};
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "directrepeats", "repeat")
+		if exists $tables_r->{"directrepeats"};
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "leaderseqs", "leader", "locus")
+		if exists $tables_r->{"leaderseqs"};
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "genes", "gene")
+		if exists $tables_r->{"genes"};
+	
+	# converting values #
+	merged_to_unmerged_pos($itree, $loci_r, \%tables_oi);
+	
+	# updating tables #
+	update_loci($dbh, $loci_r);
+	update_other_table($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
+		if exists $tables_r->{"spacers"};
+	update_other_table($dbh, $loci_r, \%tables_oi, "directrepeats", "repeat")
+		if exists $tables_r->{"directrepeats"};
+	update_other_table($dbh, $loci_r, \%tables_oi, "leaderseqs", "leader", "locus")
+		if exists $tables_r->{"leaderseqs"};
+	update_other_table($dbh, $loci_r, \%tables_oi, "genes", "gene")
+		if exists $tables_r->{"genes"};
 	}
 
 # disconnect #
@@ -63,11 +91,188 @@ exit;
 
 
 ### Subroutines
+sub list_tables{
+	my $dbh = shift;
+	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
+	map{delete $all->{$_}; tr/A-Z/a-z/; $all->{$_} = 1} keys %$all;
+		#print Dumper %$all; exit;
+	return $all;
+	}
+	
+sub update_other_table{
+# updating position info in other tables #
+	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
+	$prefix2 = $prefix unless $prefix2;
+	
+	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=?, scaffold=? 
+WHERE locus_id=?
+AND $prefix2\_id=?";
+	$cmd =~ s/[\n\r]/ /g;
+		#print Dumper $cmd;
+	
+	my $sql = $dbh->prepare($cmd);
+	my $cnt = 0;
+	foreach my $locus (@$loci_r){
+		foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ) {
+				#print Dumper @$row;
+			$sql->execute(@$row[0..2], $$locus[0], $$row[3]);
+			if($DBI::err){
+				print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
+				}
+			else{ $cnt++; }
+			}
+		}
+
+	$dbh->commit;
+	
+	print STDERR "...Number of entries updated in $table: $cnt\n";	
+	}
+
+sub update_loci{
+# updating position info in loci table #
+	my ($dbh, $loci_r) = @_;
+	
+	my $cmd = "UPDATE Loci SET scaffold=?, locus_start=?, locus_end=?,
+operon_start=?, operon_end=?, CRISPR_array_start=?, CRISPR_array_end=?
+WHERE locus_id=?";
+	$cmd =~ s/[\n\r]/ /g;
+	
+	my $sql = $dbh->prepare($cmd);
+	my $cnt = 0;
+	foreach my $locus (@$loci_r){
+		$sql->execute(@$locus[1..$#$locus], $$locus[0]);
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
+			}
+		else{ $cnt++; }
+		}
+
+	$dbh->commit;
+	
+	print STDERR "...Number of entries updated in Loci: $cnt\n";
+	}
+
+sub merged_to_unmerged_pos{
+# getting scaffold that positions fall into #
+	my ($itree, $loci_r, $tables_oi_r) = @_;
+	
+	# updating per-loci #
+	foreach my $locus (@$loci_r){			# $$locus[0] = locus_id
+		my $scaffold_name;
+		# locus table #
+		for (my $i=2; $i<=6; $i+=2){
+			# checking start-end orientation #
+			my $flip_bool = 0;
+			$flip_bool = 1 if $$locus[$i] > $$locus[$i+1];
+			($$locus[$i], $$locus[$i+1]) = flip_se($$locus[$i], $$locus[$i+1]) if $flip_bool;
+			
+			# getting position info #
+			my $ret = $itree->fetch($$locus[$i], $$locus[$i+1]);		# ret = scaffold that positions span
+			check_scaffold_span($ret, $locus, $$locus[$i], $$locus[$i+1]);						# positions should span 1 scaffold
+
+			# updating position info #
+			## new start = scaf_start + (current_pos - scaf_gw_pos)
+			## new end = scaf_end - (scaf_gw_pos - current_pos)
+			$$locus[$i] = $$ret[0]->{"start"} + ($$locus[$i] - $$ret[0]->{"gw_start"});
+			$$locus[$i+1] = $$ret[0]->{"end"} - ($$ret[0]->{"gw_end"} - $$locus[$i+1]);
+			
+			# flipping start-end back if necessary #
+			($$locus[$i], $$locus[$i+1]) = flip_se($$locus[$i], $$locus[$i+1]) if $flip_bool;
+			
+			# check start stop #
+			die " ERROR: locus$locus scaffold start-end < 0\n"
+				if $$locus[$i] < 0 || $$locus[$i+1] < 0;
+			
+			# scaffold #
+			$scaffold_name = $$ret[0]->{"id"} unless $scaffold_name;
+			}
+		$$locus[1] = $scaffold_name;
+		
+		# other tables #
+		foreach my $table (keys %$tables_oi_r){
+			foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ){		 # 2 value
+				# checking start-end orientation #
+				my $flip_bool = 0;
+				$flip_bool = 1 if $$row[0] > $$row[1];
+				($$row[0], $$row[1]) = flip_se($$row[0], $$row[1]) if $flip_bool;
+				
+				# getting position info #
+				my $ret = $itree->fetch($$row[0], $$row[1]);		# ret = scaffold that positions span
+				check_scaffold_span($ret, $locus, $$row[0], $$row[1]);						# positions should span 1 scaffold
+
+				# updating position info #
+				## new start = scaf_start + (current_pos - scaf_gw_pos)
+				## new end = scaf_end - (scaf_gw_pos - current_pos)
+				$$row[0] = $$ret[0]->{"start"} + ($$row[0] - $$ret[0]->{"gw_start"});
+				$$row[1] = $$ret[0]->{"end"} - ($$ret[0]->{"gw_end"} - $$row[1]);
+			
+				# flipping start-end back if necessary #
+				($$row[0], $$row[1]) = flip_se($$row[0], $$row[1]) if $flip_bool;
+
+				# check start stop #
+				die " ERROR: locus$locus scaffold start-end < 0\n"
+					if $$row[0] < 0 || $$row[1] < 0;
+				
+				# scaffold #
+				$$row[2] = $scaffold_name;
+				}
+			}
+		}
+	
+		#print Dumper @$loci_r;
+		#print Dumper %$tables_oi_r; 
+		#exit;
+	}
+
+sub flip_se{
+	my ($start, $end) = @_;
+	return $end, $start;
+	}
+	
+sub check_scaffold_span{
+	my ($ret, $locus, $start, $end) = @_;
+	if(scalar @$ret > 1){
+		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold\n";
+		print STDERR " LOCUS: ", join(", ", @$locus), "\n";
+		exit;
+		}	
+	}
+
+sub get_other_tables_oi{
+# other tables that need position updating:
+## spacers
+## directrepeats
+## leaderseqs
+## genes
+
+	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
+	$prefix2 = $prefix unless $prefix2;
+	
+	my $cmd = "SELECT $prefix\_start, $prefix\_end, scaffold, $prefix2\_ID FROM $table where locus_id = ?";
+	$cmd =~ s/[\n\r]/ /g;
+	my $sql = $dbh->prepare($cmd);
+
+	foreach my $loci (@$loci_r){
+		$sql->bind_param(1, $$loci[0]);
+		$sql->execute();
+		my $ret = $sql->fetchall_arrayref();
+		$tables_oi_r->{$table}{$$loci[0]} = $ret;	
+		}
+	}	
+
 sub get_loci_oi{
 # getting loci with genbank of interest #
 	my ($dbh, $merged_genbank) = @_;
 
-	#my $cmd = "SELECT * from loci where 
+	my @parts = File::Spec->splitpath($merged_genbank);
+	
+	my $cmd = "SELECT locus_id, scaffold, locus_start, locus_end, 
+operon_start, operon_end, CRISPR_array_start, CRISPR_array_end
+FROM Loci where genbank = \'$parts[2]\'";
+	$cmd =~ s/[\n\r]/ /g;
+	my $ret = $dbh->selectall_arrayref($cmd);
+	
+	return $ret;
 	}
 
 sub make_loc_itree{
@@ -79,6 +284,14 @@ sub make_loc_itree{
 
 	foreach my $merged_contig (keys %$scaf_index_r){
 		foreach my $unmerged_contig (@{$scaf_index_r->{$merged_contig}}){
+			# addig genome-wide position info to unmerged contigs #
+			$unmerged_r->{$unmerged_contig}{"gw_start"} = $merged_r->{$merged_contig}{"start"};
+			$unmerged_r->{$unmerged_contig}{"gw_end"} = $merged_r->{$merged_contig}{"end"};
+			
+			# deleting sequence info #
+			delete $unmerged_r->{$unmerged_contig}{"seq"};
+			
+			# adding to interval tree #
 			$itree->insert($unmerged_r->{$unmerged_contig},
 						$merged_r->{$merged_contig}{"start"},
 						$merged_r->{$merged_contig}{"end"});
