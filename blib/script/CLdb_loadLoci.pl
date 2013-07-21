@@ -141,7 +141,7 @@ sub load_new_entries{
 
 sub check_headers{
 	my ($header_r) = @_;
-	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status crispr_array_status genbank author/;
+	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status crispr_array_status genbank array_file author/;
 	
 	my @not_found;
 	foreach (@req){

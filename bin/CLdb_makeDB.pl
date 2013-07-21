@@ -35,6 +35,7 @@ sub make_db{
 	# checking if tables specified exists, deleted if yes, dying if no #
 	foreach my $table (@$tables_r){
 		if(exists $sql_r->{$table}){
+			print STDERR "...Not dropping table: \"$table\"\n" if -e $db_name;
 			delete $sql_r->{$table};
 			}
 		else{
@@ -74,6 +75,7 @@ Locus_ID	INTEGER	PRIMARY KEY,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT,
+Scaffold	TEXT,
 Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
 Operon_Start	INTEGER,
