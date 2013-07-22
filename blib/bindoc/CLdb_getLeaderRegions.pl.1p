@@ -188,17 +188,15 @@ Leader region start & end are according to the + strand.
 .PP
 The number of repeat_groups on each side (5' & 3') of the
 \&\s-1CRISPR\s0 array will be printed to \s-1STDERR\s0 (unless '\-v'). 
-The output values are: 'degeracies', 'locus_id', 
+The output values are: 'degeracies', locus_id', 
 \&'5\-prime_number_repeat_groups', '3\-prime_number_repeat_groups'
-.PP
-Genbank files must be in \f(CW$CLdb_HOME\fR/genbank/
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Leader regions for all loci"
 .IX Subsection "Leader regions for all loci"
 CLdb_getLeaderRegion.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Leader regions for just subtype I\-B (must have '\s-1AND\s0' in sql):"
-.IX Subsection "Leader regions for just subtype I-B (must have 'AND' in sql):"
+.SS "Leader regions for just subtype I\-B (must use '\s-1AND\s0'):"
+.IX Subsection "Leader regions for just subtype I-B (must use 'AND'):"
 CLdb_getLeaderRegions.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"\s-1AND\s0 subtype='I\-B'\*(R" > leader_I\-B.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
