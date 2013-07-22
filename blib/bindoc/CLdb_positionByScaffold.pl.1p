@@ -130,7 +130,7 @@
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_positionByScaffold.pl \-\- Initial DB construction
+CLdb_positionByScaffold.pl \-\- Convert positional values from merged (whole\-genome) to by\-scaffold
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
@@ -157,6 +157,9 @@ The input must be a 2 column tab-delimited table:
 \&'unmerged_genbank_file_name', 'merged_genbank_file_name'
 .PP
 Example of unmerged genbank file format: \s-1RAST\s0 genbank output for a draft genome.
+.PP
+Updates not committed until all of the values have been converted
+(in case something goes wrong, you won't have a hybrid-position database)
 .SS "Matching unmerged and merged scaffolds"
 .IX Subsection "Matching unmerged and merged scaffolds"
 All scaffold start-end info is obtained form the 'source' tags
