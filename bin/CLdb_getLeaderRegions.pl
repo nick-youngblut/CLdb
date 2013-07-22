@@ -17,7 +17,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check);
 my $extra_query = "";
 my $length = 1000;				# max length of leader region
-my $gene_len_cutoff = 90;		# bp minimum to be considered a real gene
+my $gene_len_cutoff = 150;		# bp minimum to be considered a real gene
 GetOptions(
 	   "database=s" => \$database_file,
 	   "query=s" => \$extra_query, 
@@ -81,43 +81,54 @@ sub get_leader_seq{
 	
 	# opening genbanks & getting sequences #
 	foreach my $genbank_file (keys %genbank_loci_index){
-		my $seqio = Bio::SeqIO->new(-format => "genbank", -file => "$genbank_path/$genbank_file")->next_seq();
-		foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
-			
-			foreach my $loc (@{$leader_loc_r->{$locus}}){		# if both ends, must get both
-				
-				# determining leader region start-end
-				my $leader_start;
-				my $leader_end;
-				my $array_start = ${$array_se_r->{$locus}}[1];
-				my $array_end = ${$array_se_r->{$locus}}[2];
-				
-				if($loc eq "start" ){
-					$leader_start = $array_start - $length;
-					$leader_end = $array_start; 
+		
+		# loadign genbank #
+		my $seqio = Bio::SeqIO->new(-format => "genbank", 
+								-file => "$genbank_path/$genbank_file");
+		
+		while( my $seqo = $seqio->next_seq ){
+			foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
+				foreach my $loc (@{$leader_loc_r->{$locus}}){		# if both ends, must get both
+					# only comparing on the same scaffole
+					my $leader_scaf = ${$array_se_r->{$locus}}[4];
+					next unless $leader_scaf eq $seqo->display_id;
+					
+					# determining leader region start-end
+					my $leader_start;
+					my $leader_end;
+					my $array_start = ${$array_se_r->{$locus}}[1];
+					my $array_end = ${$array_se_r->{$locus}}[2];
+					
+					if($loc eq "start" ){
+						$leader_start = $array_start - $length;
+						$leader_end = $array_start; 
+						}
+					elsif($loc eq "end"){		# if "end"
+						$leader_start = $array_end;
+						$leader_end = $array_end + $length;
+						}
+					else{ die " LOGIC ERROR: $!\n"; }
+					
+					# no negative (or zero) values (due to $length extending beyond scaffold) #
+					$leader_start = 1 if $leader_start < 1;
+					$leader_end = 1 if $leader_end < 1;
+					
+					# checking for gene overlap #
+					($seqo, $leader_start, $leader_end) = check_gene_overlap($seqo, $leader_start, $leader_end, $loc, $locus)
+						unless $overlap_check;
+					
+					
+					# parsing seq from genbank #
+					my $leader_seqo = $seqo->trunc($leader_start, $leader_end);					
+					$leader_seqo->display_id("cli.$locus\___$loc\___$leader_scaf\___$leader_start\___$leader_end");
+					$leader_seqo->desc(" $loc\___$leader_scaf\___$leader_start\___$leader_end");
+					$leader_seqo->desc("");
+									
+					$out->write_seq($leader_seqo);
 					}
-				elsif($loc eq "end"){		# if "end"
-					$leader_start = $array_end;
-					$leader_end = $array_end + $length;
-					}
-				else{ die " LOGIC ERROR: $!\n"; }
-				
-				# checking for gene overlap #
-				($seqio, $leader_start, $leader_end) = check_gene_overlap($seqio, $leader_start, $leader_end, $loc, $locus)
-					unless $overlap_check;
-				
-				# parsing seq from genbank #
-				my $leader_seqio = $seqio->trunc($leader_start, $leader_end);					
-				$leader_seqio->display_id("cli.$locus\__$loc\__$leader_start\__$leader_end");
-				#$leader_seqio->desc(" $loc\__$leader_start\__$leader_end");
-				$leader_seqio->desc("");
-								
-				$out->write_seq($leader_seqio);
 				}
-
 			}
 		}
-	
 	}
 
 sub check_gene_overlap{
@@ -155,8 +166,8 @@ sub check_gene_overlap{
 		}
 		
 	# debuggin itree #	
-	#	print_itree($itree, $region_start, $region_end);
-
+		#print_itree($itree, $region_start, $region_end); exit;
+		
 	my $overlap_pos = 0;
 	if($leader_loc eq "start"){		# checking for 1st overlap from 3' - 5' end # 
 		for (my $i=$region_end; $i>=$region_start; $i--){
@@ -190,7 +201,11 @@ sub check_gene_overlap{
 		die " LOGIC ERROR: region start is > region end! $!\n"
 			if $region_start > $region_end;
 		}
-		
+
+	# sanity checks #
+	die " ERROR: For locus$locus, start and/or end is negative!: start=$region_start; end=$region_end\n"
+		unless $region_start >= 0 && $region_end >= 0;
+
 	return $seq, $region_start, $region_end;
 	}
 
@@ -268,7 +283,6 @@ sub print_itree{
 		my $res = $itree->fetch($i, $i);
 		
 		print join("\t", "pos:$i", join("::", @$res)), "\n";
-		#if($i == 2037996){ print Dumper $$res[0]; exit; }
 		}
 	#exit;
 	}	
@@ -346,7 +360,7 @@ sub get_array_se{
 # getting the array start-end from loci table #
 	my ($dbh, $extra_query) = @_;
 	
-	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $extra_query";
+	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank, scaffold FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $extra_query";
 	my $ret = $dbh->selectall_arrayref($cmd);
 
 	my %array_se;
