@@ -91,6 +91,10 @@ foreach my $unmerged (keys %$gen_list_r){
 		if exists $tables_r->{"genes"};
 	}
 
+# committing updates #
+$dbh->commit;
+print STDERR "...All updates committed!\n";
+
 # disconnect #
 $dbh->disconnect();
 exit;
@@ -178,10 +182,8 @@ AND $prefix2\_id=?";
 			else{ $cnt++; }
 			}
 		}
-
-	$dbh->commit;
 	
-	print STDERR "...Number of entries updated in $table: $cnt\n";	
+	print STDERR "...Number of entries to be updated in $table: $cnt\n";	
 	}
 
 sub update_loci{
@@ -205,7 +207,7 @@ WHERE locus_id=?";
 
 	$dbh->commit;
 	
-	print STDERR "...Number of entries updated in Loci: $cnt\n";
+	print STDERR "...Number of entries to be updated in Loci: $cnt\n";
 	}
 
 sub merged_to_unmerged_pos{

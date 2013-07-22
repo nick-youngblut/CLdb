@@ -204,8 +204,6 @@ WHERE locus_id=?";
 			}
 		else{ $cnt++; }
 		}
-
-	$dbh->commit;
 	
 	print STDERR "...Number of entries to be updated in Loci: $cnt\n";
 	}
@@ -219,6 +217,9 @@ sub merged_to_unmerged_pos{
 		my $scaffold_name;
 		# locus table #
 		for (my $i=2; $i<=6; $i+=2){
+			# skipping if no values #
+			next unless $$locus[$i] && $$locus[$i+1];
+			
 			# checking start-end orientation #
 			my $flip_bool = 0;
 			$flip_bool = 1 if $$locus[$i] > $$locus[$i+1];
@@ -226,7 +227,7 @@ sub merged_to_unmerged_pos{
 			
 			# getting position info #
 			my $ret = $itree->fetch($$locus[$i], $$locus[$i+1]);		# ret = scaffold that positions span
-			check_scaffold_span($ret, $locus, $$locus[$i], $$locus[$i+1]);						# positions should span 1 scaffold
+			check_scaffold_span($ret, $locus, $$locus[$i], $$locus[$i+1], "loci");						# positions should span 1 scaffold
 
 			# updating position info #
 			## new start = scaf_start + (current_pos - scaf_gw_pos)
@@ -249,6 +250,9 @@ sub merged_to_unmerged_pos{
 		# other tables #
 		foreach my $table (keys %$tables_oi_r){
 			foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ){		 # 2 value
+				# skipping if not present #
+				next unless $$row[0] && $$row[1];
+				
 				# checking start-end orientation #
 				my $flip_bool = 0;
 				$flip_bool = 1 if $$row[0] > $$row[1];
@@ -256,7 +260,7 @@ sub merged_to_unmerged_pos{
 				
 				# getting position info #
 				my $ret = $itree->fetch($$row[0], $$row[1]);		# ret = scaffold that positions span
-				check_scaffold_span($ret, $locus, $$row[0], $$row[1]);						# positions should span 1 scaffold
+				check_scaffold_span($ret, $locus, $$row[0], $$row[1], $table);						# positions should span 1 scaffold
 
 				# updating position info #
 				## new start = scaf_start + (current_pos - scaf_gw_pos)
@@ -288,7 +292,10 @@ sub flip_se{
 	}
 	
 sub check_scaffold_span{
-	my ($ret, $locus, $start, $end) = @_;
+	my ($ret, $locus, $start, $end, $table) = @_;
+	die " ERROR: no scaffold spans positions start->$start, end->$end for locus->$$locus[0], table->$table\n"
+		unless @$ret;
+		
 	if(scalar @$ret > 1){
 		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold\n";
 		print STDERR " LOCUS: ", join(", ", @$locus), "\n";
@@ -499,7 +506,7 @@ __END__
 
 =head1 NAME
 
-CLdb_positionByScaffold.pl -- Initial DB construction
+CLdb_positionByScaffold.pl -- Convert positional values from merged (whole-genome) to by-scaffold
 
 =head1 SYNOPSIS
 
@@ -536,6 +543,9 @@ The input must be a 2 column tab-delimited table:
 'unmerged_genbank_file_name', 'merged_genbank_file_name'
 
 Example of unmerged genbank file format: RAST genbank output for a draft genome.
+
+Updates not committed until all of the values have been converted
+(in case something goes wrong, you won't have a hybrid-position database)
 
 =head2 Matching unmerged and merged scaffolds
 
