@@ -255,9 +255,17 @@ the subtypes are provided via '-subtype'
 
 CLdb_subtypePA_ITOL.pl -d CLdb.sqlite 
 
-=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary
+=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary)
 
 CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -a
+
+=head2 Subtype count table of loci containing CAS operons
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status!='absent'"
+
+=head2 Subtype count table of loci containing intact CAS operons (no broken or shuffled)
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status='intact'"
 
 =head2 User provided colors
 

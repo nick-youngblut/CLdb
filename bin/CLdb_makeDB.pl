@@ -193,7 +193,10 @@ sstart	INTEGER	NOT NULL,
 send	INTEGER	NOT NULL,
 evalue	TEXT	NOT NULL,
 bitscore	INTEGER	NOT NULL,
+qlen	INTEGER	NOT NULL,
+slen	INTEGER NOT NULL,
 CRISPR_array	TEXT,
+date	TEXT	NOT NULL,
 UNIQUE( Spacer_group, Taxon_ID, Taxon_name, Subject, sstart, send)
 ON CONFLICT REPLACE
 );
