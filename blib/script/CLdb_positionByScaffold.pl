@@ -91,6 +91,8 @@ foreach my $unmerged (keys %$gen_list_r){
 		if exists $tables_r->{"genes"};
 	}
 
+exit;
+
 # updating loci genbanks #
 update_loci_genbank($dbh, $gen_list_r);
 
@@ -186,7 +188,7 @@ sub update_other_table{
 	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
 	$prefix2 = $prefix unless $prefix2;
 	
-	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=?, scaffold=? 
+	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=? 
 WHERE locus_id=?
 AND $prefix2\_id=?";
 	$cmd =~ s/[\n\r]/ /g;
@@ -197,7 +199,7 @@ AND $prefix2\_id=?";
 	foreach my $locus (@$loci_r){
 		foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ) {
 				#print Dumper @$row;
-			$sql->execute(@$row[0..2], $$locus[0], $$row[3]);
+			$sql->execute(@$row[0..2], $$locus[0]);
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
 				}
@@ -261,8 +263,8 @@ sub merged_to_unmerged_pos{
 			($$locus[$i], $$locus[$i+1]) = flip_se($$locus[$i], $$locus[$i+1]) if $flip_bool;
 			
 			# check start stop #
-			die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
-			#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
+			#die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
+			print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
 				if $$locus[$i] < 0 || $$locus[$i+1] < 0;
 			
 			# scaffold #
@@ -295,8 +297,8 @@ sub merged_to_unmerged_pos{
 				($$row[0], $$row[1]) = flip_se($$row[0], $$row[1]) if $flip_bool;
 
 				# check start stop #
-				die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
-				#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
+				#die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
+				print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
 					if $$row[0] < 0 || $$row[1] < 0;
 			
 				# scaffold #
@@ -323,8 +325,8 @@ sub check_scaffold_span{
 	if(scalar @$ret > 1){
 		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold in table->$table\n";
 		print STDERR " LOCUS: ", join(", ", $$locus[0], @$locus[2..$#$locus]), "\n";	
-			#print Dumper @$ret;
-		exit;
+			print Dumper @$ret;
+		#exit;
 		}	
 	}
 
