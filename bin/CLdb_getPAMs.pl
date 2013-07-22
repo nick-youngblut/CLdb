@@ -183,7 +183,7 @@ blast_hits.sstart, blast_hits.send
 from Loci, Spacers, Blast_hits
 WHERE Loci.locus_id == Spacers.locus_id
 AND blast_hits.spacer_group == spacers.spacer_group
-AND blast_hits.CRISPR_array == 'yes'
+AND blast_hits.CRISPR_array == 'no'
 $join_sql";
 	$query =~ s/[\n\r]+/ /g;
 	

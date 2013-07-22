@@ -33,20 +33,20 @@ sub make_db{
 	my ($sql_r, $db_name, $tables_r) = @_;
 	
 	# checking if tables specified exists, deleted if yes, dying if no #
-	foreach my $table (@$tables_r){
-		if(exists $sql_r->{$table}){
-			delete $sql_r->{$table};
-			}
-		else{
-			print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
-			print STDERR "### tables in sql (ie. the tables that will be created) ###\n";
-			print STDERR join(",\n", keys %$sql_r), "\n";
-			exit;
-			}
-		}
-	
-	# checking for overwrite of database #
 	if(-e $db_name){
+		foreach my $table (@$tables_r){
+			if(exists $sql_r->{$table}){
+				print STDERR "...Not dropping table: \"$table\"\n";
+				delete $sql_r->{$table};
+				}
+			else{
+				print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
+				print STDERR "### tables in sql (ie. the tables that will be created) ###\n";
+				print STDERR join(",\n", keys %$sql_r), "\n";
+				exit;
+				}
+			}
+		# checking for overwrite of database #
 		die " ERROR: $db_name already exists! Use '-r' to replace\n" unless $replace
 		}
 	
@@ -74,6 +74,7 @@ Locus_ID	INTEGER	PRIMARY KEY,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT,
+Scaffold	TEXT,
 Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
 Operon_Start	INTEGER,
@@ -98,6 +99,7 @@ DROP TABLE IF EXISTS Spacers;
 CREATE TABLE Spacers (
 Locus_ID	INTEGER	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
+Scaffold	TEXT,
 Spacer_Start	INTEGER	NOT NULL,
 Spacer_End	INTEGER	NOT NULL,
 Spacer_Sequence	TEXT	NOT NULL,
@@ -115,6 +117,7 @@ DROP TABLE IF EXISTS DirectRepeats;
 CREATE TABLE DirectRepeats (
 Locus_ID	INTEGER	NOT NULL,
 Repeat_ID	INTEGER	NOT NULL,
+Scaffold	TEXT,
 Repeat_Start	INTEGER	NOT NULL,
 Repeat_End	INTEGER	NOT NULL,
 Repeat_Sequence	TEXT	NOT NULL,
@@ -145,6 +148,7 @@ DROP TABLE IF EXISTS LeaderSeqs;
 
 CREATE TABLE LeaderSeqs (
 Locus_ID	INTEGER	NOT NULL,
+Scaffold	TEXT,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
 Leader_Sequence	TEXT	NOT NULL,
@@ -162,32 +166,13 @@ DROP TABLE IF EXISTS Genes;
 CREATE TABLE Genes (
 Locus_ID	INTEGER	NOT NULL,
 Gene_ID	TEXT	NOT NULL,
+Scaffold	TEXT,
 Gene_Start	INTEGER	NOT NULL,
 Gene_End	INTEGER	NOT NULL,
 Gene_Length__AA	INTEGER	NOT NULL,
 In_Operon	TEXT	NOT NULL,
 Gene_Alias	TEXT,
 UNIQUE (Locus_ID, Gene_ID)
-ON CONFLICT REPLACE
-);
-
-HERE
-
-
-	$sql{"draft"} = <<HERE;
-DROP TABLE IF EXISTS Draft;
-
-CREATE TABLE Draft (
-Locus_ID	INTEGER,
-Scaffold_name	TEXT	NOT NULL,
-Locus_Start	INTEGER	NOT NULL,
-Locus_End	INTEGER	NOT NULL,
-Operon_Start	INTEGER,
-Operon_End	INTEGER,
-CRISPR_Array_Start	INTEGER,
-CRISPR_Array_End	INTEGER,
-Genbank	TEXT	NOT NULL,
-UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 

@@ -124,35 +124,55 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_POSITIONBYSCAFFOLD 1"
-.TH CLDB_POSITIONBYSCAFFOLD 1 "2013-07-19" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_POSITIONBYSCAFFOLD 1 "2013-07-21" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_makeDB.pl \-\- Initial DB construction
+CLdb_positionByScaffold.pl \-\- Initial DB construction
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_makeDB.pl [options] [DATABASE_name]
-.SS "options"
-.IX Subsection "options"
-.IP "\-r 	Replace existing database." 4
-.IX Item "-r 	Replace existing database."
+CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
+.SS "Required flags"
+.IX Subsection "Required flags"
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
+.SS "Optional flags"
+.IX Subsection "Optional flags"
 .PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_makeDB.pl
+perldoc CLdb_positionByScaffold.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make all of the CRISPR_db tables.
+Convert merged genbank position information (merged with \s-1EMBOSS\s0 'union')
+to scaffold-based position info.
+.SS "Input"
+.IX Subsection "Input"
+The input must be a 2 column tab-delimited table:
+\&'unmerged_genbank_file_name', 'merged_genbank_file_name'
+.PP
+Example of unmerged genbank file format: \s-1RAST\s0 genbank output for a draft genome.
+.SS "Matching unmerged and merged scaffolds"
+.IX Subsection "Matching unmerged and merged scaffolds"
+All scaffold start-end info is obtained form the 'source' tags
+in both the unmerged and merged genbank files. 1\-to\-1
+connections between scaffolds are determined in a number of steps:
+.IP "1) Comparing scaffold lengths." 4
+.IX Item "1) Comparing scaffold lengths."
+.PD 0
+.IP "2) Comparing scaffold sequences. No duplicate scaffolds allowed!" 4
+.IX Item "2) Comparing scaffold sequences. No duplicate scaffolds allowed!"
+.PD
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Naming database 'CRISPR_db1'"
-.IX Subsection "Naming database 'CRISPR_db1'"
-CLdb_makeDB.pl CRISPR_db1
+.SS "Normal usage:"
+.IX Subsection "Normal usage:"
+CLdb_positionByScaffold.pl \-d CLdb.sqlite < unmerged_merged.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

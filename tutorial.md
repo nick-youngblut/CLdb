@@ -142,7 +142,7 @@ Example database setup
 
 #### pseudo-hierarchical clustering of spacers & DRs (good for plotting loci)
 
-	$ CLdb_hclusterArrays -d CLdb.sqlite -s -r 
+	$ CLdb_hclusterArrays.pl -d CLdb.sqlite -s -r 
 
 #### calculating direct repeat consensus sequences
 
@@ -268,11 +268,11 @@ Workflows
 
 ## Get spacer-spacer blast hits
 
-##### All pairwise blast hits
+##### All spacer pairwise blast hits
 	
 	$ CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite
 
-##### All spacer-spacer blasts that only partially overlap
+##### All spacer pairwise blast hits that only partially overlap (possible multiple aquisitions
 
 	$ CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
 	
