@@ -91,17 +91,39 @@ foreach my $unmerged (keys %$gen_list_r){
 		if exists $tables_r->{"genes"};
 	}
 
+# updating loci genbanks #
+update_loci_genbank($dbh, $gen_list_r);
+
 # committing updates #
 $dbh->commit;
 print STDERR "...All updates committed!\n";
 
 # disconnect #
 $dbh->disconnect();
+
+
 exit;
 
 
 
 ### Subroutines
+sub update_loci_genbank{
+# updating loci genbank values to unmerged genbank files #
+	my ($dbh, $gen_list_r) = @_;
+	print STDERR "...updating genbank file names in loci table\n";
+	
+	my $cmd = "UPDATE loci SET genbank=? where genbank=?";		# merged to unmerged
+	my $sql = $dbh->prepare($cmd);
+
+	foreach my $unmerged (keys %$gen_list_r){
+		$sql->bind_param(1, $unmerged);
+		$sql->bind_param(2, $gen_list_r->{$unmerged});		
+		$sql->execute();
+		}
+
+	print STDERR "...be sure to move unmerged genbanks into \$CLdb_HOME/genbank!!!\n";
+	}
+
 sub find_same_sequence{
 # checking contigs by same sequence; should match all contigs #
 ## sequences should match exactly & 1-to-1 ##
@@ -239,7 +261,8 @@ sub merged_to_unmerged_pos{
 			($$locus[$i], $$locus[$i+1]) = flip_se($$locus[$i], $$locus[$i+1]) if $flip_bool;
 			
 			# check start stop #
-			die " ERROR: locus$locus scaffold start-end < 0\n"
+			die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
+			#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
 				if $$locus[$i] < 0 || $$locus[$i+1] < 0;
 			
 			# scaffold #
@@ -272,9 +295,10 @@ sub merged_to_unmerged_pos{
 				($$row[0], $$row[1]) = flip_se($$row[0], $$row[1]) if $flip_bool;
 
 				# check start stop #
-				die " ERROR: locus$locus scaffold start-end < 0\n"
+				die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
+				#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
 					if $$row[0] < 0 || $$row[1] < 0;
-				
+			
 				# scaffold #
 				$$row[2] = $scaffold_name;
 				}
@@ -295,10 +319,11 @@ sub check_scaffold_span{
 	my ($ret, $locus, $start, $end, $table) = @_;
 	die " ERROR: no scaffold spans positions start->$start, end->$end for locus->$$locus[0], table->$table\n"
 		unless @$ret;
-		
+
 	if(scalar @$ret > 1){
-		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold\n";
-		print STDERR " LOCUS: ", join(", ", @$locus), "\n";
+		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold in table->$table\n";
+		print STDERR " LOCUS: ", join(", ", $$locus[0], @$locus[2..$#$locus]), "\n";	
+			#print Dumper @$ret;
 		exit;
 		}	
 	}
@@ -492,7 +517,7 @@ sub get_genbank_list{
 		die " ERROR: the genbank list must have 2 columns!\n"
 			unless scalar @tmp == 2;
 		
-		$list{$tmp[0]} = $tmp[1];
+		$list{$tmp[0]} = $tmp[1];	# unmerged => merged
 		}
 	
 		#print Dumper %list; exit;
