@@ -166,7 +166,7 @@ sub check_gene_overlap{
 		}
 		
 	# debuggin itree #	
-		#print_itree($itree, $region_start, $region_end); exit;
+		#print_itree($itree, $region_start, $region_end);
 		
 	my $overlap_pos = 0;
 	if($leader_loc eq "start"){		# checking for 1st overlap from 3' - 5' end # 
@@ -466,10 +466,8 @@ Leader region start & end are according to the + strand.
 
 The number of repeat_groups on each side (5' & 3') of the
 CRISPR array will be printed to STDERR (unless '-v'). 
-The output values are: 'degeracies', 'locus_id', 
+The output values are: 'degeracies', locus_id', 
 '5-prime_number_repeat_groups', '3-prime_number_repeat_groups'
-
-Genbank files must be in $CLdb_HOME/genbank/
 
 =head1 EXAMPLES
 
@@ -477,7 +475,7 @@ Genbank files must be in $CLdb_HOME/genbank/
 
 CLdb_getLeaderRegion.pl -d CRISPR.sqlite
 
-=head2 Leader regions for just subtype I-B (must have 'AND' in sql):
+=head2 Leader regions for just subtype I-B (must use 'AND'):
 
 CLdb_getLeaderRegions.pl -d CRISPR.sqlite -q "AND subtype='I-B'" > leader_I-B.fna
 
@@ -495,4 +493,3 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
-
