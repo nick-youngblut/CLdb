@@ -141,18 +141,34 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 .SS "options"
 .IX Subsection "options"
 .PD 0
-.IP "\-l 	Maximum length of leader region (bp). [1000]" 4
-.IX Item "-l 	Maximum length of leader region (bp). [1000]"
-.IP "\-q 	sql to refine loci query (see \s-1EXAMPLES\s0)." 4
-.IX Item "-q 	sql to refine loci query (see EXAMPLES)."
-.IP "\-o 	Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]" 4
-.IX Item "-o 	Check for overlapping genes (& trim region if overlap)? [TRUE]"
-.IP "\-c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]" 4
-.IX Item "-c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]"
-.IP "\-b 	Get sequence on both sides of the array regardless of degeneracies? [\s-1FALSE\s0]" 4
-.IX Item "-b 	Get sequence on both sides of the array regardless of degeneracies? [FALSE]"
+.IP "\-length" 4
+.IX Item "-length"
+.PD
+Maximum length of leader region (bp). [1000]
+.IP "\-subtype" 4
+.IX Item "-subtype"
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine which sequences are returned.
+.IP "\-overlap" 4
+.IX Item "-overlap"
+Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]
+.IP "\-cutoff" 4
+.IX Item "-cutoff"
+Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
+.IP "\-both" 4
+.IX Item "-both"
+Get sequence on both sides of the array regardless of degeneracies? [\s-1FALSE\s0]
 .IP "\-v	Verbose output" 4
 .IX Item "-v	Verbose output"
+.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
@@ -194,10 +210,10 @@ The output values are: 'degeracies', locus_id',
 .IX Header "EXAMPLES"
 .SS "Leader regions for all loci"
 .IX Subsection "Leader regions for all loci"
-CLdb_getLeaderRegion.pl \-d \s-1CRISPR\s0.sqlite
-.SS "Leader regions for just subtype I\-B (must use '\s-1AND\s0'):"
-.IX Subsection "Leader regions for just subtype I-B (must use 'AND'):"
-CLdb_getLeaderRegions.pl \-d \s-1CRISPR\s0.sqlite \-q \*(L"\s-1AND\s0 subtype='I\-B'\*(R" > leader_I\-B.fna
+CLdb_getLeaderRegion.pl \-d CLdb.sqlite > leaders.fna
+.SS "Leader regions for just subtype I\-B"
+.IX Subsection "Leader regions for just subtype I-B"
+CLdb_getLeaderRegions.pl \-d CLdb.sqlite \-sub I\-B > leader_I\-B.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

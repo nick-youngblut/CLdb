@@ -15,11 +15,15 @@ use Set::IntervalTree;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check);
+my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $length = 1000;				# max length of leader region
 my $gene_len_cutoff = 150;		# bp minimum to be considered a real gene
 GetOptions(
 	   "database=s" => \$database_file,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name,	   
 	   "query=s" => \$extra_query, 
 	   "length=i" => \$length,
 	   "overlap" => \$overlap_check,
@@ -44,8 +48,14 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
 # getting array start-end from loci table #
-my $array_se_r = get_array_se($dbh, $extra_query);
+my $array_se_r = get_array_se($dbh, $join_sql, $extra_query);
 
 # determinig leader end of array based on DR degeneracy #
 ## pulling out direct repeat sequences for each loci ##
@@ -362,9 +372,9 @@ sub determine_leader{
 
 sub get_array_se{
 # getting the array start-end from loci table #
-	my ($dbh, $extra_query) = @_;
+	my ($dbh, $join_sql, $extra_query) = @_;
 	
-	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank, scaffold FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $extra_query";
+	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank, scaffold FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $join_sql $extra_query";
 	my $ret = $dbh->selectall_arrayref($cmd);
 
 	my %array_se;
@@ -396,6 +406,15 @@ sub make_leader_dir{
 	return $leader_path;
 	}
 
+sub join_query_opts{
+# joining query options for selecting loci #
+	my ($vals_r, $cat) = @_;
+
+	return "" unless @$vals_r;	
+	
+	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+	return join("", " AND $cat IN (", join(", ", @$vals_r), ")");
+	}
 
 __END__
 
@@ -421,15 +440,37 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 
 =over
 
-=item -l 	Maximum length of leader region (bp). [1000]
+=item -length
 
-=item -q 	sql to refine loci query (see EXAMPLES).
+Maximum length of leader region (bp). [1000]
 
-=item -o 	Check for overlapping genes (& trim region if overlap)? [TRUE]
+=item -subtype
 
-=item -c 	Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
+Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -b 	Get sequence on both sides of the array regardless of degeneracies? [FALSE]
+=item -taxon_id
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query
+
+Extra sql to refine which sequences are returned.
+
+=item -overlap
+
+Check for overlapping genes (& trim region if overlap)? [TRUE]
+
+=item -cutoff
+
+Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
+
+=item -both
+
+Get sequence on both sides of the array regardless of degeneracies? [FALSE]
 
 =item -v	Verbose output
 
@@ -477,11 +518,11 @@ The output values are: 'degeracies', locus_id',
 
 =head2 Leader regions for all loci
 
-CLdb_getLeaderRegion.pl -d CRISPR.sqlite
+CLdb_getLeaderRegion.pl -d CLdb.sqlite > leaders.fna
 
-=head2 Leader regions for just subtype I-B (must use 'AND'):
+=head2 Leader regions for just subtype I-B
 
-CLdb_getLeaderRegions.pl -d CRISPR.sqlite -q "AND subtype='I-B'" > leader_I-B.fna
+CLdb_getLeaderRegions.pl -d CLdb.sqlite -sub I-B > leader_I-B.fna
 
 =head1 AUTHOR
 
