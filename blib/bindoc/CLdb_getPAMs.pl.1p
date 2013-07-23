@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETPAMS 1"
-.TH CLDB_GETPAMS 1 "2013-07-21" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETPAMS 1 "2013-07-23" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -160,6 +160,9 @@ Extra sql to refine the query.
 .IP "\-staxon_name" 4
 .IX Item "-staxon_name"
 \&\s-1BLAST\s0 subject taxon_name (>1 argument allowed)
+.IP "\-length" 4
+.IX Item "-length"
+Length cutoff for blast hit (>=; fraction of spacer length). [1]
 .IP "\-x" 4
 .IX Item "-x"
 Extension beyond spacer blast to check for PAMs (bp). [20]
@@ -189,6 +192,9 @@ Spacer-PAM sequences are named as following:
 .PP
 \&\*(L"\s-1NULL\s0\*(R" will be used if \*(L"Subject_Taxon_ID\*(R" or \*(L"Subject_Taxon_name\*(R"
 is not present in CLdb.
+.PP
+By default, only full-length spacer blast hits
+are used (change with '\-l').
 .SS "Requirements for analysis"
 .IX Subsection "Requirements for analysis"
 .IP "\(bu" 4

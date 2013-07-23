@@ -18,7 +18,8 @@ my ($verbose, $database_file);
 my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name); 				# blast subject query refinement
 my $extra_query = "";						# query refinement
-my $extend = 20;						# length to extend off of each side
+my $extend = 20;							# length to extend off of each side
+my $len_cutoff = 1;							# length 
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -28,6 +29,7 @@ GetOptions(
 	   "staxon_id=s{,}" => \@staxon_id,
 	   "staxon_name=s{,}" => \@staxon_name,
 	   "x=i" => \$extend,
+	   "length=f" => \$len_cutoff,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -56,9 +58,11 @@ $join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name);
 # getting blast hits #
 my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 
-# getting PAMs & spacer sequences #
-get_PAMs($dbh, $blast_hits_r, $extend);
+# getting spacer group length #
+my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
 
+# getting PAMs & spacer sequences #
+get_PAMs($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff);
 
 # disconnect #
 $dbh->disconnect();
@@ -68,7 +72,7 @@ exit;
 ### Subroutines
 sub get_PAMs{
 # getting spacer blast hit sequence & adjacent regions #
-	my ($dbh, $blast_hits_r, $extend) = @_;
+	my ($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff) = @_;
 	
 	my $query = "SELECT substr(scaffold_sequence,?,?) FROM blast_subject
 WHERE scaffold_name = ?
@@ -81,10 +85,17 @@ AND (taxon_id == ?
 	my $sql = $dbh->prepare($query);
 	
 	# getting sequence for each blast hit queried #
-	foreach my $hit (@$blast_hits_r){
+	foreach my $hit (sort @$blast_hits_r){
 		# start - end #
 		my $hit_start = $$hit[4];
 		my $hit_end = $$hit[5];
+		
+		# length cutoff #
+		die " ERROR: $$hit[0] not found in spacer length index!\n"
+			unless exists $spacer_len_r->{$$hit[0]};
+		next unless abs($hit_end - $hit_start + 1) /  $spacer_len_r->{$$hit[0]}
+			>= $len_cutoff;
+		
 		
 		## flipping to positive strand ##
 		if($hit_start > $hit_end){
@@ -124,6 +135,37 @@ AND (taxon_id == ?
 			print join("\t", @$row), "\n";
 			}
 		}  	
+	}
+
+sub get_spacer_group_length{
+# getting spacer group length for removing spacers that do not meet length cutoff #
+	my ($dbh, $join_sql, $extra_query) = @_;
+	
+	# basic query #
+	my $query = "SELECT spacers.spacer_group, spacers.spacer_start, spacers.spacer_end
+from Loci, Spacers
+WHERE Loci.locus_id == Spacers.locus_id
+$join_sql";
+	$query =~ s/[\n\r]+/ /g;
+	
+	$query = join(" ", $query, $extra_query);
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	
+	# making hash (spacer_group => spacer_length) #
+	my %spacer_length;
+	foreach my $row (@$ret){
+		$spacer_length{$$row[0]} = abs($$row[2] - $$row[1]);
+		}
+	
+	return \%spacer_length;
 	}
 
 sub spacer2lc{
@@ -239,8 +281,6 @@ sub path_by_database{
 	}
 
 
-
-
 __END__
 
 =pod
@@ -289,6 +329,10 @@ BLAST subject taxon_id (>1 argument allowed)
 
 BLAST subject taxon_name (>1 argument allowed)
 
+=item -length
+
+Length cutoff for blast hit (>=; fraction of spacer length). [1]
+
 =item -x
 
 Extension beyond spacer blast to check for PAMs (bp). [20]
@@ -321,6 +365,9 @@ Spacer-PAM sequences are named as following:
 
 "NULL" will be used if "Subject_Taxon_ID" or "Subject_Taxon_name"
 is not present in CLdb.
+
+By default, only full-length spacer blast hits
+are used (change with '-l').
 
 =head2 Requirements for analysis
 

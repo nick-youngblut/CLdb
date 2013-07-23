@@ -113,10 +113,14 @@ sub get_leader_seq{
 					$leader_start = 1 if $leader_start < 1;
 					$leader_end = 1 if $leader_end < 1;
 					
+					# leader start & end must be < total scaffold length #
+					my $scaf_len = length $seqo->seq;
+					$leader_start = $scaf_len if $leader_start > $scaf_len;
+					$leader_end = $scaf_len if $leader_end > $scaf_len;
+					
 					# checking for gene overlap #
 					($seqo, $leader_start, $leader_end) = check_gene_overlap($seqo, $leader_start, $leader_end, $loc, $locus)
 						unless $overlap_check;
-					
 					
 					# parsing seq from genbank #
 					my $leader_seqo = $seqo->trunc($leader_start, $leader_end);					
