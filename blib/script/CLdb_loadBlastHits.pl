@@ -125,7 +125,7 @@ sub get_blast_hits{
 	my ($dbh, $taxon_info_r, $taxa_r, $taxon_id, $taxon_name, $delimiter) = @_;
 
 	# loading entry #
-	my $cmd = "INSERT INTO blast_hits(Spacer_group,Subject,pident,length,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,CRISPR_array,Taxon_ID,Taxon_name,date) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+	my $cmd = "INSERT INTO blast_hits(Spacer_group,Subject,pident,length,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,CRISPR_array,Taxon_ID,Taxon_name) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 	my $sql = $dbh->prepare($cmd);
 
 	# data stream of blast hits #

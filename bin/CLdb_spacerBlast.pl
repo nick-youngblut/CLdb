@@ -78,6 +78,8 @@ foreach my $subject (@$sub_in_r){
 	# filtering blast #
 	my $filt_blast_out = call_CLdb_spacerBlastDRFilter($blast_dir, $spacer_blast_out, $DR_blast_out, $range);
 	
+		#exit if $$subject[0] eq "/home/gtl-shared/annotation/130614_RAST_gtlenv-a5udCFS/fasta/Methanosarcina_sp_2.H.T.1A.8.fna";
+	
 	# loading blast into db #
 	call_CLdb_loadBlastHits($filt_blast_out, $database_file, $subject);
 	}
