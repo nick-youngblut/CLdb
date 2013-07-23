@@ -268,11 +268,11 @@ Workflows
 
 ## Get spacer-spacer blast hits
 
-##### All spacer pairwise blast hits
+##### All spacer pairwise blast hits 
 	
 	$ CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite
 
-##### All spacer pairwise blast hits that only partially overlap (possible multiple aquisitions
+##### All spacer pairwise blast hits that only partially overlap (possible multiple aquisitions)
 
 	$ CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
 	

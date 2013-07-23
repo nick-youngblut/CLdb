@@ -50,6 +50,9 @@ my $blast_dir = make_blast_dir($db_path);
 # getting spacers for blasting #
 my $spacer_fasta = call_CLdb_array2fasta($database_file, \@subtype, \@taxon_id, \@taxon_name, $extra_query, "spacer", $blast_dir);
 
+# making blastdb #
+make_blastdb($spacer_fasta);
+
 # pairwise blast #
 my $blast_res_r = pairwise_spacer_blast($spacer_fasta, $blast_params, $blast_dir);
 
@@ -103,7 +106,7 @@ sub add_entry{
 sub pairwise_spacer_blast{
 	my ($spacer_fasta, $blast_params, $blast_dir) = @_;
 
-	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -query $spacer_fasta -subject $spacer_fasta $blast_params";
+	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -query $spacer_fasta -db $spacer_fasta $blast_params";
 	print STDERR "$cmd\n" if $verbose;
 	open PIPE, "$cmd |" or die $!;
 
@@ -127,6 +130,13 @@ sub pairwise_spacer_blast{
 	return \%blast_res;
 	}
 
+sub make_blastdb{
+# making blastdb for spacers #
+	my ($spacer_fasta) = @_;
+	
+	my $cmd = "makeblastdb -dbtype nucl -in $spacer_fasta";
+	`$cmd`;
+	}
 
 sub call_CLdb_array2fasta{
 # calling CLdb_array2fasta to get spacers to blast #
