@@ -136,14 +136,14 @@ sub count_subtypes{
 	my ($dbh, $extra_query, $join_sql) = @_;
 	
 	# make query #
-	my $query = "select taxon_name, subtype, count(subtype) from loci ";
+	my $query = "SELECT taxon_name, subtype, count(subtype) FROM loci";
 	
 	if($join_sql || $extra_query){
 		$query = join(" ", $query, "WHERE locus_id = locus_id");
 		}
 	$query = join(" ", $query, $join_sql) if $join_sql;
 	$query = join(" ", $query, $extra_query) if $extra_query;
-	$query = join(" ", $query, "group by taxon_name");
+	$query = join(" ", $query, "group by taxon_name, subtype");
 	
 	# status #
 	print STDERR "$query\n" if $verbose;
@@ -163,6 +163,7 @@ sub count_subtypes{
 		}
 		
 		#print Dumper %taxa; exit;
+		#print Dumper %subtypes; exit;
 	return \%taxa, \%subtypes;
 	}
 	
@@ -254,9 +255,17 @@ the subtypes are provided via '-subtype'
 
 CLdb_subtypePA_ITOL.pl -d CLdb.sqlite 
 
-=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary
+=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary)
 
 CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -a
+
+=head2 Subtype count table of loci containing CAS operons
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status!='absent'"
+
+=head2 Subtype count table of loci containing intact CAS operons (no broken or shuffled)
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status='intact'"
 
 =head2 User provided colors
 

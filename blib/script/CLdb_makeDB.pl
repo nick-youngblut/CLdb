@@ -194,9 +194,15 @@ send	INTEGER	NOT NULL,
 evalue	TEXT	NOT NULL,
 bitscore	INTEGER	NOT NULL,
 CRISPR_array	TEXT,
+date	DATE,
 UNIQUE( Spacer_group, Taxon_ID, Taxon_name, Subject, sstart, send)
 ON CONFLICT REPLACE
 );
+
+CREATE TRIGGER blast_update_trg AFTER INSERT ON blast_hits
+begin
+  UPDATE blast_hits SET date = DATETIME('NOW') where rowid = new.rowid;
+end;
 
 HERE
 
@@ -209,9 +215,15 @@ Taxon_ID	TEXT,
 Taxon_name	TEXT,
 Scaffold_name	TEXT	NOT NULL,
 Scaffold_sequence	TEXT	NOT NULL,
+Date	DATE,
 UNIQUE (Taxon_ID, Taxon_name, Scaffold_name)
 ON CONFLICT REPLACE
 );
+
+CREATE TRIGGER blast_subject_update_trg AFTER INSERT ON blast_subject
+begin
+  UPDATE blast_subject SET Date = DATETIME('NOW') where rowid = new.rowid;
+end;
 
 HERE
 

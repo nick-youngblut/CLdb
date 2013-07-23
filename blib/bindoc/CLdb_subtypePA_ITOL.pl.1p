@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SUBTYPEPA_ITOL 1"
-.TH CLDB_SUBTYPEPA_ITOL 1 "2013-07-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SUBTYPEPA_ITOL 1 "2013-07-22" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -184,9 +184,15 @@ the subtypes are provided via '\-subtype'
 .SS "Pres-abs table of all subtypes & taxa in CLdb"
 .IX Subsection "Pres-abs table of all subtypes & taxa in CLdb"
 CLdb_subtypePA_ITOL.pl \-d CLdb.sqlite
-.SS "Subtype count table of all subtypes & taxa in CLdb (not-binary"
-.IX Subsection "Subtype count table of all subtypes & taxa in CLdb (not-binary"
+.SS "Subtype count table of all subtypes & taxa in CLdb (not-binary)"
+.IX Subsection "Subtype count table of all subtypes & taxa in CLdb (not-binary)"
 CLdb_subtypePA_ITOL.pl \-d CLdb.sqlite \-a
+.SS "Subtype count table of loci containing \s-1CAS\s0 operons"
+.IX Subsection "Subtype count table of loci containing CAS operons"
+CLdb_subtypePA_ITOL.pl \-d CLdb.sqlite \-q \*(L"\s-1AND\s0 operon_status!='absent'\*(R"
+.SS "Subtype count table of loci containing intact \s-1CAS\s0 operons (no broken or shuffled)"
+.IX Subsection "Subtype count table of loci containing intact CAS operons (no broken or shuffled)"
+CLdb_subtypePA_ITOL.pl \-d CLdb.sqlite \-q \*(L"\s-1AND\s0 operon_status='intact'\*(R"
 .SS "User provided colors"
 .IX Subsection "User provided colors"
 CLdb_subtypePA_ITOL.pl \-d CLdb.sqlite \-c \*(L"#FF0000 #FF6600 #FFFF00\*(R"
