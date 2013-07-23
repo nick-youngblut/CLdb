@@ -39,7 +39,7 @@ sub filter_spacer_blast{
 		chomp;
 		my @line = split /\t/;
 		
-		if(exists $itrees_r->{$line[1]}){		# hit on same taxon-scaffold
+		if(exists $itrees_r->{$line[1]}){		# hit on same taxon-scaffold of DR & spacer
 			my $res;
 			if( $line[8] < $line[9] ){
 				$res = $itrees_r->{$line[1]}->fetch($line[8], $line[9]);
@@ -61,8 +61,13 @@ sub filter_spacer_blast{
 				print "$_\n" unless @$res && scalar @$res >=2; 		# if spacer is adjacent to 2 DR
 				}			
 			}
-		else{
-			print "$_\n";
+		else{			# do not hit on the same scaffold as a DR
+			if($array_bool){
+				print "$_\tno\n";
+				}
+			else{
+				print "$_\n";
+				}
 			}
 		}
 	

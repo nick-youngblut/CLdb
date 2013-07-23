@@ -135,8 +135,8 @@ sub get_blast_hits{
 		chomp;
 		next if /^\s*$/;
 		my @line = split /\t/;
-		die " ERROR: blast hit table should have 12-13 columns!\n"
-			unless $#line == 11 || $#line == 12;
+		die " ERROR: blast hit table should have 12-14 columns!\n"
+			unless $#line >= 11 && $#line <= 13;
 		
 		# removing group from groupID #
 		$line[0] =~ s/^Group//;
@@ -184,6 +184,9 @@ sub get_blast_hits{
 		if( $line[14] && ! exists $taxa_r->{"taxon_name"}{$line[14]} ){ 
 			print STDERR " WARNING: taxon_name -> \"$line[14]\" not found in Loci table! The Genome is not in CLdb!\n";
 			}
+		
+		# getting date of loading #
+		
 		
 		# loading db #
 		$sql->execute( @line, $taxon_id, $taxon_name );

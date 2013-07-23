@@ -78,6 +78,8 @@ foreach my $subject (@$sub_in_r){
 	# filtering blast #
 	my $filt_blast_out = call_CLdb_spacerBlastDRFilter($blast_dir, $spacer_blast_out, $DR_blast_out, $range);
 	
+		#exit if $$subject[0] eq "/home/gtl-shared/annotation/130614_RAST_gtlenv-a5udCFS/fasta/Methanosarcina_sp_2.H.T.1A.8.fna";
+	
 	# loading blast into db #
 	call_CLdb_loadBlastHits($filt_blast_out, $database_file, $subject);
 	}
@@ -111,6 +113,7 @@ sub DR_blast{
 	my ($DR_fasta, $blast_params, $blast_db, $blast_dir) = @_;
 	
 	my $out = "$blast_dir/DR_blast.txt";
+		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
 	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $DR_fasta > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
@@ -122,6 +125,7 @@ sub spacer_blast{
 	my ($spacer_fasta, $blast_params, $blast_db, $blast_dir) = @_;
 
 	my $out = "$blast_dir/spacer_blast.txt";
+		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
 	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
@@ -182,7 +186,7 @@ sub call_CLdb_array2fasta{
 # using grouped spacers #
 	my ($database_file, $subtype, $taxon_id, $taxon_name, $extra_query, $element, $blast_dir) = @_;
 	
-	my $out = "$blast_dir/spacers.fna";
+	my $out = "$blast_dir/$element.fna";
 	
 	# adding flags #
 	my $cmd = "CLdb_array2fasta.pl -database $database_file -g";	
