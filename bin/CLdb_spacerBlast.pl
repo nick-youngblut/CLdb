@@ -111,6 +111,7 @@ sub DR_blast{
 	my ($DR_fasta, $blast_params, $blast_db, $blast_dir) = @_;
 	
 	my $out = "$blast_dir/DR_blast.txt";
+		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
 	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $DR_fasta > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
@@ -122,6 +123,7 @@ sub spacer_blast{
 	my ($spacer_fasta, $blast_params, $blast_db, $blast_dir) = @_;
 
 	my $out = "$blast_dir/spacer_blast.txt";
+		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
 	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
@@ -182,7 +184,7 @@ sub call_CLdb_array2fasta{
 # using grouped spacers #
 	my ($database_file, $subtype, $taxon_id, $taxon_name, $extra_query, $element, $blast_dir) = @_;
 	
-	my $out = "$blast_dir/spacers.fna";
+	my $out = "$blast_dir/$element.fna";
 	
 	# adding flags #
 	my $cmd = "CLdb_array2fasta.pl -database $database_file -g";	
