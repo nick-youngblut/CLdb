@@ -58,24 +58,62 @@ my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
 trim_se($fasta_aln_r, $ori_r, $trim_length, $rm_gap);
 
 # updating / loading_db #
-#load_leader($dbh, $fasta_aln_r);
+load_leader($dbh, $fasta_aln_r);
 
 # updating loci table #
 my $loci_tbl_r = get_loci_table($dbh);
 
+# reset locus start-end #
+reset_locus_start_end($loci_tbl_r, $fasta_aln_r);
+
 # adjust locus_start-end to include leaders if needed #
 adjust_locus_start_end($loci_tbl_r, $fasta_aln_r);
 
+# update locus table #
+update_loci_table($dbh, $loci_tbl_r, $fasta_aln_r);
+
 # disconnect to db #
+$dbh->commit;	
 $dbh->disconnect();
 exit;
 
 ### Subroutines
+sub update_loci_table{
+	my ($dbh, $loci_tbl_r, $fasta_aln_r) = @_;
+
+	# preparing sql #	
+	my $cmd = "UPDATE Loci SET 
+locus_start=?, locus_end=?, operon_start=?, operon_end=?, CRISPR_array_start=?, CRISPR_array_end=? 
+where locus_id = ?";
+	$cmd =~ s/[\r\n]//g;
+	my $sql = $dbh->prepare($cmd);
+
+	# updating #
+	my $cnt;
+	foreach my $locus_id (keys %$fasta_aln_r){
+		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
+		for my $i (0..$#${$loci_tbl_r->{$locus_id}}){
+			$sql->bind_param( $i+1, ${$loci_tbl_r->{$locus_id}}[$i] );
+			}
+		$sql->bind_param($#${$loci_tbl_r->{$locus_id}} + 1, $locus_id_e);
+		$sql->execute( );
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr for updating $locus_id \n";
+			}
+		else{ $cnt++; }
+		}
+	
+
+	
+	print STDERR "...Number of entries updated in loci table: $cnt\n"
+		unless $verbose;
+	}
+
 sub adjust_locus_start_end{
 # locus start-end #
 	my ($loci_tbl_r, $fasta_aln_r) = @_;
 	
-	#print Dumper %$fasta_aln_r; exit;
 	foreach my $locus_id (keys %$fasta_aln_r){
 		(my $locus_id_e = $locus_id) =~ s/cli\.//;
 		
@@ -102,9 +140,6 @@ sub adjust_locus_start_end{
 			
 		# checking whether leader falls outside of locus #
 		## if yes, updating locus table ##
-		#print Dumper 	@{$loci_tbl_r->{$locus_id_e}};
-		#print Dumper @{$fasta_aln_r->{$locus_id}{"meta"}};
-		
 		if(${$fasta_aln_r->{$locus_id}{"meta"}}[3] < 			# leader_start < locus_start
 		   ${$loci_tbl_r->{$locus_id_e}}[0] ){
 		   	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id_e}}[0], ${$fasta_aln_r->{$locus_id}{"meta"}}[3]);
@@ -132,6 +167,56 @@ sub adjust_locus_start_end{
 			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);	
 			}
 		}		
+	}
+
+sub reset_locus_start_end{
+# reseting locus start-end to just array + operon #
+	my ($loci_tbl_r, $fasta_aln_r) = @_;
+	
+	foreach my $locus_id (keys %$fasta_aln_r){			# each locus of interest
+		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
+
+		# checking for operon & array start-end #
+		next unless ${$loci_tbl_r->{$locus_id_e}}[2] && ${$loci_tbl_r->{$locus_id_e}}[4];
+		
+		# if just array or operon, give locus those values #
+		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){
+			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using operon start
+			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 		
+			}
+		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){
+			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
+			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using array end 		
+			}
+		
+		
+		# adjusting using operon & array #
+		if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+			 ${$loci_tbl_r->{$locus_id_e}}[1]){
+			if( ${$loci_tbl_r->{$locus_id_e}}[2] < 		# operon start is smaller, using 
+				 ${$loci_tbl_r->{$locus_id_e}}[4]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 
+				 }
+			else{
+				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using array start
+				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using operon end
+				}
+			}
+
+		else{											# locus start > end
+			if( ${$loci_tbl_r->{$locus_id_e}}[2] > 		# operon start is greater, using 
+				 ${$loci_tbl_r->{$locus_id_e}}[4]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end
+				 }
+			else{
+				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	
+				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	
+				}
+			}	
+		}
+		#print Dumper $loci_tbl_r; exit;
 	}
 
 sub flip_se{
@@ -165,8 +250,8 @@ sub load_leader{
 	my $cnt = 0;
 	foreach my $locus (keys %$fasta_aln_r){
 		(my $tmp_locus = $locus) =~ s/cli\.//;
-		$sql->execute($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[2], 
-							int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
+		$sql->execute($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
+							int ${$fasta_aln_r->{$locus}{"meta"}}[4], 
 							$fasta_aln_r->{$locus}{"seq"});
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr for $locus\n";
@@ -175,7 +260,7 @@ sub load_leader{
 		}
 	$dbh->commit;
 
-	print STDERR "...$cnt entries added/updated in database\n";
+	print STDERR "...Number entries added/updated in leaderseqs table: $cnt\n";
 	}
 
 sub trim_se{
@@ -195,31 +280,43 @@ sub trim_se{
 		if($ori_r->{$locus} eq "norm"){
 			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 5' end (+ strand)
 				# trim seq #
-				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
+				my $trimmed_seq = substr( $fasta_aln_r->{$locus}{"seq"}, 0, $trim_length);
+				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length , $seq_len);
+
 				# changing start position (moving up toward 3') #
-				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length + $ngap);
+				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains
+				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length - $ngap);
 				}
 			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 3' end (+ strand)
+				# trim seq #
+				my $trimmed_seq = substr($fasta_aln_r->{$locus}{"seq"}, $seq_len - $trim_length );
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
+
 				# changing end position (moving back toward 5') #
-				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length + $ngap);				
+				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains
+				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length - $ngap);				
 				}
 			else{ die $!; }
 			}
 		elsif($ori_r->{$locus} eq "rev" || $ori_r->{$locus} eq "rev-comp"){
+
 			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 3' end (+ strand)
-				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);						
+				# trim seq #
+				my $trimmed_seq = substr($fasta_aln_r->{$locus}{"seq"}, $seq_len - $trim_length );
+				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
+				
 				# changing end position (moving back toward 5') #
-				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length + $ngap);			
+				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains				
+				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length - $ngap);			
 				}
 			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 5' end (+ strand)
-				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
+				# trim seq #
+				my $trimmed_seq = substr( $fasta_aln_r->{$locus}{"seq"}, 0, $trim_length);
+				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length , $seq_len);
+				
 				# changing start position (moving up toward 3') #
-				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length + $ngap);
+				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains				
+				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length - $ngap);
 				}		
 			else{ die $!; }
 			}
@@ -229,11 +326,31 @@ sub trim_se{
 		$fasta_aln_r->{$locus}{"seq"} =~ s/-//g if $rm_gap;
 		}
 		
+		#print Dumper $fasta_aln_r->{"cli.85"}; exit;
 		#print Dumper %$fasta_aln_r; exit;
 	}
 
 sub count_gaps{
-	my $seq = shift;
+# counting gaps that fall in trimmed alignment range #
+	my ($seq) = @_;
+		
+	my $ngap = 0;
+	$ngap++ while $seq =~ /-/g;
+	return $ngap;
+	}
+
+sub count_gaps_old{
+# counting gaps that fall in trimmed alignment range #
+	my ($seq, $trim_length, $se) = @_;
+	
+	if($se eq "start"){
+		$seq = substr($seq, 0, $trim_length);
+		}
+	elsif($se eq "end"){
+		$seq = substr($seq, $trim_length - 1);
+		}
+	print Dumper $seq;	
+		
 	my $ngap = 0;
 	$ngap++ while $seq =~ /-/g;
 	return $ngap;
@@ -454,7 +571,7 @@ CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =item -t 	Number of bp (& gaps) to trim of end of alignment. [0]
 
-=item -g 	Leave gaps in leader sequence entered into the DB? 
+=item -g 	Leave gaps in leader sequence entered into the DB? [TRUE] 
 
 =item -v	Verbose output. [FALSE]
 
@@ -485,12 +602,11 @@ were written because the side containing the leader
 region could not be determined from direct-repeat
 degeneracy.
 
-
 =head1 EXAMPLES
 
 =head2 Triming off the 50bp of unconserved alignment 
 
-CLdb_loadLeaders.pl -d ../CRISPR.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
+CLdb_loadLeaders.pl -d CLdb.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
 
 =head1 AUTHOR
 
