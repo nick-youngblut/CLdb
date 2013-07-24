@@ -58,13 +58,103 @@ my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
 trim_se($fasta_aln_r, $ori_r, $trim_length, $rm_gap);
 
 # updating / loading_db #
-load_leader($dbh, $fasta_aln_r);
+#load_leader($dbh, $fasta_aln_r);
+
+# updating loci table #
+my $loci_tbl_r = get_loci_table($dbh);
+
+# adjust locus_start-end to include leaders if needed #
+adjust_locus_start_end($loci_tbl_r, $fasta_aln_r);
 
 # disconnect to db #
 $dbh->disconnect();
 exit;
 
 ### Subroutines
+sub adjust_locus_start_end{
+# locus start-end #
+	my ($loci_tbl_r, $fasta_aln_r) = @_;
+	
+	#print Dumper %$fasta_aln_r; exit;
+	foreach my $locus_id (keys %$fasta_aln_r){
+		(my $locus_id_e = $locus_id) =~ s/cli\.//;
+		
+		die " ERROR: $locus_id does not exist in locus table!\n"	
+			unless exists $loci_tbl_r->{$locus_id_e};
+		
+		# flipping start-end of locus & leader if needed #
+		my @flip_bool = (0,0);
+		if( ${$fasta_aln_r->{$locus_id}{"meta"}}[3] > 			# leader
+			${$fasta_aln_r->{$locus_id}{"meta"}}[4]){
+			
+			@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4] = 
+				flip_se(@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4]);
+			$flip_bool[0] = 1;
+			}
+			
+		if ( ${$loci_tbl_r->{$locus_id_e}}[0] >					# locus
+			 ${$loci_tbl_r->{$locus_id_e}}[1]){
+			
+			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
+			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);
+			 $flip_bool[1] = 1;
+			 }
+			
+		# checking whether leader falls outside of locus #
+		## if yes, updating locus table ##
+		#print Dumper 	@{$loci_tbl_r->{$locus_id_e}};
+		#print Dumper @{$fasta_aln_r->{$locus_id}{"meta"}};
+		
+		if(${$fasta_aln_r->{$locus_id}{"meta"}}[3] < 			# leader_start < locus_start
+		   ${$loci_tbl_r->{$locus_id_e}}[0] ){
+		   	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id_e}}[0], ${$fasta_aln_r->{$locus_id}{"meta"}}[3]);
+		   	
+		   	${$loci_tbl_r->{$locus_id_e}}[0] = ${$fasta_aln_r->{$locus_id}{"meta"}}[3];
+		   	
+		   	
+		   	print STDERR "...Locus_start for $locus_id extended to include leader region ($se)\n";
+			}
+		elsif( ${$fasta_aln_r->{$locus_id}{"meta"}}[4] > 			# leader_end > locus_end
+		     ${$loci_tbl_r->{$locus_id_e}}[1]){
+		 	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id_e}}[1], ${$fasta_aln_r->{$locus_id}{"meta"}}[4]);
+		   
+		    ${$loci_tbl_r->{$locus_id_e}}[1] = ${$fasta_aln_r->{$locus_id}{"meta"}}[4];
+		   	print STDERR "...Locus_end for $locus_id extended to include leader region ($se)\n";
+			}
+
+		# flipping back start-end if necessary #
+		if($flip_bool[0]){
+			@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4] = 
+				flip_se(@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4]);
+			}
+		if($flip_bool[1]){
+			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
+			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);	
+			}
+		}		
+	}
+
+sub flip_se{
+	my ($start, $end) = @_;
+	return $end, $start;
+	}
+
+sub get_loci_table{
+# getting loci table for updating #
+	my ($dbh) = @_;
+	
+	my $cmd = "SELECT locus_id, locus_start, locus_end, operon_start, operon_end, CRISPR_array_start, CRISPR_array_end from loci";
+	my $ret = $dbh->selectall_arrayref($cmd);
+	
+	my %loci_tbl;
+	foreach my $row (@$ret){
+		$loci_tbl{$$row[0]} = [@$row[1..$#$row]];
+		}
+	
+		#print Dumper %loci_tbl; exit;
+	return \%loci_tbl;
+	}
+
 sub load_leader{
 # loading leader info into db #
 	my ($dbh, $fasta_aln_r) = @_;
@@ -94,8 +184,6 @@ sub trim_se{
 ## trimming from leader end most distant from array ##
 	my ($fasta_aln_r, $ori_r, $trim_length, $rm_gap) = @_;
 	
-		#print Dumper $fasta_aln_r; exit;
-	
 	foreach my $locus (keys %$fasta_aln_r){
 		die " LOGIC ERROR: $locus not found in ori hash!\n"
 			unless exists $ori_r->{$locus};
@@ -110,13 +198,13 @@ sub trim_se{
 				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
 				# changing start position (moving up toward 3') #
 				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[2] += ($trim_length + $ngap);
+				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length + $ngap);
 				}
 			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 3' end (+ strand)
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
 				# changing end position (moving back toward 5') #
 				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[3] -= ($trim_length + $ngap);				
+				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length + $ngap);				
 				}
 			else{ die $!; }
 			}
@@ -125,13 +213,13 @@ sub trim_se{
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);						
 				# changing end position (moving back toward 5') #
 				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[3] -= ($trim_length + $ngap);			
+				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length + $ngap);			
 				}
 			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 5' end (+ strand)
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, $trim_length, $seq_len - $trim_length);
 				# changing start position (moving up toward 3') #
 				my $ngap = count_gaps($fasta_aln_r->{$locus}{"seq"});
-				${$fasta_aln_r->{$locus}{"meta"}}[2] += ($trim_length + $ngap);
+				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length + $ngap);
 				}		
 			else{ die $!; }
 			}
@@ -223,7 +311,7 @@ sub load_fasta{
  		next if  /^\s*$/;	
  		
  		if(/>.+/){
- 			my @line = split /  |__/;
+ 			my @line = split /  |___/;
  			$line[0] =~ s/.+(cli\.\d+).*/$1/;
  			die " ERROR: seq name: \"$_\" does not have identifiablle cli ID!\n"
  				unless $line[0] =~ /^cli\.\d+$/;
@@ -237,7 +325,6 @@ sub load_fasta{
 		#print Dumper %fasta; exit;
 	return \%fasta;
 	} #end load_fasta
-
 
 sub update_db{
 # updating any entries with CLI identifiers #
