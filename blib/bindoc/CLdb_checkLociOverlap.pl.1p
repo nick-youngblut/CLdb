@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADLOCI 1"
-.TH CLDB_LOADLOCI 1 "2013-08-14" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_CHECKLOCIOVERLAP 1"
+.TH CLDB_CHECKLOCIOVERLAP 1 "2013-08-14" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadLoci.pl \-\- adding/updating loci entries in to CRISPR_db
+CLdb_checkLociOverlap.pl \-\- checking for loci position overlap
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadLoci.pl [flags] < loci_table.txt
+CLdb_checkLociOverlap.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -148,27 +148,19 @@ CLdb_loadLoci.pl [flags] < loci_table.txt
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadLoci.pl
+perldoc CLdb_checkLociOverlap.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Load and/or update \s-1CRISPR\s0 loci table entries.
+Check for overlap of loci based on locus_start\-locus_end
+position info in the CLdb loci table. Overlap 
+may be caused by erroneous entries in the database.
 .PP
-Loci entries will be added if no Locus_id is provided;
-otherwise, the entrie will be updated.
-.SS "\s-1WARNING\s0!"
-.IX Subsection "WARNING!"
-The loci table must be in tab-delimited format.
-.PP
-File names in the loci table should match files in the 
-\&\f(CW$CLdb_HOME\fR/genbank/ & \f(CW$CLdb_HOME\fR/array/ directories.
-.PP
-Extra columns (not in CLdb Loci table) can exist in the 
-input loci table. They just won't be added to CLdb.
+Overlapping entries will be written to \s-1STDOUT\s0.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Usage:"
 .IX Subsection "Usage:"
-CLdb_loadLoci.pl \-d CLdb.sqlite < loci.txt
+CLdb_checkLociOverlap.pl \-d \s-1CL\s0.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

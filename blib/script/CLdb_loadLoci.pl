@@ -292,7 +292,7 @@ input loci table. They just won't be added to CLdb.
 
 =head2 Usage:
 
-CLdb_loadLoci.pl -d CRISPR.sqlite < loci.txt
+CLdb_loadLoci.pl -d CLdb.sqlite < loci.txt
 
 =head1 AUTHOR
 
