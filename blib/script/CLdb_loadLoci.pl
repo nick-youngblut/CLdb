@@ -34,9 +34,12 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 # database metadata #
 my $table_list_r = list_tables();
 check_for_loci_table($table_list_r);
+my $column_list_r = list_columns("loci", 1);
+
+#print Dumper $column_list_r; exit;
 
 # getting input loci table #
-my ($loci_r, $header_r) = load_loci_table();
+my ($loci_r, $header_r) = load_loci_table($column_list_r);
 
 # checking for required headers #
 check_headers($header_r);
@@ -162,6 +165,9 @@ sub check_headers{
 	}
 
 sub load_loci_table{
+# loading tab-delimited table from STDIN #
+	my $column_list_r = shift;
+		
 	# checking line breaks #
 	my @table = <>;
 	my @tmp;
@@ -177,10 +183,12 @@ sub load_loci_table{
 		$line_cnt++;
 		next if /^\s*$/;
 
-		if($line_cnt == 1){ # loading header
+		if($line_cnt == 1){ 					# loading header
 			tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
 			my @line = split /\t/;
 			for my $i (0..$#line){
+				next unless exists $column_list_r->{$line[$i]};		# only including columns in loci DB table
+				next if exists $header{$line[$i]}; 					# only using 1st column found with a particular name
 				$header{$line[$i]} = $i;		# column_name => index
 				}
 			}
@@ -198,7 +206,10 @@ sub load_loci_table{
 		}
 		#print Dumper %loci; exit; 
 		#print Dumper %header; exit;
-	return (\%loci, \%header);;
+	# sanity check #
+	die " ERROR: entries found in loci table!\n" unless %loci;	
+	
+	return (\%loci, \%header);
 	}
 
 sub check_for_loci_table{
@@ -210,6 +221,19 @@ sub check_for_loci_table{
 sub list_tables{
 	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
 	return [keys %$all];
+	}
+
+sub list_columns{
+	my ($column_list, $silent_ret) = @_;
+	my $all = $dbh->selectall_arrayref("pragma table_info($column_list)");
+		#print Dumper $$all[0]; exit;
+	my %tmp;
+	foreach (@$all){ 
+		$$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
+		$tmp{$$_[1]} = 1; 
+		}
+	if($silent_ret){ return \%tmp; }
+	else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
 	}
 
 
@@ -260,6 +284,9 @@ The loci table must be in tab-delimited format.
 
 File names in the loci table should match files in the 
 $CLdb_HOME/genbank/ & $CLdb_HOME/array/ directories.
+
+Extra columns (not in CLdb Loci table) can exist in the 
+input loci table. They just won't be added to CLdb.
 
 =head1 EXAMPLES
 
