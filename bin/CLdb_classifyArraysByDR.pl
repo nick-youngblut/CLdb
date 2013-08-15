@@ -18,7 +18,7 @@ my ($verbose, $database_file, $rogue_bool);
 my (@taxon_id, @taxon_name, @locus_id);
 my $extra_query = "";
 my $kmer_len = 8;
-my $score_cutoff = 0.95;	
+my $score_cutoff = 0.99;	
 GetOptions(
 	   "database=s" => \$database_file,
 	   "taxon_id=s{,}" => \@taxon_id,
@@ -51,7 +51,7 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 map{ s/[A-Za-z]//g } @locus_id;
 $join_sql .= join_query_opts(\@locus_id, "locus_id");
 
-# getting  #
+# getting training dataset (classified, intact arrays) #
 my $arrays_class_r = get_classified_arrays($dbh, $kmer_len);
 
 # getting unclassified arrays #
@@ -60,7 +60,7 @@ my $arrays_unclass_r = get_unclassified_arrays($dbh, $join_sql, $extra_query, $k
 # training classifier #
 my $nb = train_classifier($arrays_class_r);
 
-# classify #
+# classifying #
 my $res_r = classify_arrays($nb, $arrays_unclass_r);
 
 # filter results #
@@ -295,7 +295,7 @@ Kmer length using for naive bayes classifier. [8]
 
 =item -cutoff
 
-Bayes score cutoff (0-1) for accepting classification (>=). [0.95]
+Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
 
 =item -rogue
 
@@ -344,7 +344,7 @@ Classify 'rogue' arrays that lack operons needed for classification.
 to each query (unclassified) array bases on the kmer composition of all 
 of its direct repeats. Score range: 0-1 (0 = not likely; 1 = very likely)
 
-=item *	The subtype label with the top score is used if it is >= '-cutoff' (Defaut: 0.95)
+=item *	The subtype label with the top score is used if it is >= '-cutoff' (Defaut: 0.99)
 
 =item *	If the top score is < '-cutoff', the array will remain unclassified
 
