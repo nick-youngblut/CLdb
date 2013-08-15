@@ -9,26 +9,32 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Algorithm::NaiveBayes;
+use List::Util qw/shuffle/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $rogue_bool);
+my ($verbose, $database_file, $rogue_bool, $quiet);
 my (@taxon_id, @taxon_name, @locus_id);
 my $extra_query = "";
 my $kmer_len = 8;
-my $score_cutoff = 0.95;	
+my $score_cutoff = 0.99;	
+my $boot_cutoff = 95;
+my $nboot = 100;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "locus_id=s{,}" => \@locus_id,
 	   "query=s" => \$extra_query, 
+	   "rogue" => \$rogue_bool, 		# just rounge arrays? [TRUE]
 	   "kmer=i" => \$kmer_len,
-	   "cutoff=f" => \$score_cutoff,		# bayes score cutoff
-	   "rogue" => \$rogue_bool, 			# just rounge arrays? [TRUE]
+	   "score=f" => \$score_cutoff,		# bayes score cutoff
+	   "bootstrap=i" => \$nboot,		# number of bootstrap iterations
+	   "cutoff=i" => \$boot_cutoff,		# bootstrap cutoff
 	   "verbose" => \$verbose,
+	   "quiet" => \$quiet,
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -51,20 +57,39 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 map{ s/[A-Za-z]//g } @locus_id;
 $join_sql .= join_query_opts(\@locus_id, "locus_id");
 
-# getting  #
+# getting training dataset (classified, intact arrays) #
 my $arrays_class_r = get_classified_arrays($dbh, $kmer_len);
 
 # getting unclassified arrays #
-my $arrays_unclass_r = get_unclassified_arrays($dbh, $join_sql, $extra_query, $kmer_len, $rogue_bool);
+my ($arrays_unclass_r, $kmers_r) = get_unclassified_arrays($dbh, $join_sql, $extra_query, $kmer_len, $rogue_bool);
 
 # training classifier #
 my $nb = train_classifier($arrays_class_r);
 
-# classify #
+# classifying #
 my $res_r = classify_arrays($nb, $arrays_unclass_r);
 
 # filter results #
-$res_r = filter_bayes_scores($res_r, $score_cutoff);
+$res_r = filter_bayes_scores($res_r, $score_cutoff, $quiet);
+
+# bootstrapping #
+my %boot_score;
+for my $ii (1..$nboot){
+	# getting subset of kmers #
+	my $kmer_sub_r = subset_kmer_pool($kmers_r, $kmer_len);
+	
+	# classifying #
+	my $boot_res_r = classify_arrays($nb, $kmer_sub_r);
+	
+	# filter results #
+	$boot_res_r = filter_bayes_scores($boot_res_r, $score_cutoff, 1);		
+	
+	# does bootstrap classification match original classification? #
+	score_bootstrap($res_r, $boot_res_r, \%boot_score);
+	}
+		
+# filter by bootstrap score #
+filter_by_boot_scores($res_r, \%boot_score, $boot_cutoff, $nboot) if $nboot;
 
 # updating loci table #
 update_db($dbh, $res_r);
@@ -85,6 +110,7 @@ sub update_db{
 	
 	my $update_cnt = 0;
 	foreach my $locus_id (keys %$res_r){
+		next if $res_r->{$locus_id} eq "";
 		
 		$sql->execute( ($res_r->{$locus_id}, $locus_id) );
 					
@@ -99,9 +125,54 @@ sub update_db{
 	print STDERR "...Loci table updated!\n" unless $verbose;
 	}
 
+sub filter_by_boot_scores{
+# filtering classifications by bootstrap scores #
+## scores must be >= cutoff; or no classification given ##
+	my ($res_r, $boot_score_r, $boot_cutoff, $nboot) = @_;
+	
+	my %passed;
+	foreach my $locus_id (keys %$res_r){
+		$boot_score_r->{$locus_id} = 0 unless exists $boot_score_r->{$locus_id};
+		if($boot_score_r->{$locus_id} < $boot_cutoff){			# no classification unless meets cutoff
+			$res_r->{$locus_id} = "";
+			}
+		}	
+
+	}
+
+sub score_bootstrap{
+	my ($res_r, $boot_res_r, $boot_score_r) = @_;
+	#print Dumper $res_r, $boot_res_r; 
+	
+	foreach my $locus_id (keys %$res_r){	
+		die " ERROR: Locus$locus_id not found in bootstrapped classifications!\n"
+			unless exists $boot_res_r->{$locus_id};
+		
+		if( $res_r->{$locus_id} eq $boot_res_r->{$locus_id} ){	# same classification
+			$boot_score_r->{$locus_id}++
+			}
+		}
+	}
+
+sub	subset_kmer_pool{
+# getting subset of kmers (fraction = 1/$kmer_len) #
+	my ($kmers_r, $kmer_len) = @_;
+	
+	my %subset;
+	foreach my $locus_id (keys %$kmers_r){
+		my $fract = sprintf("%.0f", scalar @{$kmers_r->{$locus_id}} / $kmer_len);
+		my @shuffled_kmers = shuffle(@{$kmers_r->{$locus_id}});
+		for my $i (0..($fract - 1)){
+			$subset{$locus_id}{$shuffled_kmers[$i]}++;
+			}
+		}
+
+	return \%subset;
+	}
+
 sub filter_bayes_scores{
 # filtering bayes scores from NB classification #
-	my ($res_r, $score_cutoff) = @_;
+	my ($res_r, $score_cutoff, $quiet) = @_;
 	
 	my %passed;
 	foreach my $locus_id (keys %$res_r){
@@ -110,7 +181,9 @@ sub filter_bayes_scores{
 			
 			my $top_score = $res_r->{$locus_id}{$label};
 			if($top_score < $score_cutoff){	# less than cutoff, cannot be classified
-				print STDERR " WARNING! Cannot classify Locus: '$locus_id'!\tTop score only $top_score\n";
+				print STDERR " WARNING! Cannot classify Locus: '$locus_id'!\tTop score only $top_score\n"
+					unless $quiet;
+				$passed{$locus_id} = "";
 				}
 			else{
 				$passed{$locus_id} = $label;		# label = subtype
@@ -190,20 +263,21 @@ $join_sql
 	die " ERROR: no unclassifed arrays that need classifying!\n"
 		unless $$ret[0];
 	
-	my %arrays;
+	my (%arrays, %kmers);
 	foreach my $row (@$ret){
 		for (my $i = 0; $i<=(length $$row[0]) - $kmer_len; $i++){
 			my $kmer = substr($$row[0], $i, $kmer_len);
+			push( @{$kmers{$$row[1]}}, $kmer );
 			$arrays{$$row[1]}{$kmer}++;		# locus_id => kmer => count
 			}
 		}
 	
 	# status #
 	print STDERR "...Number of arrays to classify:\t", scalar keys %arrays, "\n"
-		unless $verbose;
+		unless $quiet;
 	
 		#print Dumper %arrays; exit;
-	return \%arrays;
+	return \%arrays, \%kmers;
 	}
 
 sub get_classified_arrays{
@@ -295,7 +369,7 @@ Kmer length using for naive bayes classifier. [8]
 
 =item -cutoff
 
-Bayes score cutoff (0-1) for accepting classification (>=). [0.95]
+Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
 
 =item -rogue
 
@@ -344,11 +418,16 @@ Classify 'rogue' arrays that lack operons needed for classification.
 to each query (unclassified) array bases on the kmer composition of all 
 of its direct repeats. Score range: 0-1 (0 = not likely; 1 = very likely)
 
-=item *	The subtype label with the top score is used if it is >= '-cutoff' (Defaut: 0.95)
+=item *	The subtype label with the top score is used if it is >= '-cutoff' (Defaut: 0.99)
 
 =item *	If the top score is < '-cutoff', the array will remain unclassified
 
 =back
+
+=head3 Notes
+
+Unclassified 'rogue' arrays identified by lacking a 'subtype' value
+and an 'operon_start' value in the loci table.
 
 =head1 EXAMPLES
 

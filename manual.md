@@ -1,7 +1,7 @@
 CLdb (CRISPR Loci Database) tutorial
 ====================================
 
-last updated: 7/18/13
+last updated: 8/15/13
 
 
 Preparing genbank files for compatibility with ITEP
@@ -207,7 +207,7 @@ Example database setup
 	CLdb_groupLeaders.pl -da CLdb.sqlite
 
 
-
+***
 
 
 Workflows
@@ -275,5 +275,31 @@ Workflows
 ##### All spacer pairwise blast hits that only partially overlap (possible multiple aquisitions)
 
 	$ CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
+
+*** 
+
+## Get GFF3 of spacer blast hits
+
+##### GFF3 of all spacers that hit E.coli
+
+	$ CLdb_spacerBlast2GFF.pl -d CLdb.sqlite -staxon_name "E.coli" > ecoli_hits.gff
+
+###### GFF3 of all spacers that hit FIG|2209.27
+
+	$ CLdb_spacerBlast2GFF.pl -d CLdb.sqlite -staxon_id 2209.27 > 2209.27_hits.gff
 	
+	
+*** 
+
+## Classifying arrays based on direct repeats
+
+##### Classifying all 'rogue' (no operon) arrays
+
+	$ CLdb_classifyArraysByDR.pl -d CLdb.sqlite 
+
+##### Get idea of classification accuracy
+
+	$ CLdb_classifyArraysByDR_validate.pl -da CLdb.sqlite
+
+
 

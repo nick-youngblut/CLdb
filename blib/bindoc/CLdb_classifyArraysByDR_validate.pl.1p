@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_CLASSIFYARRAYSBYDR 1"
-.TH CLDB_CLASSIFYARRAYSBYDR 1 "2013-08-15" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_CLASSIFYARRAYSBYDR_VALIDATE 1"
+.TH CLDB_CLASSIFYARRAYSBYDR_VALIDATE 1 "2013-08-15" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_classifyArraysByDR.pl \-\- classify array subtype using direct repeats
+CLdb_classifyArraysByDR_validate.pl \-\- validation of Bayes classifier for arrays
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_classifyArraysByDR.pl [flags]
+CLdb_classifyArraysByDR_validate.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -141,28 +141,25 @@ CLdb_classifyArraysByDR.pl [flags]
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
+.IP "\-iterations" 4
+.IX Item "-iterations"
+.PD
+Number of test iterations to perform. [100]
+.IP "\-fraction" 4
+.IX Item "-fraction"
+Fraction of dataset to test. [0.1]
 .IP "\-kmer" 4
 .IX Item "-kmer"
-.PD
 Kmer length using for naive bayes classifier. [8]
+.IP "\-score" 4
+.IX Item "-score"
+Bayes score cutoff (0\-1) for accepting classification (>=). [0.99]
+.IP "\-bootstrap" 4
+.IX Item "-bootstrap"
+Number of bootstraps to perform the classification of each array
 .IP "\-cutoff" 4
 .IX Item "-cutoff"
-Bayes score cutoff (0\-1) for accepting classification (>=). [0.99]
-.IP "\-rogue" 4
-.IX Item "-rogue"
-Just classify 'rogue' arrays (no associated operon)? [\s-1TRUE\s0]
-.IP "\-locus_id" 4
-.IX Item "-locus_id"
-Refine query arrays to specific a locus_id(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
-Refine query arrays to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
-Refine query arrays to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine the query array selection
+Bootstrap score cutoff (>=). [95]
 .IP "\-v 	Verbose output. [\s-1TRUE\s0]" 4
 .IX Item "-v 	Verbose output. [TRUE]"
 .PD 0
@@ -171,42 +168,16 @@ Extra sql to refine the query array selection
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_classifyArraysByDR.pl
+perldoc CLdb_classifyArraysByDR_validate.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Classify 'rogue' arrays that lack operons needed for classification.
-.SS "Naive Bayesian Classifier Method"
-.IX Subsection "Naive Bayesian Classifier Method"
-.IP "\(bu" 4
-All classified arrays with 'intact' operons used for the training dataset.
-.IP "\(bu" 4
-Direct repeats sequences (training & query datasets) are parsed into all possible kmers
-(similar to the RDPClassifier).
-.IP "\(bu" 4
-The trained bayes classifier gives a score for each possible subtype
-to each query (unclassified) array bases on the kmer composition of all 
-of its direct repeats. Score range: 0\-1 (0 = not likely; 1 = very likely)
-.IP "\(bu" 4
-The subtype label with the top score is used if it is >= '\-cutoff' (Defaut: 0.99)
-.IP "\(bu" 4
-If the top score is < '\-cutoff', the array will remain unclassified
-.PP
-\fINotes\fR
-.IX Subsection "Notes"
-.PP
-Unclassified 'rogue' arrays identified by lacking a 'subtype' value
-and an 'operon_start' value in the loci table.
+Test accuracy of using direct repeats to 
+classify rogue arrays using a naive bayesian classifier.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Classifying all rogue arrays"
-.IX Subsection "Classifying all rogue arrays"
-CLdb_classifyArraysByDR.pl \-d CLdb.sqlite
-.SS "Classifying 1 rogue array: 'cli103'"
-.IX Subsection "Classifying 1 rogue array: 'cli103'"
-CLdb_classifyArraysByDR.pl \-d CLdb.sqlite \-l cli103
-.SS "Classifying all unclassified arrays"
-.IX Subsection "Classifying all unclassified arrays"
-CLdb_classifyArraysByDR.pl \-d CLdb.sqlite \-r
+.SS "Basic usage:"
+.IX Subsection "Basic usage:"
+CLdb_classifyArraysByDR_validate.pl \-da CLdb.sqlite
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
