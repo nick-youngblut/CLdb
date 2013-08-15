@@ -9,6 +9,7 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Algorithm::NaiveBayes;
+use List::Util qw/shuffle/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -17,14 +18,18 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $quiet);
 my $kmer_len = 8;
 my $score_cutoff = 0.99;
+my $boot_cutoff = 95;
 my $iter = 100;
 my $frac_arrays = 0.1;
+my $nboot = 100;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "kmer=i" => \$kmer_len,
-	   "cutoff=f" => \$score_cutoff,		# bayes score cutoff
+	   "score=f" => \$score_cutoff,			# bayes score cutoff
 	   "iterations=i" => \$iter, 			# number of test iterations
 	   "fraction=f" => \$frac_arrays, 		# fraction of arrays to use as query
+	   "bootstrap=i" => \$nboot,					# number of bootstrapped classifications to perform
+	   "cutoff=i" => \$boot_cutoff, 			# bootstrap cutoff
 	   "verbose" => \$verbose,
 	   "quiet" => \$quiet, 
 	   "help|?" => \&pod2usage # Help
@@ -57,7 +62,7 @@ for my $i (1..$iter){
 	my $arrays_class_r = get_classified_arrays($dbh, $kmer_len);
 
 	# getting unclassified arrays #
-	my $arrays_unclass_r = get_unclassified_arrays($dbh, $kmer_len);
+	my ($arrays_unclass_r, $kmers_r) = get_unclassified_arrays($dbh, $kmer_len);
 
 	# training classifier #
 	my $nb = train_classifier($arrays_class_r);
@@ -65,10 +70,27 @@ for my $i (1..$iter){
 	# classifying #
 	my $res_r = classify_arrays($nb, $arrays_unclass_r);
 
-	
-
 	# filter results #
 	$res_r = filter_bayes_scores($res_r, $score_cutoff);
+
+	# bootstrapping #
+	my %boot_score;
+	for my $ii (1..$nboot){
+		# getting subset of kmers #
+		my $kmer_sub_r = subset_kmer_pool($kmers_r, $kmer_len);
+		
+		# classifying #
+		my $boot_res_r = classify_arrays($nb, $kmer_sub_r);
+
+		# filter results #
+		$boot_res_r = filter_bayes_scores($boot_res_r, $score_cutoff, 1);		
+		
+		# does bootstrap classification match original classification? #
+		score_bootstrap($res_r, $boot_res_r, \%boot_score);
+		}
+		
+	# filter by bootstrap score #
+	filter_by_boot_scores($res_r, \%boot_score, $boot_cutoff, $nboot) if $nboot;
 
 	# compare to true classifications #
 	compare_classifications($true_class_r, $res_r, $i, \%tpfn);
@@ -77,35 +99,49 @@ for my $i (1..$iter){
 	$dbh->disconnect();
 	}
 
-write_summary(\%tpfn);
+write_summary(\%tpfn, $iter);
 
 
 ### Subroutines 
 sub write_summary{
 	my ($tpfn_r) = @_;
 
-	# initializing if zero count #
-	$tpfn_r->{"total"}{"true_pos"} = 0 unless exists $tpfn_r->{"total"}{"true_pos"};
-	$tpfn_r->{"total"}{"false_neg"} = 0 unless exists $tpfn_r->{"total"}{"false_neg"};
-	
-	# total #
-	print STDERR "Total true positives: ", $tpfn_r->{"total"}{"true_pos"}, "\n";
-	print STDERR "Total false negatives: ", $tpfn_r->{"total"}{"false_neg"}, "\n";
-	
-	# by iteration #
-	foreach my $iter_num (keys %$tpfn_r){
-		next if $iter_num eq "total";
-		
-		# intializing if zero count #
-		$tpfn_r->{$iter_num}{"true_pos"} = 0 unless exists $tpfn_r->{$iter_num}{"true_pos"};
-		$tpfn_r->{$iter_num}{"false_neg"} = 0 unless exists $tpfn_r->{$iter_num}{"false_neg"};
-		
-		# writing #
-		print join("\t", $iter_num, 
-				$tpfn_r->{$iter_num}{"true_pos"},
-				$tpfn_r->{$iter_num}{"false_neg"}
-				), "\n";
+	# making array of values #
+	my @tp;
+	foreach my $iter (keys %{$tpfn_r->{"true_pos"}}){
+		push @tp, $tpfn_r->{"true_pos"}{$iter};
 		}
+	my @fn;
+	foreach my $iter (keys %{$tpfn_r->{"false_neg"}}){
+		push @fn, $tpfn_r->{"false_neg"}{$iter};
+		}
+	my @na;
+	foreach my $iter (keys %{$tpfn_r->{"NA"}}){
+		push @na, $tpfn_r->{"NA"}{$iter};
+		}	
+	my @tpfn;
+	foreach my $iter (keys %{$tpfn_r->{"true_pos"}}){
+		push @tpfn, $tpfn_r->{"true_pos"}{$iter} / $tpfn_r->{"false_neg"}{$iter};
+		}
+	
+	# summary #
+	print join("\t", "TP:FN",
+		sprintf("%.3f", average( \@tpfn )), 
+		sprintf("%.3f", stdev(\@tpfn))
+		), "\n";
+	print join("\t", "True positives:",
+		sprintf("%.3f", average( \@tp )), 
+		sprintf("%.3f", stdev(\@tp))
+		), "\n";
+	print join("\t", "False negatives:",
+		sprintf("%.3f", average( \@fn )), 
+		sprintf("%.3f", stdev(\@fn))
+		), "\n";
+	print join("\t", "NA:",
+		sprintf("%.3f", average( \@na )), 
+		sprintf("%.3f", stdev(\@na))
+		), "\n";
+
 	}
 
 sub compare_classifications{
@@ -114,26 +150,69 @@ sub compare_classifications{
 	foreach my $locus_id (keys %$true_class_r){
 		die " ERROR: locus \"cli$locus_id\" not found in classifed values\n"
 			unless exists $res_r->{$locus_id};
-			
-		if($true_class_r->{$locus_id} eq $res_r->{$locus_id}){
-			$tpfn_r->{$iter_num}{"true_pos"}++;
-			$tpfn_r->{"total"}{"true_pos"}++;
+		
+		if($res_r->{$locus_id} eq ""){
+			$tpfn_r->{"NA"}{$iter_num}++;
+			}
+		elsif($true_class_r->{$locus_id} eq $res_r->{$locus_id}){
+			$tpfn_r->{"true_pos"}{$iter_num}++;
 			}
 		else{ 
 			print STDERR "FALSE negative! Locus_id: $locus_id; True classification '", 
 					$true_class_r->{$locus_id},
 					"'; Classified as: '", $res_r->{$locus_id}, "'\n"
 					if $verbose;
-			$tpfn_r->{$iter_num}{"false_neg"}++;
-			$tpfn_r->{"total"}{"false_neg"}++;
+			$tpfn_r->{"false_neg"}{$iter_num}++;
 			}
 		}
+	}
+
+sub filter_by_boot_scores{
+# filtering classifications by bootstrap scores #
+## scores must be >= cutoff; or no classification given ##
+	my ($res_r, $boot_score_r, $boot_cutoff, $nboot) = @_;
 	
+	foreach my $locus_id (keys %$res_r){
+		$boot_score_r->{$locus_id} = 0 unless exists $boot_score_r->{$locus_id};
+		if($boot_score_r->{$locus_id} < $boot_cutoff){			# no classification unless meets cutoff
+			$res_r->{$locus_id} = "";
+			}
+		}	
+	}
+
+sub score_bootstrap{
+	my ($res_r, $boot_res_r, $boot_score_r) = @_;
+	#print Dumper $res_r, $boot_res_r; exit;
+	
+	foreach my $locus_id (keys %$res_r){	
+		die " ERROR: Locus$locus_id not found in bootstrapped classifications!\n"
+			unless exists $boot_res_r->{$locus_id};
+		
+		if( $res_r->{$locus_id} eq $boot_res_r->{$locus_id} ){	# same classification
+			$boot_score_r->{$locus_id}++
+			}
+		}
+	}
+
+sub	subset_kmer_pool{
+# getting subset of kmers (fraction = 1/$kmer_len) #
+	my ($kmers_r, $kmer_len) = @_;
+	
+	my %subset;
+	foreach my $locus_id (keys %$kmers_r){
+		my $fract = sprintf("%.0f", scalar @{$kmers_r->{$locus_id}} / $kmer_len);
+		my @shuffled_kmers = shuffle(@{$kmers_r->{$locus_id}});
+		for my $i (0..($fract - 1)){
+			$subset{$locus_id}{$shuffled_kmers[$i]}++;
+			}
+		}
+
+	return \%subset;
 	}
 
 sub filter_bayes_scores{
 # filtering bayes scores from NB classification #
-	my ($res_r, $score_cutoff) = @_;
+	my ($res_r, $score_cutoff, $quiet) = @_;
 	
 	my %passed;
 	foreach my $locus_id (keys %$res_r){
@@ -212,10 +291,11 @@ OR loci_temp.subtype = '')
 	die " ERROR: no unclassifed arrays that need classifying!\n"
 		unless $$ret[0];
 	
-	my %arrays;
+	my (%arrays, %kmers);
 	foreach my $row (@$ret){
 		for (my $i = 0; $i<=(length $$row[0]) - $kmer_len; $i++){
 			my $kmer = substr($$row[0], $i, $kmer_len);
+			push( @{$kmers{$$row[1]}}, $kmer );
 			$arrays{$$row[1]}{$kmer}++;		# locus_id => kmer => count
 			}
 		}
@@ -225,7 +305,7 @@ OR loci_temp.subtype = '')
 		unless $quiet;
 	
 		#print Dumper %arrays; exit;
-	return \%arrays;
+	return \%arrays, \%kmers;
 	}
 
 sub get_classified_arrays{
@@ -399,6 +479,32 @@ sub copy_file{
 	return $tmpfile;
 	}	
 
+sub average{
+        my($data) = @_;
+        if (not @$data) {
+                die("Empty array\n");
+        }
+        my $total = 0;
+        foreach (@$data) {
+                $total += $_;
+        }
+        my $average = $total / @$data;
+        return $average;
+}
+
+sub stdev{
+        my($data) = @_;
+        if(@$data == 1){
+                return 0;
+        }
+        my $average = &average($data);
+        my $sqtotal = 0;
+        foreach(@$data) {
+                $sqtotal += ($average-$_) ** 2;
+        }
+        my $std = ($sqtotal / (@$data-1)) ** 0.5;
+        return $std;
+}
 
 
 __END__
@@ -425,14 +531,6 @@ CLdb_classifyArraysByDR_validate.pl [flags]
 
 =over
 
-=item -kmer
-
-Kmer length using for naive bayes classifier. [8]
-
-=item -cutoff
-
-Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
-
 =item -iterations
 
 Number of test iterations to perform. [100]
@@ -440,6 +538,22 @@ Number of test iterations to perform. [100]
 =item -fraction
 
 Fraction of dataset to test. [0.1]
+
+=item -kmer
+
+Kmer length using for naive bayes classifier. [8]
+
+=item -score
+
+Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
+
+=item -bootstrap
+
+Number of bootstraps to perform the classification of each array
+
+=item -cutoff 
+
+Bootstrap score cutoff (>=). [95]
 
 =item -v 	Verbose output. [TRUE]
 
@@ -453,12 +567,14 @@ perldoc CLdb_classifyArraysByDR_validate.pl
 
 =head1 DESCRIPTION
 
-Test accuracy of naive bayesian classifier for arrays using direct repeats.
+Test accuracy of using direct repeats to 
+classify rogue arrays using a naive bayesian classifier.
 
 =head1 EXAMPLES
 
-=head2 
+=head2 Basic usage:
 
+CLdb_classifyArraysByDR_validate.pl -da CLdb.sqlite
 
 =head1 AUTHOR
 
