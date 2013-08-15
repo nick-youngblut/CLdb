@@ -291,7 +291,7 @@ CLdb_getPAMs.pl -- getting PAMs from spacer blast hits
 
 =head1 SYNOPSIS
 
-CLdb_getPAMs.pl [flags] > PAM-spacer.fan
+CLdb_getPAMs.pl [flags] > PAM-spacer.fna
 
 =head2 Required flags
 
