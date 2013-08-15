@@ -350,11 +350,6 @@ of its direct repeats. Score range: 0-1 (0 = not likely; 1 = very likely)
 
 =back
 
-=head3 Notes
-
-Unclassified 'rogue' arrays identified by lacking a 'subtype' value
-and an 'operon_start' value in the loci table.
-
 =head1 EXAMPLES
 
 =head2 Classifying all rogue arrays
