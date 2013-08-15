@@ -74,7 +74,7 @@ Locus_ID	INTEGER	PRIMARY KEY,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT,
-Scaffold	TEXT,
+Scaffold	TEXT	NOT NULL,
 Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
 Operon_Start	INTEGER,
@@ -87,7 +87,9 @@ Genbank	TEXT	NOT NULL,
 Array_File	TEXT,
 Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
-Author	TEXT	NOT NULL
+Author	TEXT	NOT NULL,
+UNIQUE (Taxon_ID, Taxon_name, Scaffold, Locus_Start, Locus_End)
+ON CONFLICT IGNORE
 );
 
 HERE

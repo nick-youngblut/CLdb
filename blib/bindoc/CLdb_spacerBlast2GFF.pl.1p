@@ -123,57 +123,107 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADLOCI 1"
-.TH CLDB_LOADLOCI 1 "2013-08-14" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_SPACERBLAST2GFF 1"
+.TH CLDB_SPACERBLAST2GFF 1 "2013-08-14" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadLoci.pl \-\- adding/updating loci entries in to CRISPR_db
+CLdb_spacerBlast2GFF.pl \-\- make GFF3 file from spacer blasts
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadLoci.pl [flags] < loci_table.txt
+CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
 .IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+.SS "options"
+.IX Subsection "options"
 .PD 0
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+.IP "\-subtype" 4
+.IX Item "-subtype"
+.PD
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine the query.
+.IP "\-staxon_id" 4
+.IX Item "-staxon_id"
+\&\s-1BLAST\s0 subject taxon_id (>1 argument allowed)
+.IP "\-staxon_name" 4
+.IX Item "-staxon_name"
+\&\s-1BLAST\s0 subject taxon_name (>1 argument allowed)
+.IP "\-length" 4
+.IX Item "-length"
+Length cutoff for blast hit (>=; fraction of spacer length). [0.9]
+.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v	Verbose output. [FALSE]"
+.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadLoci.pl
+perldoc CLdb_spacerBlast2GFF.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Load and/or update \s-1CRISPR\s0 loci table entries.
+Convert spacer blasts in CLdb (see CLdb_spacerBlast.pl)
+to \s-1GFF3\s0 file format for viewing spacer blast hits
+on a subject genome.
+.SS "Output columns"
+.IX Subsection "Output columns"
+.IP "seqid = scaffold (subject_genome)" 4
+.IX Item "seqid = scaffold (subject_genome)"
+.PD 0
+.IP "source = 'CLdb_spacer_blast'" 4
+.IX Item "source = 'CLdb_spacer_blast'"
+.IP "feature = 'region'" 4
+.IX Item "feature = 'region'"
+.IP "start = 'hit start'" 4
+.IX Item "start = 'hit start'"
+.IP "end = 'hit end'" 4
+.IX Item "end = 'hit end'"
+.IP "score = e\-value" 4
+.IX Item "score = e-value"
+.IP "strand = strand" 4
+.IX Item "strand = strand"
+.IP "phase = 0" 4
+.IX Item "phase = 0"
+.PD
 .PP
-Loci entries will be added if no Locus_id is provided;
-otherwise, the entrie will be updated.
+\fI'Attributes' column\fR
+.IX Subsection "'Attributes' column"
+.IP "\s-1ID\s0 = taxon_ID (spacer)" 4
+.IX Item "ID = taxon_ID (spacer)"
+.PD 0
+.IP "name = taxon_name (spacer)" 4
+.IX Item "name = taxon_name (spacer)"
+.IP "alias = locus_id (spacer)" 4
+.IX Item "alias = locus_id (spacer)"
+.IP "note = mismatches; percentID; spacer_group" 4
+.IX Item "note = mismatches; percentID; spacer_group"
+.PD
 .SS "\s-1WARNING\s0!"
 .IX Subsection "WARNING!"
-The loci table must be in tab-delimited format.
+Spacer blasting must be done prior!
 .PP
-Loci entries must be unique by 'taxon_name', 'taxon_id', 'scaffold', 'locus_start', 'locus_end'.
-Only the 1st of duplicated entries will be kept.
-.PP
-A scaffold name will be added to any entries lacking one.
-.PP
-File names in the loci table should match files in the 
-\&\f(CW$CLdb_HOME\fR/genbank/ & \f(CW$CLdb_HOME\fR/array/ directories.
-.PP
-Extra columns (not in CLdb Loci table) can exist in the 
-input loci table. They just won't be added to CLdb.
+\&'\-staxon_name' or '\-staxon_id' should be used
+to limit hits to just 1 subject genome.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-CLdb_loadLoci.pl \-d CLdb.sqlite < loci.txt
+.SS "\s-1GFF3\s0 of all spacers that hit E.coli"
+.IX Subsection "GFF3 of all spacers that hit E.coli"
+CLdb_spacerBlast2GFF.pl \-d CLdb.sqlite \-staxon_name \*(L"E.coli\*(R" > ecoli_hits.gff
+.SS "\s-1GFF3\s0 of all spacers that hit \s-1FIG\s0 2209.27"
+.IX Subsection "GFF3 of all spacers that hit FIG 2209.27"
+CLdb_spacerBlast2GFF.pl \-d CLdb.sqlite \-staxon_id 2209.27 > 2209.27_hits.gff
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

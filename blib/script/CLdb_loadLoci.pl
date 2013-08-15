@@ -44,6 +44,9 @@ my ($loci_r, $header_r) = load_loci_table($column_list_r);
 # checking for required headers #
 check_headers($header_r);
 
+# adding scaffold values if not found #
+add_scaffold_ID($loci_r, $header_r);
+
 # striping off paths from file columns #
 remove_paths($loci_r, $header_r);
 
@@ -140,6 +143,27 @@ sub load_new_entries{
 
 	print STDERR "...Number of entries added to loci table: ", scalar @$loci_new_r, "\n"
 		unless $verbose;
+	}
+
+sub add_scaffold_ID{
+# adding scaffold ID if not found; needed to make sure entries are unique #
+	my ($loci_r, $header_r) = @_;
+	
+	$header_r->{"scaffold"} = scalar keys %$header_r unless exists $header_r->{"scaffold"};
+	
+	my $scaf_add_bool = 0;
+	foreach my $entry_type (keys %$loci_r){
+		foreach my $row (@{$loci_r->{$entry_type}}){
+			unless( $$row[$header_r->{"scaffold"}] ){
+				$$row[$header_r->{"scaffold"}] = "CLDB__ONE_CHROMOSOME";
+				$scaf_add_bool = 1;
+				}
+			}
+		}
+
+	# status #
+	print STDERR "...Did not find 'scaffold' values for some entries. Adding scaffold names as: 'CLDB__ONE_CHROMOSOME'\n"
+		if $scaf_add_bool and ! $verbose;
 	}
 
 sub check_headers{
@@ -281,6 +305,11 @@ otherwise, the entrie will be updated.
 =head2 WARNING!
 
 The loci table must be in tab-delimited format.
+
+Loci entries must be unique by 'taxon_name', 'taxon_id', 'scaffold', 'locus_start', 'locus_end'.
+Only the 1st of duplicated entries will be kept.
+
+A scaffold name will be added to any entries lacking one. 
 
 File names in the loci table should match files in the 
 $CLdb_HOME/genbank/ & $CLdb_HOME/array/ directories.
