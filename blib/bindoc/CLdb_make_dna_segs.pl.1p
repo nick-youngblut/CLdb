@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_POSITIONBYSCAFFOLD 1"
-.TH CLDB_POSITIONBYSCAFFOLD 1 "2013-08-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_MAKE_DNA_SEGS 1"
+.TH CLDB_MAKE_DNA_SEGS 1 "2013-08-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_positionByScaffold.pl \-\- Convert positional values from merged (whole\-genome) to by\-scaffold
+CLdb_make_dna_segs.pl \-\- making dna_segs table for plotting
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
+CLdb_make_dna_segs.pl [flags] > dna_segs.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -141,41 +141,55 @@ CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
 .SS "Optional flags"
 .IX Subsection "Optional flags"
 .PD 0
+.IP "\-ITEP" 4
+.IX Item "-ITEP"
+.PD
+Get gene cluster info from \s-1ITEP\s0. 2 arguments required: (ITEP_sqlite_file, cluster_runID).
+.IP "\-cutoff" 4
+.IX Item "-cutoff"
+Spacer clustering cutoff for spacer coloring (0.8 \- 1). [1]
+.IP "\-subtype" 4
+.IX Item "-subtype"
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine which sequences are returned.
+.IP "\-xlims" 4
+.IX Item "-xlims"
+Name of output xlims file. [xlims.txt]
+.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v 	Verbose output. [FALSE]"
+.PD 0
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_positionByScaffold.pl
+perldoc CLdb_make_dna_segs.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Convert merged genbank position information (merged with \s-1EMBOSS\s0 'union')
-to scaffold-based position info.
-.SS "Input"
-.IX Subsection "Input"
-The input must be a 2 column tab-delimited table:
-\&'unmerged_genbank_file_name', 'merged_genbank_file_name'
-.PP
-Example of unmerged genbank file format: \s-1RAST\s0 genbank output for a draft genome.
-.PP
-Updates not committed until all of the values have been converted
-(in case something goes wrong, you won't have a hybrid-position database)
-.SS "Matching unmerged and merged scaffolds"
-.IX Subsection "Matching unmerged and merged scaffolds"
-All scaffold start-end info is obtained form the 'source' tags
-in both the unmerged and merged genbank files. 1\-to\-1
-connections between scaffolds are determined in a number of steps:
-.IP "1) Comparing scaffold lengths." 4
-.IX Item "1) Comparing scaffold lengths."
-.PD 0
-.IP "2) Comparing scaffold sequences. No duplicate scaffolds allowed!" 4
-.IX Item "2) Comparing scaffold sequences. No duplicate scaffolds allowed!"
-.PD
+Make a basic dna_segs object needed for plotting.
+.SS "Coloring genes by gene cluster"
+.IX Subsection "Coloring genes by gene cluster"
+Provide and \s-1ITEP\s0 sqlite file name and cluster run \s-1ID\s0
+to add cluster info to the table (used for coloring)
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Normal usage:"
-.IX Subsection "Normal usage:"
-CLdb_positionByScaffold.pl \-d CLdb.sqlite < unmerged_merged.txt
+.SS "Plotting all loci classified as subtype 'I\-A'"
+.IX Subsection "Plotting all loci classified as subtype 'I-A'"
+CLdb_make_dna_segs.pl \-d CLdb.sqlite \-sub I\-A
+.SS "Gene cluster info from \s-1ITEP\s0"
+.IX Subsection "Gene cluster info from ITEP"
+CLdb_make_dna_segs.pl \-d CLdb.sqlite \-sub I\-A  \-I \s-1DATABASE\s0.sqlite all_I_2.0_c_0.4_m_maxbit
+.SS "No broken loci"
+.IX Subsection "No broken loci"
+CLdb_make_dna_segs.pl \-da CLdb.sqlite \-sub I\-A \-q \*(L"\s-1AND\s0 loci.operon_status != 'broken'\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

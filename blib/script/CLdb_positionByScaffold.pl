@@ -41,7 +41,7 @@ my $gen_list_r = get_genbank_list();
 my $gen_io_r = load_genbank_io($gen_list_r);
 
 # making merged => unmerged location index #
-foreach my $unmerged (keys %$gen_list_r){			
+foreach my $unmerged (keys %$gen_list_r){				
 	# getting scaffold lengths & sequence #
 	my $unmerged_r = parse_unmerged_genbank($gen_list_r, $gen_io_r, $unmerged);
 	my $merged_r = parse_merged_genbank($gen_list_r, $gen_io_r, $gen_list_r->{$unmerged});
@@ -91,9 +91,7 @@ foreach my $unmerged (keys %$gen_list_r){
 		if exists $tables_r->{"genes"};
 	}
 
-exit;
-
-# updating loci genbanks #
+# updating loci table values: genbank file names #
 update_loci_genbank($dbh, $gen_list_r);
 
 # committing updates #
@@ -102,8 +100,6 @@ print STDERR "...All updates committed!\n";
 
 # disconnect #
 $dbh->disconnect();
-
-
 exit;
 
 
@@ -117,13 +113,22 @@ sub update_loci_genbank{
 	my $cmd = "UPDATE loci SET genbank=? where genbank=?";		# merged to unmerged
 	my $sql = $dbh->prepare($cmd);
 
+	my $cnt = 0;
 	foreach my $unmerged (keys %$gen_list_r){
-		$sql->bind_param(1, $unmerged);
-		$sql->bind_param(2, $gen_list_r->{$unmerged});		
+		my @parts = File::Spec->splitpath($unmerged);
+		$sql->bind_param(1, $parts[2]);
+		@parts = File::Spec->splitpath($gen_list_r->{$unmerged});
+		$sql->bind_param(2, $parts[2]);		
 		$sql->execute();
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: $unmerged\n";
+			}
+		else{ $cnt++; }
 		}
 
-	print STDERR "...be sure to move unmerged genbanks into \$CLdb_HOME/genbank!!!\n";
+	print STDERR "...Number of genbank values updated: $cnt\n";
+	print STDERR "...BE SURE to move unmerged genbanks into \$CLdb_HOME/genbank!!!\n";
 	}
 
 sub find_same_sequence{
@@ -131,10 +136,6 @@ sub find_same_sequence{
 ## sequences should match exactly & 1-to-1 ##
 	my ($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r) = @_;
 
-	#print Dumper $scaf_index_r; exit;
-	#print Dumper $needs_blasting_r; exit;
-	#print Dumper $merged_r; exit;
-	
 	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
 		foreach my $unmerged_contig (keys %{$needs_blasting_r->{"unmerged"}}){
 			if ($merged_r->{$merged_contig}{"seq"} eq $unmerged_r->{$unmerged_contig}{"seq"}){
@@ -189,16 +190,15 @@ sub update_other_table{
 	$prefix2 = $prefix unless $prefix2;
 	
 	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=? 
-WHERE locus_id=?
-AND $prefix2\_id=?";
+WHERE $prefix2\_id=?
+AND locus_id=?";
+
 	$cmd =~ s/[\n\r]/ /g;
-		#print Dumper $cmd;
 	
 	my $sql = $dbh->prepare($cmd);
 	my $cnt = 0;
 	foreach my $locus (@$loci_r){
 		foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ) {
-				#print Dumper @$row;
 			$sql->execute(@$row[0..2], $$locus[0]);
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
@@ -263,8 +263,8 @@ sub merged_to_unmerged_pos{
 			($$locus[$i], $$locus[$i+1]) = flip_se($$locus[$i], $$locus[$i+1]) if $flip_bool;
 			
 			# check start stop #
-			#die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
-			print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
+			die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
+				#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->loci; start = $$locus[$i], end = ", $$locus[$i+1], "\n"
 				if $$locus[$i] < 0 || $$locus[$i+1] < 0;
 			
 			# scaffold #
@@ -277,6 +277,8 @@ sub merged_to_unmerged_pos{
 			foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ){		 # 2 value
 				# skipping if not present #
 				next unless $$row[0] && $$row[1];
+
+					#print Dumper @$row;
 				
 				# checking start-end orientation #
 				my $flip_bool = 0;
@@ -297,12 +299,11 @@ sub merged_to_unmerged_pos{
 				($$row[0], $$row[1]) = flip_se($$row[0], $$row[1]) if $flip_bool;
 
 				# check start stop #
-				#die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
-				print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
+				die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
+					#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
 					if $$row[0] < 0 || $$row[1] < 0;
-			
-				# scaffold #
-				$$row[2] = $scaffold_name;
+		
+					#print Dumper @$row;
 				}
 			}
 		}
@@ -322,11 +323,11 @@ sub check_scaffold_span{
 	die " ERROR: no scaffold spans positions start->$start, end->$end for locus->$$locus[0], table->$table\n"
 		unless @$ret;
 
-	if(scalar @$ret > 1){
+	if(scalar @$ret > 1){		# error & die
 		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold in table->$table\n";
 		print STDERR " LOCUS: ", join(", ", $$locus[0], @$locus[2..$#$locus]), "\n";	
-			print Dumper @$ret;
-		#exit;
+			#print Dumper @$ret;
+		exit;
 		}	
 	}
 
@@ -340,7 +341,7 @@ sub get_other_tables_oi{
 	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
 	$prefix2 = $prefix unless $prefix2;
 	
-	my $cmd = "SELECT $prefix\_start, $prefix\_end, scaffold, $prefix2\_ID FROM $table where locus_id = ?";
+	my $cmd = "SELECT $prefix\_start, $prefix\_end, $prefix2\_ID FROM $table where locus_id = ?";
 	$cmd =~ s/[\n\r]/ /g;
 	my $sql = $dbh->prepare($cmd);
 
