@@ -91,7 +91,7 @@ foreach my $unmerged (keys %$gen_list_r){
 		if exists $tables_r->{"genes"};
 	}
 
-# updating loci genbanks #
+# updating loci table values: genbank file names #
 update_loci_genbank($dbh, $gen_list_r);
 
 # committing updates #
@@ -190,16 +190,15 @@ sub update_other_table{
 	$prefix2 = $prefix unless $prefix2;
 	
 	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=? 
-WHERE locus_id=?
-AND $prefix2\_id=?";
+WHERE $prefix2\_id=?
+AND locus_id=?";
+
 	$cmd =~ s/[\n\r]/ /g;
-		#print Dumper $cmd;
 	
 	my $sql = $dbh->prepare($cmd);
 	my $cnt = 0;
 	foreach my $locus (@$loci_r){
 		foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ) {
-				#print Dumper @$row;
 			$sql->execute(@$row[0..2], $$locus[0]);
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
@@ -278,6 +277,8 @@ sub merged_to_unmerged_pos{
 			foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ){		 # 2 value
 				# skipping if not present #
 				next unless $$row[0] && $$row[1];
+
+					#print Dumper @$row;
 				
 				# checking start-end orientation #
 				my $flip_bool = 0;
@@ -301,7 +302,8 @@ sub merged_to_unmerged_pos{
 				die " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
 					#print STDERR " ERROR: scaffold start or end < 0 for locus->$$locus[0], table->$table; start = $$row[0], end = $$row[1]\n"
 					if $$row[0] < 0 || $$row[1] < 0;
-			
+		
+					#print Dumper @$row;
 				}
 			}
 		}

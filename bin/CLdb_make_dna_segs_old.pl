@@ -17,7 +17,6 @@ my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
-my $xlim_out = "xlims.txt";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
@@ -26,7 +25,6 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "cutoff=f" =>  \$spacer_cutoff,
-	   "xlim=s" => \$xlim_out,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -65,9 +63,6 @@ my $join_sql = "";
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
-# getting loci start-end #
-make_xlims($dbh, $join_sql, $extra_query, $xlim_out);
 
 # getting spacer, DR, & gene info from CLdb #
 my %dna_segs; 
@@ -343,43 +338,7 @@ $extra_query
 	#print Dumper %$dna_segs_r; exit;
 	return \%spacer_clusters;
 	}
-
-sub make_xlims{
-	my ($dbh, $join_sql, $extra_query, $xlim_out) = @_;
 	
-# same table join #
-	my $query = "
-SELECT 
-loci.locus_start,
-loci.locus_end,
-loci.taxon_name,
-loci.locus_id
-FROM Loci Loci, Loci b
-WHERE Loci.locus_id = b.locus_id
-$join_sql
-$extra_query
-GROUP BY loci.locus_id
-";
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	open OUT, ">$xlim_out" or die $!;
-	
-	print OUT join("\t", qw/start end taxon_name locus_id/), "\n";
-	foreach my $row (@$ret){
-		print OUT join("\t", @$row), "\n";
-		}
-		
-	close OUT;
-	}
-
 sub join_query_opts{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
