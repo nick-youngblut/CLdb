@@ -26,7 +26,7 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "cutoff=f" =>  \$spacer_cutoff,
-	   "xlim=s" => \$xlim_out,
+	   "xlims=s" => \$xlim_out,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -149,7 +149,7 @@ sub write_dna_segs{
 					$end,
 					1, 				# strand 
 					1,				# col
-					1, 1, 8, 1,
+					1, 0.2, 8, 1,
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
@@ -440,6 +440,10 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 Extra sql to refine which sequences are returned.
 
+=item -xlims
+
+Name of output xlims file. [xlims.txt]
+
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -461,13 +465,17 @@ to add cluster info to the table (used for coloring)
 
 =head1 EXAMPLES
 
-=head2 Basic usage
+=head2 Plotting all loci classified as subtype 'I-A'
 
-CLdb_make_dna_segs.pl -d CLdb.sqlite 
+CLdb_make_dna_segs.pl -d CLdb.sqlite -sub I-A 
 
 =head2 Gene cluster info from ITEP
 
-CLdb_make_dna_segs.pl -d CLdb.sqlite -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
+CLdb_make_dna_segs.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
+
+=head2 No broken loci
+
+CLdb_make_dna_segs.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
 
 =head1 AUTHOR
 
