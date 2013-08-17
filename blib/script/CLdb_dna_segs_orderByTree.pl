@@ -197,11 +197,11 @@ __END__
 
 =head1 NAME
 
-CLdb_order_dna_segs_byTree.pl -- needed if plotting a tree with CRISPR loci
+CLdb_dna_segs_orderByTree.pl -- needed if plotting a tree with CRISPR loci
 
 =head1 SYNOPSIS
 
-CLdb_order_dna_segs_byTree.pl [flags] > dna_segs_ordered.txt
+CLdb_dna_segs_orderByTree.pl [flags] > dna_segs_ordered.txt
 
 =head2 Required flags
 
@@ -233,7 +233,7 @@ Output file name for pruned tree. ['-tree' + '_prn.nwk']
 
 =head2 For more information:
 
-perldoc CLdb_order_dna_segs_byTree.pl
+perldoc CLdb_dna_segs_orderByTree.pl
 
 =head1 DESCRIPTION
 
@@ -249,7 +249,7 @@ tree ordering.
 
 =head2 Basic usage
 
-CLdb_order_dna_segs_byTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
+CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
 =head1 AUTHOR
 

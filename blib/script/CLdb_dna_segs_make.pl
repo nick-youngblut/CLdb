@@ -398,11 +398,11 @@ __END__
 
 =head1 NAME
 
-CLdb_make_dna_segs.pl -- making dna_segs table for plotting
+CLdb_dna_segs_make.pl -- making dna_segs table for plotting
 
 =head1 SYNOPSIS
 
-CLdb_make_dna_segs.pl [flags] > dna_segs.txt
+CLdb_dna_segs_make.pl [flags] > dna_segs.txt
 
 =head2 Required flags
 
@@ -452,7 +452,7 @@ Name of output xlims file. [xlims.txt]
 
 =head2 For more information:
 
-perldoc CLdb_make_dna_segs.pl
+perldoc CLdb_dna_segs_make.pl
 
 =head1 DESCRIPTION
 
@@ -467,15 +467,15 @@ to add cluster info to the table (used for coloring)
 
 =head2 Plotting all loci classified as subtype 'I-A'
 
-CLdb_make_dna_segs.pl -d CLdb.sqlite -sub I-A 
+CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A 
 
 =head2 Gene cluster info from ITEP
 
-CLdb_make_dna_segs.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
+CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
 
 =head2 No broken loci
 
-CLdb_make_dna_segs.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
 
 =head1 AUTHOR
 

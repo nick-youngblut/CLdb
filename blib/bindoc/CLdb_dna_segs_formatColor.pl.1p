@@ -123,46 +123,30 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_MAKE_DNA_SEGS 1"
-.TH CLDB_MAKE_DNA_SEGS 1 "2013-08-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_DNA_SEGS_FORMATCOLOR 1"
+.TH CLDB_DNA_SEGS_FORMATCOLOR 1 "2013-08-17" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_make_dna_segs.pl \-\- making dna_segs table for plotting
+CLdb_dna_segs_formatColor.pl \-\- needed if plotting a tree with CRISPR loci
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_make_dna_segs.pl [flags] > dna_segs.txt
+CLdb_dna_segs_formatColor.pl [flags] > dna_segs_ordered.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-tree" 4
+.IX Item "-tree"
+Tree file name (nexus or newick).
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-ITEP" 4
-.IX Item "-ITEP"
-.PD
-Get gene cluster info from \s-1ITEP\s0. 2 arguments required: (ITEP_sqlite_file, cluster_runID).
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
-Spacer clustering cutoff for spacer coloring (0.8 \- 1). [1]
-.IP "\-subtype" 4
-.IX Item "-subtype"
-Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine which sequences are returned.
-.IP "\-xlims" 4
-.IX Item "-xlims"
-Name of output xlims file. [xlims.txt]
+.IP "\-format" 4
+.IX Item "-format"
+Tree file format. [newick]
+.IP "\-name" 4
+.IX Item "-name"
+Output file name for pruned tree. ['\-tree' + '_prn.nwk']
 .IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v 	Verbose output. [FALSE]"
 .PD 0
@@ -171,25 +155,21 @@ Name of output xlims file. [xlims.txt]
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_make_dna_segs.pl
+perldoc CLdb_dna_segs_formatColor.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make a basic dna_segs object needed for plotting.
-.SS "Coloring genes by gene cluster"
-.IX Subsection "Coloring genes by gene cluster"
-Provide and \s-1ITEP\s0 sqlite file name and cluster run \s-1ID\s0
-to add cluster info to the table (used for coloring)
+Formatting tree and dna_segs table for plotting.
+.PP
+The tree file is pruned to just the taxa found in
+the dna_segs table.
+.PP
+The dna_segs file is ordered to match the pruned
+tree ordering.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Plotting all loci classified as subtype 'I\-A'"
-.IX Subsection "Plotting all loci classified as subtype 'I-A'"
-CLdb_make_dna_segs.pl \-d CLdb.sqlite \-sub I\-A
-.SS "Gene cluster info from \s-1ITEP\s0"
-.IX Subsection "Gene cluster info from ITEP"
-CLdb_make_dna_segs.pl \-d CLdb.sqlite \-sub I\-A  \-I \s-1DATABASE\s0.sqlite all_I_2.0_c_0.4_m_maxbit
-.SS "No broken loci"
-.IX Subsection "No broken loci"
-CLdb_make_dna_segs.pl \-da CLdb.sqlite \-sub I\-A \-q \*(L"\s-1AND\s0 loci.operon_status != 'broken'\*(R"
+.SS "Basic usage"
+.IX Subsection "Basic usage"
+CLdb_dna_segs_formatColor.pl \-t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
