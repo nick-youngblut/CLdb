@@ -13,11 +13,10 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
+my ($verbose, $CLdb_sqlite, @ITEP_sqlite, $xlim_out);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
-my $xlim_out = "xlims.txt";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
@@ -67,7 +66,7 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # getting loci start-end #
-make_xlims($dbh, $join_sql, $extra_query, $xlim_out);
+make_xlims($dbh, $join_sql, $extra_query, $xlim_out) if $xlim_out;
 
 # getting subtype #
 my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
@@ -497,7 +496,8 @@ Extra sql to refine which sequences are returned.
 
 =item -xlims
 
-Name of output xlims file. [xlims.txt]
+Output name of xlims table (table not written unless provided). 
+An xlims table can also be created with CLdb_xlims_make.pl.
 
 =item -v 	Verbose output. [FALSE]
 
@@ -531,6 +531,10 @@ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.
 =head2 No broken loci
 
 CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+
+=head2 Also write an xlims table
+
+CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A -x xlims.txt
 
 =head1 AUTHOR
 
