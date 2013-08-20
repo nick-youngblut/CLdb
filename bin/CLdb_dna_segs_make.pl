@@ -13,7 +13,7 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $CLdb_sqlite, @ITEP_sqlite, $xlim_out);
+my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
@@ -25,7 +25,6 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "cutoff=f" =>  \$spacer_cutoff,
-	   "xlims=s" => \$xlim_out,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -65,9 +64,6 @@ $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
-# getting loci start-end #
-make_xlims($dbh, $join_sql, $extra_query, $xlim_out) if $xlim_out;
-
 # getting subtype #
 my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
@@ -83,7 +79,12 @@ my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0],
 						$ITEP_sqlite[1], \%dna_segs)
 						if @ITEP_sqlite;
 
+# mutli-loci / multi-subtype problem
+## determining if multiple loci/subtypes per taxon_name ##
+my ($multi_loci, $multi_subtype)  = check_multi(\%dna_segs, $subtypes_r);
 
+## adding loci & subtypes to DNA_segs names ##
+my $dna_segs_r = edit_dna_segs_taxon_name(\%dna_segs, $subtypes_r, $multi_loci, $multi_subtype);
 
 # writing table #
 write_dna_segs(\%dna_segs, $subtypes_r);
@@ -117,21 +118,20 @@ sub write_dna_segs{
 	my ($dna_segs, $subtypes_r) = @_;
 	
 	# header #
-	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype/), "\n";
+	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype dna_segs_id/), "\n";
 	
 	# body #
 	foreach my $taxon_name (keys %$dna_segs){
 		foreach my $locus_id (keys %{$dna_segs->{$taxon_name}}){
 			# spacers #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"spacer"}}){
-				# start-end, color #
-				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[0];
-				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[1];
-				my $col = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[2];
+				my $row = $dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id};
 				
-				# subtype #
-				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
-					unless exists $subtypes_r->{$taxon_name}{$locus_id};
+				# start-end, color #
+				my $start = $$row[0];
+				my $end = $$row[1];
+				my $col = $$row[2];
+				my $dna_segs_id = $$row[$#$row];
 				
 				print join("\t",  
 					$id,
@@ -145,19 +145,19 @@ sub write_dna_segs{
 					$locus_id,
 					"spacer", 		# feature
 					$id,
-					$subtypes_r->{$taxon_name}{$locus_id}
+					$subtypes_r->{$taxon_name}{$locus_id},
+					$dna_segs_id
 					), "\n";				
 				}
 			# DRs #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"DR"}}){
-				# start-end, color #
-				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id}}[0];
-				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id}}[1];
-
-				# subtype #
-				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
-					unless exists $subtypes_r->{$taxon_name}{$locus_id};
+				my $row = $dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id};
 				
+				# start-end, color #
+				my $start = $$row[0];
+				my $end = $$row[1];
+				my $dna_segs_id = $$row[$#$row];				
+
 				print join("\t",  
 					$id,
 					$start,
@@ -170,25 +170,25 @@ sub write_dna_segs{
 					$locus_id,
 					"directrepeat", 	# feature
 					$id,
-					$subtypes_r->{$taxon_name}{$locus_id}
+					$subtypes_r->{$taxon_name}{$locus_id},
+					$dna_segs_id
 					), "\n";				
 				}			
 			
 			# genes #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"gene"}}){
+				my $row = $dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id};
+				
 				# start-end, color #			
-				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[0];
-				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[1];
-				my $alias = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[2];
+				my $start = $$row[0];
+				my $end = $$row[1];
+				my $alias = $$row[2];
+				my $dna_segs_id = $$row[$#$row];
 				
 				# color #
 				my $col = 1;
-				$col = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[3]
-					if ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[3];
-
-				# subtype #
-				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
-					unless exists $subtypes_r->{$taxon_name}{$locus_id};
+				$col = $$row[3]
+					if $$row[3];
 				
 				print join("\t",  
 					$alias,
@@ -202,13 +202,43 @@ sub write_dna_segs{
 					$locus_id,
 					"gene", 				# feature
 					$id,
-					$subtypes_r->{$taxon_name}{$locus_id}			
+					$subtypes_r->{$taxon_name}{$locus_id},
+					$dna_segs_id			
 					), "\n";				
 				}				
 			}
 		}
 	}
+
+sub check_multi{
+# checking for multiple entries per taxon #
+	my ($dna_segs_r, $subtypes_r) = @_;
 	
+	my $multi_loci = 0;				# mutliple loci per taxon_name
+	my $multi_subtype = 0;			# multiple subtypes total 
+	my %subtype_sum; 
+	foreach my $taxon_name (keys %$dna_segs_r){
+		$multi_loci = 1 if scalar keys %{$dna_segs_r->{$taxon_name}} > 1;
+			
+		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}} ){
+			# sanity check #
+			die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+				unless exists $subtypes_r->{$taxon_name}{$locus_id};
+			
+			$subtype_sum{$subtypes_r->{$taxon_name}{$locus_id}}++;
+			}
+		}
+	$multi_subtype = 1 if scalar keys %subtype_sum > 1;
+
+	# status #
+	print STDERR "...Found multiple loci for 1 or more taxa. Adding leaves to the tree! Adding loci_ids to leaves & dna_segs table!\n"
+		if $multi_loci;
+	print STDERR "...Found multiple subtypes. Adding subtype to names in tree & dna_segs table!\n"
+		if $multi_subtype;
+		
+	return $multi_loci, $multi_subtype;
+	}
+
 sub get_strand{
 # start > end? #
 	my ($start, $end) = @_;
@@ -401,43 +431,6 @@ GROUP BY loci.locus_id
 	return \%subtypes;
 	}
 
-sub make_xlims{
-	my ($dbh, $join_sql, $extra_query, $xlim_out) = @_;
-	
-# same table join #
-	my $query = "
-SELECT 
-loci.locus_start,
-loci.locus_end,
-loci.taxon_name,
-loci.locus_id,
-loci.subtype
-FROM Loci Loci, Loci b
-WHERE Loci.locus_id = b.locus_id
-$join_sql
-$extra_query
-GROUP BY loci.locus_id
-";
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	open OUT, ">$xlim_out" or die $!;
-	
-	print OUT join("\t", qw/start end taxon_name locus_id subtype/), "\n";
-	foreach my $row (@$ret){
-		print OUT join("\t", @$row), "\n";
-		}
-		
-	close OUT;
-	}
-
 sub join_query_opts{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
@@ -498,11 +491,6 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 Extra sql to refine which sequences are returned.
 
-=item -xlims
-
-Output name of xlims table (table not written unless provided). 
-An xlims table can also be created with CLdb_xlims_make.pl.
-
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -535,10 +523,6 @@ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.
 =head2 No broken loci
 
 CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
-
-=head2 Also write an xlims table
-
-CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A -x xlims.txt
 
 =head1 AUTHOR
 

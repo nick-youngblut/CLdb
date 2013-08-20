@@ -50,7 +50,17 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # getting loci start-end #
-make_xlims($dbh, $join_sql, $extra_query);
+my $xlims_r = load_xlims($dbh, $join_sql, $extra_query);
+
+# mutli-loci / multi-subtype problem
+## determining if multiple loci/subtypes per taxon_name ##
+my ($multi_loci, $multi_subtype)  = check_multi($xlims_r);
+
+## adding loci & subtypes to DNA_segs names ##
+edit_xlims_taxon_name($xlims_r, $multi_loci, $multi_subtype);
+
+# writing table #
+write_xlims($xlims_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -58,7 +68,70 @@ exit;
 
 
 ### Subroutines
-sub make_xlims{
+sub write_xlims{
+	my ($xlims_r) = @_;
+	
+	# header #
+	print join("\t", qw/start end taxon_name locus_id subtype dna_segs_id/), "\n";
+	
+	# body #
+	foreach my $taxon_name (keys %$xlims_r){
+		foreach my $locus_id (keys %{$xlims_r->{$taxon_name}}){
+			print join("\t", @{$xlims_r->{$taxon_name}{$locus_id}{"entry"}}), "\n";
+			}
+		}
+	}
+
+sub edit_xlims_taxon_name{
+	my ($xlims_r, $multi_loci, $multi_subtype) = @_;
+	
+	foreach my $taxon_name (keys %$xlims_r){
+		foreach my $locus_id (keys %{$xlims_r->{$taxon_name}}){
+			# editing taxon_name in row #
+			my $new_taxon_name = $taxon_name;
+			$new_taxon_name = join("__", $taxon_name, "cli$locus_id")
+					if $multi_loci;
+			$new_taxon_name = join("__", $new_taxon_name, $xlims_r->{$taxon_name}{$locus_id}{"subtype"})
+					if $multi_subtype;
+			
+			#print Dumper $new_taxon_name;
+			
+			push(@{$xlims_r->{$taxon_name}{$locus_id}{"entry"}}, $new_taxon_name);
+			}
+		}
+		#print Dumper %$xlims_r; exit;
+	}
+
+sub check_multi{
+# checking for multiple entries per taxon #
+	my ($xlims_r) = @_;
+	
+	my $multi_loci = 0;				# mutliple loci per taxon_name
+	my $multi_subtype = 0;			# multiple subtypes total 
+	my %subtype_sum; 
+	foreach my $taxon_name (keys %$xlims_r){
+		$multi_loci = 1 if scalar keys %{$xlims_r->{$taxon_name}} > 1;
+			
+		foreach my $locus_id (keys %{$xlims_r->{$taxon_name}} ){
+			# sanity check #
+			die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+				unless exists  $xlims_r->{$taxon_name}{$locus_id}{"subtype"};
+			
+			$subtype_sum{ $xlims_r->{$taxon_name}{$locus_id}{"subtype"} }++;
+			}
+		}
+	$multi_subtype = 1 if scalar keys %subtype_sum > 1;
+
+	# status #
+	print STDERR "...Found multiple loci for 1 or more taxa. Adding leaves to the tree! Adding loci_ids to leaves & xlims table!\n"
+		if $multi_loci;
+	print STDERR "...Found multiple subtypes. Adding subtype to names in tree & xlims table!\n"
+		if $multi_subtype;
+		
+	return $multi_loci, $multi_subtype;
+	}
+
+sub load_xlims{
 	my ($dbh, $join_sql, $extra_query) = @_;
 	
 # same table join #
@@ -85,10 +158,15 @@ GROUP BY loci.locus_id
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
 	
-	print join("\t", qw/start end taxon_name locus_id subtype/), "\n";
+	# loading hash #
+	my %xlims;
 	foreach my $row (@$ret){
-		print join("\t", @$row), "\n";
+		$xlims{$$row[2]}{$$row[3]}{"entry"} = $row;
+		$xlims{$$row[2]}{$$row[3]}{"subtype"} = $$row[4];
 		}
+	
+		#print Dumper %xlims; exit;
+	return \%xlims;
 	}
 
 sub join_query_opts{
