@@ -13,11 +13,10 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
+my ($verbose, $CLdb_sqlite, @ITEP_sqlite, $xlim_out);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
-my $xlim_out = "xlims.txt";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
@@ -67,7 +66,10 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # getting loci start-end #
-make_xlims($dbh, $join_sql, $extra_query, $xlim_out);
+make_xlims($dbh, $join_sql, $extra_query, $xlim_out) if $xlim_out;
+
+# getting subtype #
+my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
 # getting spacer, DR, & gene info from CLdb #
 my %dna_segs; 
@@ -82,7 +84,7 @@ my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0],
 						if @ITEP_sqlite;
 
 # writing table #
-write_dna_segs(\%dna_segs);
+write_dna_segs(\%dna_segs, $subtypes_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -110,10 +112,10 @@ sub write_dna_segs{
 ### locus_ID
 ### feat_ID 
 
-	my ($dna_segs) = @_;
+	my ($dna_segs, $subtypes_r) = @_;
 	
 	# header #
-	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat_id/), "\n";
+	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat_id subtype/), "\n";
 	
 	
 	# body #
@@ -121,9 +123,14 @@ sub write_dna_segs{
 		foreach my $locus_id (keys %{$dna_segs->{$taxon_name}}){
 			# spacers #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"spacer"}}){
+				# start-end, color #
 				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[0];
 				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[1];
 				my $col = ${$dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id}}[2];
+				
+				# subtype #
+				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+					unless exists $subtypes_r->{$taxon_name}{$locus_id};
 				
 				print join("\t",  
 					$id,
@@ -135,13 +142,19 @@ sub write_dna_segs{
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
-					$id
+					$id,
+					$subtypes_r->{$taxon_name}{$locus_id}
 					), "\n";				
 				}
 			# DRs #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"DR"}}){
+				# start-end, color #
 				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id}}[0];
 				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id}}[1];
+
+				# subtype #
+				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+					unless exists $subtypes_r->{$taxon_name}{$locus_id};
 				
 				print join("\t",  
 					$id,
@@ -153,12 +166,14 @@ sub write_dna_segs{
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
-					$id
+					$id,
+					$subtypes_r->{$taxon_name}{$locus_id}
 					), "\n";				
 				}			
 			
 			# genes #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"gene"}}){
+				# start-end, color #			
 				my $start = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[0];
 				my $end = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[1];
 				my $alias = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[2];
@@ -167,6 +182,10 @@ sub write_dna_segs{
 				my $col = 1;
 				$col = ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[3]
 					if ${$dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id}}[3];
+
+				# subtype #
+				die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+					unless exists $subtypes_r->{$taxon_name}{$locus_id};
 				
 				print join("\t",  
 					$alias,
@@ -178,7 +197,8 @@ sub write_dna_segs{
 					"arrows", 				# end of required columns
 					$taxon_name,
 					$locus_id,
-					$id, 			
+					$id, 
+					$subtypes_r->{$taxon_name}{$locus_id}			
 					), "\n";				
 				}				
 			}
@@ -344,6 +364,39 @@ $extra_query
 	return \%spacer_clusters;
 	}
 
+sub get_subtypes{
+	my ($dbh, $join_sql, $extra_query ) = @_;
+	
+	my $query = "
+SELECT 
+loci.taxon_name,
+loci.locus_id,
+loci.subtype
+FROM Loci Loci, Loci b
+WHERE Loci.locus_id = b.locus_id
+$join_sql
+$extra_query
+GROUP BY loci.locus_id
+";
+	$query =~ s/\n|\r/ /g;
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	my %subtypes; 
+	foreach my $row (@$ret){
+		$subtypes{$$row[0]}{$$row[1]} = $$row[2]; 		# taxon_name => locus_id => subtype
+		}
+	
+		#print Dumper %subtypes; exit;
+	return \%subtypes;
+	}
+
 sub make_xlims{
 	my ($dbh, $join_sql, $extra_query, $xlim_out) = @_;
 	
@@ -353,7 +406,8 @@ SELECT
 loci.locus_start,
 loci.locus_end,
 loci.taxon_name,
-loci.locus_id
+loci.locus_id,
+loci.subtype
 FROM Loci Loci, Loci b
 WHERE Loci.locus_id = b.locus_id
 $join_sql
@@ -372,7 +426,7 @@ GROUP BY loci.locus_id
 	
 	open OUT, ">$xlim_out" or die $!;
 	
-	print OUT join("\t", qw/start end taxon_name locus_id/), "\n";
+	print OUT join("\t", qw/start end taxon_name locus_id subtype/), "\n";
 	foreach my $row (@$ret){
 		print OUT join("\t", @$row), "\n";
 		}
@@ -442,7 +496,8 @@ Extra sql to refine which sequences are returned.
 
 =item -xlims
 
-Name of output xlims file. [xlims.txt]
+Output name of xlims table (table not written unless provided). 
+An xlims table can also be created with CLdb_xlims_make.pl.
 
 =item -v 	Verbose output. [FALSE]
 
@@ -476,6 +531,10 @@ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.
 =head2 No broken loci
 
 CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+
+=head2 Also write an xlims table
+
+CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A -x xlims.txt
 
 =head1 AUTHOR
 

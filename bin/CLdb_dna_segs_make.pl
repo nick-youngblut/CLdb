@@ -83,6 +83,8 @@ my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0],
 						$ITEP_sqlite[1], \%dna_segs)
 						if @ITEP_sqlite;
 
+
+
 # writing table #
 write_dna_segs(\%dna_segs, $subtypes_r);
 
@@ -115,8 +117,7 @@ sub write_dna_segs{
 	my ($dna_segs, $subtypes_r) = @_;
 	
 	# header #
-	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat_id subtype/), "\n";
-	
+	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype/), "\n";
 	
 	# body #
 	foreach my $taxon_name (keys %$dna_segs){
@@ -142,6 +143,7 @@ sub write_dna_segs{
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
+					"spacer", 		# feature
 					$id,
 					$subtypes_r->{$taxon_name}{$locus_id}
 					), "\n";				
@@ -166,6 +168,7 @@ sub write_dna_segs{
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
+					"directrepeat", 	# feature
 					$id,
 					$subtypes_r->{$taxon_name}{$locus_id}
 					), "\n";				
@@ -197,7 +200,8 @@ sub write_dna_segs{
 					"arrows", 				# end of required columns
 					$taxon_name,
 					$locus_id,
-					$id, 
+					"gene", 				# feature
+					$id,
 					$subtypes_r->{$taxon_name}{$locus_id}			
 					), "\n";				
 				}				

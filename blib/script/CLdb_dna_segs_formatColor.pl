@@ -9,6 +9,7 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Bio::TreeIO;
+use Color::Mix;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -24,18 +25,24 @@ GetOptions(
 	   );
 
 ### I/O error & defaults
-die " ERROR: cannot find tree file!\n" unless -e $tree_in;
-$format = check_tree_format($format);
-($tree_name = $tree_in) =~ s/\.[^.]+$|$/_prn.nwk/ unless $tree_name;
+$format = check_tree_format($format) if $tree_in;
 
 ### Main
+# loading dna_segs table #
+my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
+
+# formatting gene cluster colors (if provided) #
+format_gene_cluster_color($dna_segs_r);
+
+exit;
+
+
 # loading tree #
+if($tree_in){
 my $treeio = Bio::TreeIO -> new(-file => $tree_in,
 								-format => $format);
 my $treeo = $treeio->next_tree;
 
-# loading dna_segs table #
-my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
 
 # prune tree by dna_segs #
 $treeo = prune_tree($dna_segs_r, $treeo);
@@ -50,6 +57,12 @@ order_dna_segs($dna_segs_r, $tree_order_r, $header_r);
 
 
 ### Subroutines
+sub format_gene_cluster_color{
+	my ($dna_segs_r) = @_;
+	
+	}
+
+
 sub tree_write{
 	my ($treeo, $tree_name) = @_;
 	
@@ -158,7 +171,7 @@ sub load_dna_segs{
 				unless exists $dna_segs{$taxon_name};
 			
 			# dna_segs to %@ #
-			push( @{$dna_segs{$taxon_name}}, \@line );
+			push( @{$dna_segs{$taxon_name}}, \@line );		# taxon_name => row
 			}
 		}
 		

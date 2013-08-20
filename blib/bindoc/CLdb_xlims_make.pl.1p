@@ -123,35 +123,37 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_DNA_SEGS_ORDERBYTREE 1"
-.TH CLDB_DNA_SEGS_ORDERBYTREE 1 "2013-08-18" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_XLIMS_MAKE 1"
+.TH CLDB_XLIMS_MAKE 1 "2013-08-18" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_dna_segs_orderByTree.pl \-\- needed if plotting a tree with CRISPR loci
+CLdb_xlims_make.pl \-\- making xlims table for plotting
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-.SS "Ordering 'dna_segs' table"
-.IX Subsection "Ordering 'dna_segs' table"
-CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
-.SS "Ordering 'xlims' table"
-.IX Subsection "Ordering 'xlims' table"
-CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
+CLdb_xlims_make.pl [flags] > xlims.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-tree" 4
-.IX Item "-tree"
-Tree file name (nexus or newick).
+.IP "\-d 	CLdb database." 4
+.IX Item "-d 	CLdb database."
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.IP "\-format" 4
-.IX Item "-format"
-Tree file format. [newick]
-.IP "\-name" 4
-.IX Item "-name"
-Output file name for pruned tree. ['\-tree' + '_prn.nwk']
+.PD 0
+.IP "\-subtype" 4
+.IX Item "-subtype"
+.PD
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id" 4
+.IX Item "-taxon_id"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name" 4
+.IX Item "-taxon_name"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query" 4
+.IX Item "-query"
+Extra sql to refine which sequences are returned.
 .IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v 	Verbose output. [FALSE]"
 .PD 0
@@ -160,32 +162,18 @@ Output file name for pruned tree. ['\-tree' + '_prn.nwk']
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_dna_segs_orderByTree.pl
+perldoc CLdb_xlims_make.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Formatting tree and 'dna_segs' or 'xlims' table for plotting.
-.PP
-The tree file is pruned to just the taxa found in
-the dna_segs/xlims table.
-.PP
-The dna_segs/xlims tables are ordered to match the pruned
-tree ordering.
-.PP
-Both xlims and dna_segs tables must be ordered by the tree
-if the tree is used for plotting!
+Make a basic xlims table needed for plotting.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Basis usage"
-.IX Subsection "Basis usage"
-\fIOrdering a dna_segs table\fR
-.IX Subsection "Ordering a dna_segs table"
-.PP
-CLdb_dna_segs_orderByTree.pl \-t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
-.PP
-\fIOrdering the complemenary xlims table\fR
-.IX Subsection "Ordering the complemenary xlims table"
-.PP
-CLdb_dna_segs_orderByTree.pl \-t tree.nwk < xlims.txt > xlims.txt
+.SS "Plotting all loci classified as subtype 'I\-A'"
+.IX Subsection "Plotting all loci classified as subtype 'I-A'"
+CLdb_xlims_make.pl \-d CLdb.sqlite \-sub I\-A
+.SS "No broken loci"
+.IX Subsection "No broken loci"
+CLdb_xlims_make.pl \-da CLdb.sqlite \-sub I\-A \-q \*(L"\s-1AND\s0 loci.operon_status != 'broken'\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

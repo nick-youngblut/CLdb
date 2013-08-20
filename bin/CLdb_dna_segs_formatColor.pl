@@ -15,11 +15,18 @@ use Color::Mix;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $tree_in, $format, $tree_name);
+my ($verbose, $tree_in, $format, $adjacency_opt, $write_brlen_stats);
+my $gene_color_opt = 0;
+my $brlen_cutoff = 0;
+my @default_colors = ("#666666", "#FF9933");
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
-	   "name=s" => \$tree_name,	   
+	   "adjacency" => \$adjacency_opt, 
+	   "gene=i" => \$gene_color_opt,
+	   "branch=f" => \$brlen_cutoff,			# branch-length cutoff (>= max branch length)	   
+	   "stats" => \$write_brlen_stats,
+	   "default=s{1,2}" => \@default_colors,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -31,122 +38,21 @@ $format = check_tree_format($format) if $tree_in;
 # loading dna_segs table #
 my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
 
-# formatting gene cluster colors (if provided) #
-format_gene_cluster_color($dna_segs_r);
-
-exit;
-
-
-# loading tree #
+# tree-based color formatting #
+## using brlen distance to remove similar colors ##
 if($tree_in){
-my $treeio = Bio::TreeIO -> new(-file => $tree_in,
+	my $treeio = Bio::TreeIO -> new(-file => $tree_in,
 								-format => $format);
-my $treeo = $treeio->next_tree;
+	my $treeo = $treeio->next_tree;
+	
+	}
 
-
-# prune tree by dna_segs #
-$treeo = prune_tree($dna_segs_r, $treeo);
-tree_write($treeo, $tree_name);
-
-# getting tree order #
-my $tree_order_r = get_tree_order($treeo);
-
-# ordering table by tree and writing #
-order_dna_segs($dna_segs_r, $tree_order_r, $header_r);
 
 
 
 ### Subroutines
-sub format_gene_cluster_color{
-	my ($dna_segs_r) = @_;
-	
-	}
-
-
-sub tree_write{
-	my ($treeo, $tree_name) = @_;
-	
-	my $out = new Bio::TreeIO(-file => ">$tree_name",
-						-format => "newick");
-	$out->write_tree($treeo);
-
-	#exit;
-	}
-
-sub prune_tree{
-# pruning tree by dna_segs, just dna_segs taxa remaining #
-	my ($dna_segs_r, $treeo) = @_;
-
-	# getting taxa no in tree #
-	my %rm;
-	for my $node ($treeo->get_leaf_nodes){
-		$rm{$node->id} = 1 unless exists $dna_segs_r->{$node->id};
-		}
-
-	# sanity check #	
-	die " ERROR: < 2 leaves found in dna_segs table; no need to prune!\n"
-		if ( (scalar $treeo->get_leaf_nodes) - (scalar keys %rm) ) <= 2;
-	
-	# editing internal node labels #
-	for my $node ($treeo->get_nodes){
-		next if $node->is_Leaf;
-		$node->id("") unless $node->id;
-		$node->id(join("__", "INTERNAL", $node->id));
-		}
-	
-	# pruning tree #
-	for my $node ($treeo->get_leaf_nodes){
-		if (exists $rm{$node->id}){
-			print STDERR "Pruning node: ", $node->id, "\n";
-			$treeo->remove_Node($node);
-			}
-		}
-		
-		
-	# pruning any non-labeled leaves #
-	while(1){
-		my $intern_cnt = 0;
-		for my $node ($treeo->get_leaf_nodes){
-			if($node->id =~ /^INTERNAL__/){
-				$treeo->remove_Node($node);
-				$intern_cnt++;
-				}
-			}
-		last unless $intern_cnt;		# continue until all internal node leaves are removed
-		}	
-	
-	# editing internal node labels (names back) #
-	for my $node ($treeo->get_nodes){
-		next if $node->is_Leaf;
-		next unless $node->id =~ /^INTERNAL__/;
-		(my $tmp = $node->id) =~ s/^INTERNAL__//;
-		$node->id( $tmp );
-		}	
-
-	return $treeo;
-	}
-
-sub order_dna_segs{
-	my ($dna_segs_r, $tree_order_r, $header_r) = @_;
-	
-	# header #
-	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
-	
-	# body #
-	foreach my $leaf (@$tree_order_r){
-		die " ERROR: leaf -> \"$leaf\" not found in dna_segs table!\n"
-			unless exists $dna_segs_r->{$leaf};
-		foreach my $row (@{$dna_segs_r->{$leaf}}){
-			print join("\t", @$row), "\n";
-			}
-		}
-
-	}
-
 sub load_dna_segs{
 # loading dna_segs from stdin #
-
-	my @dna_segs_order;
 	my %dna_segs;
 	my %header;
 	while(<>){
@@ -161,23 +67,21 @@ sub load_dna_segs{
 				}
 			die " ERROR: 'taxon_name' not found in dna_seg header!\n"
 				unless exists $header{"taxon_name"};
+			die " ERROR: 'col' not found in dna_seg header!\n"
+				unless exists $header{"col"};				
 			}
 		else{
 			my @line = split /\t/;
 			my $taxon_name = $line[$header{"taxon_name"}];
+			my $col = $line[$header{"col"}];
 			
-			# order #
-			push( @dna_segs_order, $taxon_name)
-				unless exists $dna_segs{$taxon_name};
 			
 			# dna_segs to %@ #
-			push( @{$dna_segs{$taxon_name}}, \@line );		# taxon_name => row
+			push {@{$dna_segs{}} = \@line );		# taxon_name => row
 			}
 		}
-		
-		#print Dumper @dna_segs_order;
 		#print Dumper %dna_segs; exit;
-	return \%dna_segs, \@dna_segs_order, \%header;
+	return \%dna_segs, \%header;
 	}
 
 sub get_tree_order{
