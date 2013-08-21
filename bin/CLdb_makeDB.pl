@@ -238,7 +238,7 @@ Locus_ID	TEXT	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, Spacer_ID)
+UNIQUE (Locus_ID, Spacer_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 

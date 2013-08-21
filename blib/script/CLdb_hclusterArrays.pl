@@ -94,14 +94,14 @@ sub add_entry{
 # add_entry to *_hcluster #
 	my ($dbh, $clust_r, $cat) = @_;
 
-	my $cmd = "INSERT into spacer_hclust(spacer_id, cutoff, cluster_id) values(?,?,?)";
+	my $cmd = "INSERT into spacer_hclust(locus_id, spacer_id, cutoff, cluster_id) values(?,?,?,?)";
 	
 	my $sql = $dbh->prepare($cmd);
 	
 	foreach my $cutoff (keys %$clust_r){
 		foreach my $locus_id (keys %{$clust_r->{$cutoff}}){
 			foreach my $x_id ( keys %{$clust_r->{$cutoff}{$locus_id}} ){	# spacer/DR_id => cluster_id		
-				$sql->execute( $x_id, $cutoff, $clust_r->{$cutoff}{$locus_id}{$x_id} );
+				$sql->execute($locus_id, $x_id, $cutoff, $clust_r->{$cutoff}{$locus_id}{$x_id} );
 				if($DBI::err){
 					print STDERR "ERROR: $DBI::errstr in: ", join("\t", $x_id, $cutoff, $clust_r->{$cutoff}{$locus_id}{$x_id} ), "\n";
 					}
