@@ -19,7 +19,7 @@ my ($verbose, $tree_in, $format, $adjacency_opt, $write_brlen_stats);
 my $gene_color_opt = 0;
 my $spacer_color_opt = 3;
 my $brlen_cutoff = 0;
-my @default_colors = ("#666666", "#666666", "#000000");
+my @default_colors = ("#666666", "#CCCCCC", "#000000");		# gene, spacer, DR
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
@@ -129,7 +129,7 @@ sub apply_rainbow{
 # applying rainbow to color mod #
 	my ($color_mod_r, $descrim_cnt_r) = @_;
 	
-	print Dumper $descrim_cnt_r; exit;
+		#print Dumper $descrim_cnt_r; exit;
 	
 	my %new_dna_segs;
 	foreach my $feat (keys %$color_mod_r){
@@ -404,7 +404,7 @@ Write branch length stats for the provided tree, then exit? [FALSE]
 
 =item -default
 
-The default color used when discrimant coloring is not needed (needs 2 values: 'spacer_color' 'gene_color').
+The default colors for when coloring isn't needed (needs 3 values: 'gene_color' 'spacer_color' 'DR_color').
 
 =item -v 	Verbose output. [FALSE]
 
@@ -418,12 +418,62 @@ perldoc CLdb_dna_segs_formatColor.pl
 
 =head1 DESCRIPTION
 
+Add descriminatory coloring to genes and spacers.
+Genes and/or spacers that do not need coloring
+because: 
+=over 
+
+=item i) the gene/spacer always adjacent
+in the plot, so 'blast' connections in the 
+plot will provide the needed information.
+
+=item ii) the gene/spacer is only found in
+a very similar clade, so no coloring is needed
+(if a tree & branch length cutoff is provided).
+
+=back
+
+Discrimantory coloring can be based on:
+
+=over 
+
+=item Continuous adjacency in the plot: [1]
+
+=item Max branch length: [2]
+
+=item Both: [3]
+
+=back
+
+By default: genes = 1, spacers = 3
+
+The default non-descriminatory colors are:
+
+=over
+
+=item gene: #666666
+
+=item spacer: #CCCCCC
+
+=item direct repeat: #000000
+
+=back 
+
+=head2 WARNING
+
+If the dna_segs table has been ordered by a tree,
+use the pruned/edited tree.
 
 =head1 EXAMPLES
 
-=head2 Basic usage
+=head2 Basic usage:
 
-CLdb_dna_segs_formatColor.pl 
+CLdb_dna_segs_formatColor.pl < dna_segs_order.txt > dna_segs_order_col.txt
+
+=head2 Branch length cutoff (<= 0.1):
+
+CLdb_dna_segs_formatColor.pl -t tree.nwk -b 0.1 < dna_segs_order.txt > dna_segs_order_col.txt
+
 
 =head1 AUTHOR
 

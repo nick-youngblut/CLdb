@@ -210,6 +210,30 @@ sub write_dna_segs{
 		}
 	}
 
+sub edit_dna_segs_taxon_name{
+    my ($dna_segs_r, $header_r, $multi_loci, $multi_subtype) = @_;
+   
+	foreach my $taxon_name (keys %$dna_segs_r){
+    	foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
+        	# editing taxon_name in row #
+        	my $dna_segs_id = $taxon_name;
+        	$dna_segs_id = join("__", $taxon_name, "cli$locus_id")
+            	            if $multi_loci;
+            $dna_segs_id = join("__", $dna_segs_id, $dna_segs_r->{$taxon_name}{$locus_id}{"subtype"})
+                           if $multi_subtype;
+        	
+        	foreach my $cat (keys %{$dna_segs_r->{$taxon_name}{$locus_id}}){  
+                foreach my $id (keys %{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}}){  
+				
+					push(@{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}{$id}}, $dna_segs_id);
+					}                               
+				}
+        	}
+        }
+       
+       	#print Dumper $dna_segs_r; exit;
+	}
+
 sub check_multi{
 # checking for multiple entries per taxon #
 	my ($dna_segs_r, $subtypes_r) = @_;
