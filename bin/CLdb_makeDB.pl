@@ -234,10 +234,11 @@ HERE
 DROP TABLE IF EXISTS spacer_hclust;
 
 CREATE TABLE spacer_hclust (
+Locus_ID	TEXT	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Spacer_ID, Cutoff, Cluster_ID)
+UNIQUE (Locus_ID, Spacer_ID)
 ON CONFLICT REPLACE
 );
 

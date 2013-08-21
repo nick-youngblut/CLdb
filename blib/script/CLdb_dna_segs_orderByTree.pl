@@ -35,32 +35,25 @@ my $treeio = Bio::TreeIO -> new(-file => $tree_in,
 my $treeo = $treeio->next_tree;
 
 # loading dna_segs table #
-my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
+my ($dna_segs_r, $dna_segs_order_r, $header_r, 
+	$dna_segs_ids_r, $name_index_r) = load_dna_segs();
 
-# prune tree by dna_segs #
+# prune tree by dna_segs (just taxon_names of interest) #
 $treeo = prune_tree($dna_segs_r, $treeo);
 
-# mutli-loci / multi-subtype problem
-## determining if multiple loci/subtypes per taxon_name ##
-my ($multi_loci, $multi_subtype)  = check_multi($dna_segs_r);
-
+# mutli-loci / multi-subtype problem ##
 ## adding leaves if multiple taxon entries; also adding sub ##
-$treeo = add_leaves($dna_segs_r, $treeo) if $multi_loci;
-	
-## adding subtype if needed ##
-$treeo = add_subtype($dna_segs_r, $treeo) if $multi_subtype;
+$treeo = add_leaves($dna_segs_r, $treeo, $dna_segs_ids_r);
 	
 ## writing editted tree ##
 tree_write($treeo, $tree_name);
 
-## adding loci & subtypes to DNA_segs names ##
-$dna_segs_r = edit_dna_segs_taxon_name($dna_segs_r, $header_r, $multi_loci, $multi_subtype);
-
-# getting tree order #
+# ordering dna_segs by tree #
+## getting tree order ##
 my $tree_order_r = get_tree_order($treeo);
 
-# ordering table by tree and writing #
-order_dna_segs($dna_segs_r, $tree_order_r, $header_r);
+## ordering table by tree and writing ##
+order_dna_segs($dna_segs_r, $tree_order_r, $header_r, $name_index_r);
 
 
 
@@ -76,18 +69,18 @@ sub tree_write{
 	}
 
 sub order_dna_segs{
-	my ($dna_segs_r, $tree_order_r, $header_r) = @_;
+	my ($dna_segs_r, $tree_order_r, $header_r, $name_index_r) = @_;
 	
 	# header #
-	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r);
-	print  "\ttaxon_name_original\n";
+	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
 	
 	# body #
 	foreach my $leaf (@$tree_order_r){
-		die " ERROR: leaf -> \"$leaf\" not found in dna_segs table!\n"
-			unless exists $dna_segs_r->{$leaf};
-		foreach my $locus_id (keys %{$dna_segs_r->{$leaf}}){
-			foreach my $row (@{$dna_segs_r->{$leaf}{$locus_id}{"entries"}}){
+		my $taxon_name = $name_index_r->{$leaf};
+		die " ERROR: leaf -> \"$taxon_name\" not found in dna_segs table!\n"
+			unless exists $dna_segs_r->{$taxon_name};
+		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
+			foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 				print join("\t", @$row), "\n";
 				}
 			}
@@ -108,74 +101,35 @@ sub get_tree_order{
 	return \@tree_order;
 	}
 
-sub edit_dna_segs_taxon_name{
-	my ($dna_segs_r, $header_r, $multi_loci, $multi_subtype) = @_;
-	
-	my %new_dna_segs;
-	foreach my $taxon_name (keys %$dna_segs_r){
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
-			foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){				
-				# appending new column of original taxon_names #
-				push(@$row, $taxon_name);
-				
-				# editing taxon_name in row #
-				my $new_taxon_name = $taxon_name;
-				$new_taxon_name = join("__", $taxon_name, "cli$locus_id")
-							if $multi_loci;
-				$new_taxon_name = join("__", $new_taxon_name, $dna_segs_r->{$taxon_name}{$locus_id}{"subtype"})
-							if $multi_subtype;
-								
-				# appending to new hash #
-				$$row[$header_r->{"taxon_name"}] = $new_taxon_name;
-				
-				push(@{$new_dna_segs{$new_taxon_name}{$locus_id}{"entries"}}, $row);
-				}
-			}
-		}
-	
-		#print Dumper %new_dna_segs; exit;
-	return \%new_dna_segs;
-	}
-
-sub add_subtype{
-# adding subtype label to leaves if needed #
-	my ($dna_segs_r, $treeo, $multi_subtype) = @_;
-	for my $node ($treeo->get_leaf_nodes){
-		my @parts = split(/__/, $node->id);
-		my $taxon_id  = join("__", @parts[0..($#parts-1)]);
-		(my $locus_id = $parts[$#parts]) =~ s/^cli//;
-		my $subtype = $dna_segs_r->{$taxon_id}{$locus_id}{"subtype"};
-		
-		$node->id( join("__", $node->id, $subtype)); 
-		}
-		#print Dumper $treeo; exit;
-	return $treeo;
-	}
-
 sub add_leaves{
 # adding leaves to any nodes that have multiple subtypes #
-	my ($dna_segs_r, $treeo, $multi_loci) = @_;
+	my ($dna_segs_r, $treeo, $dna_segs_ids_r) = @_;
 	
 	# splitting taxa if needed #
 	for my $node ($treeo->get_leaf_nodes){
-		my @loci = keys %{$dna_segs_r->{$node->id}};		# locus_ids 
+		my @loci = keys %{$dna_segs_r->{$node->id}};		# locus_ids for each taxon_name 
 		
 		for my $i (0..$#loci){
 			if ($i > 0){		# adding nodes if needed 	
+				# sanity check #
+				die " ERROR: locus_id -> $loci[$i] not found in dna_segs_ids!\n"
+					unless exists $dna_segs_ids_r->{$loci[$i]};
+				
 				# getting node info #
 				my $anc_node = $node->ancestor;
 				my $brlen = $node->branch_length();
 				(my $new_node_id = $node->id) =~ s/__[^_]+$//g;
 									
 				my $new_node = new Bio::Tree::Node(
-							-id => $node->id,
+							-id => $dna_segs_ids_r->{$loci[$i]},
 							-branch_length => $brlen);					
 				
-				$new_node->id( join("__", $new_node_id, "cli$loci[$i]") );					
+				#$new_node->id( join("__", $new_node_id, "cli$loci[$i]") );					
 				$anc_node->add_Descendent($new_node);
 				}
-			else{	# appending locus_id #
-				$node->id( join("__", $node->id, "cli$loci[$i]") );
+			else{	# appending locus_id #				
+				# changing node id #
+				$node->id( $dna_segs_ids_r->{$loci[$i]} );
 				}
 			}
 		}
@@ -213,7 +167,7 @@ sub prune_tree{
 # pruning tree by dna_segs, just dna_segs taxa remaining #
 	my ($dna_segs_r, $treeo) = @_;
 
-	# getting taxa no in tree #
+	# getting taxa not in tree #
 	my %rm;
 	for my $node ($treeo->get_leaf_nodes){
 		$rm{$node->id} = 1 unless exists $dna_segs_r->{$node->id};
@@ -268,28 +222,31 @@ sub load_dna_segs{
 	my @dna_segs_order;
 	my %dna_segs;
 	my %header;
+	my %dna_segs_ids;
+	my %name_index;
 	while(<>){
 		chomp;
 		next if /^\s*$/;
 
 		# header #
 		if($.==1){
+			# indexing header #
 			my @tmp = split /\t/;
 			for my $i (0..$#tmp){
 				$header{$tmp[$i]} = $i;
 				}
-			die " ERROR: 'taxon_name' not found in dna_seg header!\n"
-				unless exists $header{"taxon_name"};
-			die " ERROR: 'locus_id' not found in dna_seg header!\n"
-				unless exists $header{"locus_id"};				
-			die " ERROR: 'locus_id' not found in dna_seg header!\n"
-				unless exists $header{"subtype"};	
+			
+			# checking for existence of columns #
+			my @check = qw/taxon_name locus_id subtype dna_segs_id/;
+			map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
+				unless exists $header{$_} } @check;
 			}
 		else{
 			my @line = split /\t/;
 			my $taxon_name = $line[$header{"taxon_name"}];
 			my $locus_id = $line[$header{"locus_id"}];
 			my $subtype = $line[$header{"subtype"}];
+			my $dna_seg_id = $line[$header{"dna_segs_id"}];
 			
 			# order of loci#
 			push( @dna_segs_order, $taxon_name)
@@ -298,12 +255,20 @@ sub load_dna_segs{
 			# dna_segs  #
 			push( @{$dna_segs{$taxon_name}{$locus_id}{"entries"}}, \@line );
 			$dna_segs{$taxon_name}{$locus_id}{"subtype"} = $subtype;
+			
+			# dna_segs_id index #
+			$dna_segs_ids{$locus_id} = $dna_seg_id;
+			
+			# name index #
+			$name_index{$dna_seg_id} = $taxon_name;
 			}
 		}
 		
 		#print Dumper @dna_segs_order;
 		#print Dumper %dna_segs; exit;
-	return \%dna_segs, \@dna_segs_order, \%header;
+		#print Dumper %dna_segs_ids; exit;
+		#print Dumper %name_index; exit;
+	return \%dna_segs, \@dna_segs_order, \%header, \%dna_segs_ids ,\%name_index;
 	}
 	
 sub check_tree_format{
