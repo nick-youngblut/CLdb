@@ -19,7 +19,7 @@ my ($verbose, $tree_in, $format, $adjacency_opt, $write_brlen_stats);
 my $gene_color_opt = 0;
 my $spacer_color_opt = 3;
 my $brlen_cutoff = 0;
-my @default_colors = ("#666666", "#666666");
+my @default_colors = ("#666666", "#666666", "#000000");
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
@@ -27,7 +27,7 @@ GetOptions(
 	   "gene=i" => \$gene_color_opt,			# 0 = none, 1 = tree, 2 = adjacency, 3 = both
 	   "branch=f" => \$brlen_cutoff,			# branch-length cutoff (>= max branch length)	   
 	   "stats" => \$write_brlen_stats,
-	   "default=s{1,2}" => \@default_colors,
+	   "default=s{3}" => \@default_colors,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -39,10 +39,10 @@ $format = check_tree_format($format) if $tree_in;
 my %default_colors;
 $default_colors{"gene"} = $default_colors[0];
 $default_colors{"spacer"} = $default_colors[1];
-
+$default_colors{"directrepeat"} = $default_colors[2];
 
 ### Main
-my %same_color; 		# colors thats will be all the same color
+my %color_mod; 			# how colors will be modified
 
 # loading dna_segs table #
 my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
@@ -59,35 +59,41 @@ if($tree_in){
 	add_upper($brlen_mat_r);
 	
 	# finding colors where max brlen between taxa are < cutoff #
-	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%same_color, "spacer")
+	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "spacer")
 		if $spacer_color_opt == 1 || $spacer_color_opt == 3;
 		
-	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%same_color, "gene")
+	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "gene")
 		if $gene_color_opt == 1 || $gene_color_opt == 3;	
 	}
 
 # adjacency-based color formatting #
-check_adjacency($dna_segs_r, $dna_segs_order_r, \%same_color, "spacer")
+check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer")
 	if $spacer_color_opt == 2 || $spacer_color_opt == 3;
-check_adjacency($dna_segs_r, $dna_segs_order_r, \%same_color, "gene")
+check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "gene")
 	if $gene_color_opt == 2 || $gene_color_opt == 3;
 
 # editting colors #
 ## applying default 'same' color ##
-($dna_segs_r, my $new_color_r) = apply_same_color($dna_segs_r, \%same_color);
+#($dna_segs_r, my $new_color_r) = apply_color_mod($dna_segs_r, \%color_mod);
+
+## finding colors that need descriminator hexadecimal coloring ##
+my $descrim_cnt_r = find_descrim_color($dna_segs_r, \%color_mod);
 
 ## adding 'good' colors to rest ##
-$dna_segs_r = apply_rainbow($dna_segs_r, $new_color_r);
+apply_rainbow(\%color_mod, $descrim_cnt_r);
+
+## applying default color to repeats ##
+apply_DR_color(\%color_mod);
 
 # writing editted table #
-write_dna_segs($dna_segs_r, $header_r, $dna_segs_order_r);
+write_dna_segs($dna_segs_r, $header_r, $dna_segs_order_r, \%color_mod);
 
 
 
 ### Subroutines
 sub write_dna_segs{
 # writing dna_segs table #
-	my ($dna_segs_r, $header_r, $dna_segs_order_r) = @_;
+	my ($dna_segs_r, $header_r, $dna_segs_order_r, $color_mod_r) = @_;
 	
 	# header #
 	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
@@ -97,7 +103,12 @@ sub write_dna_segs{
 		foreach my $feat (keys %$dna_segs_r){
 			foreach my $col (keys %{$dna_segs_r->{$feat}}){
 				foreach my $row (@{$dna_segs_r->{$feat}{$col}{$dna_segs_id}}){
-					$$row[$header_r->{"col"}] = $col;
+					# sanity check #
+					die " ERROR: $feat -> $col not found in color index! $!\n"
+						unless exists  $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
+					
+					# applying modified colors (hexadecimal) #
+					$$row[$header_r->{"col"}] = $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
 					print join("\t", @$row), "\n";
 					}
 				}
@@ -105,111 +116,106 @@ sub write_dna_segs{
 		}
 	}
 
+sub apply_DR_color{
+# applying default to direct repeat #
+	my $color_mod_r = shift;	
+	foreach my $col ( keys %{$color_mod_r->{"directrepeat"}} ){
+		$color_mod_r->{"directrepeat"}{$col} = $default_colors{"directrepeat"};
+		}
+
+	}
+
 sub apply_rainbow{
-	my ($dna_segs_r, $need_color_r) = @_;
+# applying rainbow to color mod #
+	my ($color_mod_r, $descrim_cnt_r) = @_;
+	
+	print Dumper $descrim_cnt_r; exit;
 	
 	my %new_dna_segs;
-	foreach my $feat (keys %$dna_segs_r){
+	foreach my $feat (keys %$color_mod_r){
 		next if $feat eq "directrepeat";
 		
 		# getting hexa colors for color wheel #
 		my $color = Color::Mix->new;
-		my @cols = keys %{$need_color_r->{$feat}};
-		my $ncol = scalar @cols;
-		my @hexa = $color->analogous('0000ff', $ncol, $ncol);
+		my @hexa = $color->analogous('0000ff', 
+							$descrim_cnt_r->{$feat}, 
+							$descrim_cnt_r->{$feat});
 		
 		# formatting hexa #
 		map{ $_ = "#$_"} @hexa;
 		
-		# color index #
-		my %col_index;
-		for my $i (0..$#cols){ $col_index{$cols[$i]} = $hexa[$i]; }
-		
 		# applying colors #
-		foreach my $col (keys %{$dna_segs_r->{$feat}}){
-			my $col2 = $col;
-			$col2 = $col_index{$col} if exists $col_index{$col};
-			$new_dna_segs{$feat}{$col2} = $dna_segs_r->{$feat}{$col};
+		my $cnt = 0;
+		foreach my $col (keys %{$color_mod_r->{$feat}}){
+			unless($color_mod_r->{$feat}{$col}){
+				$color_mod_r->{$feat}{$col} = $hexa[$cnt];
+				$cnt++;
+				}
 			}
 		}
-		
-		#print Dumper %new_dna_segs; exit;
-	return \%new_dna_segs;
+		#print Dumper "here", $color_mod_r; exit;		
 	}
 
-sub apply_same_color{
-# making colors all the same if needed #
-	my ($dna_segs_r, $same_color_r) = @_;
-		#print Dumper $same_color_r; exit;
-		# same_color: feat=>color=>hexadecimal
-	my %new_dna_segs;
-	my %new_color;
+sub find_descrim_color{
+	my ($dna_segs_r, $color_mod_r) = @_;
+	
+	my %descrim_cnt;
 	foreach my $feat (keys %$dna_segs_r){
-		next if $feat eq "directrepeat";
 		foreach my $col (keys %{$dna_segs_r->{$feat}}){
-			my $col2 = $col;
-			if(exists $same_color_r->{$feat}{$col}){		# applying non-descriminant color
-				$col2 = $same_color_r->{$feat}{$col};
+			unless (exists $color_mod_r->{$feat}{$col}){
+				$color_mod_r->{$feat}{$col} = 0;
+				$descrim_cnt{$feat}++;
 				}
-			else{ $new_color{$feat}{$col} = 1; } 
-				
-			$new_dna_segs{$feat}{$col2} = $dna_segs_r->{$feat}{$col};	
-			}	
+			}
 		}
-		#print Dumper %new_dna_segs; exit;
-		#print Dumper %new_color; exit
-	return \%new_dna_segs;
+		#print Dumper $color_mod_r; exit; 
+	return \%descrim_cnt;
 	}
 
 sub check_adjacency{
 # making adjacency list for taxa by color #
-	my ($dna_segs_r, $dna_segs_order_r, $same_color_r, $feat) = @_;
+	my ($dna_segs_r, $dna_segs_order_r, $color_mod_r, $feat) = @_;
 	
 	# making and checking adjacency matrix #
 	foreach my $col (keys %{$dna_segs_r->{$feat}}){
-		next if exists $same_color_r->{$feat}{$col};
+		next if exists $color_mod_r->{$feat}{$col};
 		
-		my @adjmtx;
-		for my $i (0..$dna_segs_order_r){
-			last if $i == $#$dna_segs_order_r;
-			if(exists $dna_segs_r->{$feat}{$col}{$$dna_segs_order_r[$i]}
-			   && exists $dna_segs_r->{$feat}{$col}{$$dna_segs_order_r[$i+1]}){
-				$adjmtx[$i][$i+1] = 1;
-				}
-			else{ $adjmtx[$i][$i+1] = 0; }
+		# making adjacency list #
+		my %adjlist;
+		for my $i (0..($#$dna_segs_order_r-1)){
+			$adjlist{$$dna_segs_order_r[$i]} = $$dna_segs_order_r[$i+1]
+				if exists $dna_segs_r->{$feat}{$col}{$$dna_segs_order_r[$i]}
+				&& exists $dna_segs_r->{$feat}{$col}{$$dna_segs_order_r[$i+1]};
 			}
+			#print Dumper \%adjlist; exit;
+		
 		# checking adjacencies #
-		for my $i (0..$dna_segs_order_r){
-			last if $i == $#$dna_segs_order_r;
-			if($adjmtx[$i][$i+1]) {
-				my $cnt = transverse_diag(\@adjmtx, $i);
-				$same_color_r->{$feat}{$col} = $default_colors{$feat}
-					if $cnt == scalar @adjmtx - $i;
+		my $adjcnt=0;			# number of adjacency strings
+		my $i = 0;
+		while(1){
+			last if $i >= $#$dna_segs_order_r;
+				#print "loop i: $i\n";
+			if(exists $adjlist{$$dna_segs_order_r[$i]}){
+				# following adjacency #
+				$adjcnt++;
+				while(1){
+					$i++;
+						#print "string i: $i\n";
+					last unless exists $adjlist{$$dna_segs_order_r[$i]};
+					}
 				}
+			$i++;
 			}
+		
+		# modifying same color (one continued adjacency will be colored default color) #
+		$color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt == 1;
 		}
-	
-		#print Dumper $same_color_r; exit;
-	}
-	
-sub transverse_diag{
-# transversing diag of matrix; end when hit a zero/undef #
-	my ($mtx_r, $i) = @_;
-	
-	my $cnt = 0;
-	for my $ii ($i..$#$mtx_r){
-		if($$mtx_r[$ii][$ii+1]){
-			$cnt++;
-			}
-		else{
-			last;
-			}
-		}
-	return $cnt;
+		
+		#print Dumper $color_mod_r; exit;
 	}
 
 sub apply_brlen_cutoff{
-	my ($dna_segs_r, $brlen_mat_r, $same_color_r, $feat) = @_;
+	my ($dna_segs_r, $brlen_mat_r, $color_mod_r, $feat) = @_;
 	
 	#print Dumper %$brlen_mat_r; exit;
 	
@@ -230,10 +236,10 @@ sub apply_brlen_cutoff{
 		push(@dists, 0) unless $dists[0];
 		
 		if(max (@dists) < $brlen_cutoff){
-			$same_color_r->{$feat}{$col} = $default_colors{$feat};
+			$color_mod_r->{$feat}{$col} = $default_colors{$feat};
 			}
 		}
-		#print Dumper %$same_color_r; exit;
+		#print Dumper %$color_mod_r; exit;
 	}
 
 sub make_brlen_matrix{
