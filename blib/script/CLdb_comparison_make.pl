@@ -116,7 +116,7 @@ sub get_spacer_hclust{
 	
 	# preparing query #
 	my $query = "
-SELECT a.locus_id, b.spacer_start, b.spacer_end 
+SELECT b.spacer_start, b.spacer_end 
 FROM spacer_hclust a, spacers b 
 WHERE a.locus_id=b.locus_id 
 AND  a.spacer_id=? 
@@ -124,8 +124,6 @@ AND b.spacer_id=?
 AND a.cutoff = ?
 AND a.locus_id IN (?, ?);
 ";
-	print STDERR "$query\n" if $verbose;
-	
 	$query =~ s/\r|\n/ /g;
 
 	my $sth = $dbh->prepare($query);
@@ -154,17 +152,13 @@ AND a.locus_id IN (?, ?);
 			
 			# skipping any spacers not in both loci #
 			next if @$res && scalar @$res != 2;
-			
-			# making hash #
-			my %res;
-			map{ $res{$$_[0]} = [@$_[1..$#$_]] } @$res;
+				#print Dumper $res if @$res && scalar @$res != 2;
 			
 			# loading hash #
-			$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} = 
-				[@{$res{$locus_id1}}, @{$res{$locus_id2}}, $spacer_cutoff * 100];
+			$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} = [$$res[0][0], $$res[0][1], $$res[1][0], $$res[1][1], 100];
 			}
 		}
-		##print Dumper %$compare_r; exit;
+		#print Dumper %$compare_r; exit;
 	}
 
 sub load_dna_segs{

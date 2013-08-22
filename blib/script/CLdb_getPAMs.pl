@@ -14,12 +14,12 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose, $database_file, $parse_proto);
 my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name); 				# blast subject query refinement
 my $extra_query = "";						# query refinement
 my $extend = 20;							# length to extend off of each side
-my $len_cutoff = 1;							# length 
+my $len_cutoff = 1;							# cutoff for length of blast hit relative to query length
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -30,6 +30,7 @@ GetOptions(
 	   "staxon_name=s{,}" => \@staxon_name,
 	   "x=i" => \$extend,
 	   "length=f" => \$len_cutoff,
+	   "parse=s" => \$parse_proto, 			# parsing proto spacer and 5'/3' regions
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -61,8 +62,11 @@ my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 # getting spacer group length #
 my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
 
+# making output files if protospacer parsed #
+my $outfh_r = make_outfiles($parse_proto) if $parse_proto;
+
 # getting PAMs & spacer sequences #
-get_PAMs($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff);
+get_PAMs($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff, $outfh_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -70,9 +74,19 @@ exit;
 
 
 ### Subroutines
+sub make_outfiles{
+	my ($parse_proto) = @_;
+	
+	open FPFH, ">$parse_proto\_5prime.fna" or die $!;
+	open PFH, ">$parse_proto\_proto.fna" or die $!;
+	open TPFH, ">$parse_proto\_3prime.fna" or die $!;
+	
+	return [\*FPFH, \*PFH, \*TPFH];
+	}
+
 sub get_PAMs{
 # getting spacer blast hit sequence & adjacent regions #
-	my ($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff) = @_;
+	my ($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff, $outfh_r) = @_;
 	
 	my $query = "SELECT substr(scaffold_sequence,?,?) FROM blast_subject
 WHERE scaffold_name = ?
@@ -89,19 +103,19 @@ AND (taxon_id == ?
 		# start - end #
 		my $hit_start = $$hit[4];
 		my $hit_end = $$hit[5];
-		
-		# length cutoff #
-		die " ERROR: $$hit[0] not found in spacer length index!\n"
-			unless exists $spacer_len_r->{$$hit[0]};
-		next unless abs($hit_end - $hit_start + 1) /  $spacer_len_r->{$$hit[0]}
-			>= $len_cutoff;
-		
+
 		
 		## flipping to positive strand ##
 		if($hit_start > $hit_end){
 			($hit_start, $hit_end) = flip_se($hit_start, $hit_end);
 			}
 		my $hit_len = $hit_end - $hit_start;
+		
+		# length cutoff #
+		die " ERROR: $$hit[0] not found in spacer length index!\n"
+			unless exists $spacer_len_r->{$$hit[0]};
+		next unless ($hit_end - $hit_start + 1) /  $spacer_len_r->{$$hit[0]}
+			>= $len_cutoff;
 		
 		## adding -extend ##
 		$hit_start = $hit_start - $extend;
@@ -124,15 +138,36 @@ AND (taxon_id == ?
 				join(", ", @$hit), "\n" unless @$ret;
 		
 		# converting extended region to lower case #
+		## protospacer rev-comp if needed ##
 		foreach my $row (@$ret){
 			$$row[0] = spacer2lc($$row[0], $extend, $hit_len, $fiveP_loss, $$hit[4], $$hit[5]);
 			}
 		
+		# writing out protospacers #
 		foreach my $row (@$ret){
 			$$hit[1] = "NULL" unless $$hit[1];
 			$$hit[2] = "NULL" unless $$hit[2];		
-			print join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
-			print join("\t", @$row), "\n";
+			
+			if($outfh_r){
+				# 5' 
+				print {$$outfh_r[0]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
+				print {$$outfh_r[0]} join("\t", $$row[0][0], @$row[1..$#$row] ), "\n";
+				
+				# proto
+				print {$$outfh_r[1]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
+				print {$$outfh_r[1]} join("\t", $$row[0][1], @$row[1..$#$row] ), "\n";
+
+				# 3' 
+				print {$$outfh_r[2]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
+				print {$$outfh_r[2]} join("\t", $$row[0][2], @$row[1..$#$row] ), "\n";							
+				
+				}
+			
+			else{	# write to stdout
+				$$row[0] = join("", @{$$row[0]});
+				print join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
+				print join("\t", @$row), "\n";
+				}
 			}
 		}  	
 	}
@@ -193,10 +228,10 @@ sub spacer2lc{
 		$hit_seq = revcomp($hit_seq);
 		$threeP_seq = revcomp($threeP_seq);
 		
-		return join("", $threeP_seq, $hit_seq, $fiveP_seq);
+		return [$threeP_seq, $hit_seq, $fiveP_seq];
 		}
 	else{
-		return join("", $fiveP_seq, $hit_seq, $threeP_seq);
+		return [$fiveP_seq, $hit_seq, $threeP_seq];
 		}
 	}
 
@@ -337,6 +372,10 @@ Length cutoff for blast hit (>=; fraction of spacer length). [1]
 
 Extension beyond spacer blast to check for PAMs (bp). [20]
 
+=item -parse
+
+Provide a file name prefix to parse proto spacer and 5'/3' extensions into differnt fasta files.
+
 =item -v	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -396,6 +435,10 @@ CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" -x 10 > spacer_PAM_I-B.fna
 =head2 Spacer-PAMs to just 2 subject taxon_names
 
 CLdb_getPAMs.pl -d CLdb.sqlite -staxon_name ecoli salmonela > spacer_PAM_E-S.fna
+
+=head2 Spacer-PAMs to just 2 subject taxon_names
+
+CLdb_getPAMs.pl -d CLdb.sqlite -sub I-A -parse I-A_output
 
 =head1 AUTHOR
 

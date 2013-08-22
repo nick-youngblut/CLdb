@@ -126,6 +126,7 @@ do{ my $x = [
                              './bin/CLdb_dna_segs_make.pl',
                              './bin/CLdb_leader2fasta.pl',
                              './bin/CLdb_getPAMs.pl',
+                             './bin/CLdb_comparison_make.pl',
                              './bin/CLdb_getGeneIDs.pl',
                              './bin/CLdb_checkLociOverlap.pl',
                              './bin/CLdb_classifyArraysByDR.pl',
