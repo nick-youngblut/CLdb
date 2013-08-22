@@ -15,10 +15,12 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
 my $spacer_cutoff = 1;
+my $spacer_opt = "cluster";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
 	   "cutoff=f" =>  \$spacer_cutoff,
+	   "spacer=s" => \$spacer_opt, 		# 'blast' or 'cluster'
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -54,27 +56,32 @@ if(@ITEP_sqlite){
 
 
 # loading dna_segs table #
-my $dna_segs_r = load_dna_segs();
+my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
+my %compare;
+
+# querying CLdb #
+## for querying spacer_hclust, need: ##
+if( exists $dna_segs_r->{"spacer"} ){
+	if($spacer_opt =~ /cluster/i){
+		get_spacer_hclust($dbh, $dna_segs_r, $dna_segs_order_r, \%compare, $spacer_cutoff);
+		}
+	elsif($spacer_opt =~ /blast/i){
+	
+		}
+	}
+	
+## for querying spacer_pairwise_blast, need: ##
+	# spacerIDs (by dna_segs_id)
+
 
 # querying ITEP #
 ## for querying ITEP, need:
 	# runID
 	# geneIDs (by dna_segs_id)
 
-# querying CLdb #
-## for querying spacer_hclust, need: ##
-	# spacerIDs (by dna_segs_id)
-## for querying spacer_pairwise_blast, need: ##
-	# spacerIDs (by dna_segs_id)
-	
-		
 
-## joining query options (for table join) ##
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
+# writing out compare table #
+write_compare(\%compare, $dna_segs_order_r);
 
 # disconnect #
 $dbh->disconnect();
@@ -83,13 +90,83 @@ exit;
 
 
 ### Subroutines
+sub write_compare{
+# writing out compare table #
+	my ($compare_r, $dna_segs_order_r) = @_;
+	
+	# header #
+	print join("\t", qw/start1 end1 start2 end2 col dna_segs_id1 dna_segs_id2 feat feat_id/), "\n";
+	
+	# body #
+	foreach my $dna_seg1 (@$dna_segs_order_r){
+		foreach my $feat (keys %$compare_r){
+			foreach my $dna_seg2 (keys %{$compare_r->{$feat}{$dna_seg1}}){
+				foreach my $feat_id (keys %{$compare_r->{$feat}{$dna_seg1}{$dna_seg2}}){
+					print join("\t", @{$compare_r->{$feat}{$dna_seg1}{$dna_seg2}{$feat_id}}, 
+							$dna_seg1, $dna_seg2, $feat, $feat_id), "\n";
+					}
+				}
+			}
+		}
+	}
+
+sub get_spacer_hclust{
+# querying CLdb for spacer_hclust info #
+	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r, $spacer_cutoff) = @_;
+	
+	# preparing query #
+	my $query = "
+SELECT b.spacer_start, b.spacer_end 
+FROM spacer_hclust a, spacers b 
+WHERE a.locus_id=b.locus_id 
+AND  a.spacer_id=? 
+AND b.spacer_id=?
+AND a.cutoff = ?
+AND a.locus_id IN (?, ?);
+";
+	$query =~ s/\r|\n/ /g;
+
+	my $sth = $dbh->prepare($query);
+	
+	# querying each spacer ID for matches against adjacent locus #
+	for my $i (0..($#$dna_segs_order_r-1)){
+		my $dna_seg_id1 = $$dna_segs_order_r[$i];
+		my $dna_seg_id2 = $$dna_segs_order_r[$i+1];
+		# getting loci to compare #
+		my ($locus_id1, $locus_id2);
+		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}}){
+			$locus_id1 = $locus_id;
+			}
+		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id2}}){
+			$locus_id2 = $locus_id;
+			}
+		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
+			#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2; exit;
+			$sth->bind_param(1, $feat_id);
+			$sth->bind_param(2, $feat_id);			
+			$sth->bind_param(3, $spacer_cutoff);
+			$sth->bind_param(4, $locus_id1);
+			$sth->bind_param(5, $locus_id2);
+			$sth->execute();
+			my $res = $sth->fetchall_arrayref();
+			
+			# skipping any spacers not in both loci #
+			next if @$res && scalar @$res != 2;
+				#print Dumper $res if @$res && scalar @$res != 2;
+			
+			# loading hash #
+			$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} = [$$res[0][0], $$res[0][1], $$res[1][0], $$res[1][1], 100];
+			}
+		}
+		#print Dumper %$compare_r; exit;
+	}
+
 sub load_dna_segs{
 # loading dna_segs from stdin #
 
 	my @dna_segs_order;
 	my %dna_segs;
 	my %header;
-	my %dna_segs_ids;
 	my %name_index;
 	while(<>){
 		chomp;
@@ -104,50 +181,34 @@ sub load_dna_segs{
 				}
 			
 			# checking for existence of columns #
-			my @check = qw/taxon_name locus_id subtype dna_segs_id/;
+			my @check = qw/locus_id dna_segs_id feat feat_id/;
 			map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
 				unless exists $header{$_} } @check;
 			}
 		else{
 			my @line = split /\t/;
-			my $taxon_name = $line[$header{"taxon_name"}];
 			my $locus_id = $line[$header{"locus_id"}];
-			my $subtype = $line[$header{"subtype"}];
 			my $dna_seg_id = $line[$header{"dna_segs_id"}];
+			my $feat = $line[$header{"feat"}];
+			my $feat_id = $line[$header{"feat_id"}];						
 			
 			# order of loci#
-			push( @dna_segs_order, $taxon_name)
-				unless exists $dna_segs{$taxon_name};
+			push( @dna_segs_order, $dna_seg_id)
+				unless exists $name_index{$dna_seg_id};
+			$name_index{$dna_seg_id} = 1;
 			
-			# dna_segs  #
-			push( @{$dna_segs{$taxon_name}{$locus_id}{"entries"}}, \@line );
-			$dna_segs{$taxon_name}{$locus_id}{"subtype"} = $subtype;
+			# dna_segs #
+			die " ERROR: $feat -> $dna_seg_id -> $locus_id -> $feat_id is not unique!\n"
+				if exists $dna_segs{$feat}{$dna_seg_id}{$locus_id}{$feat_id};
+			$dna_segs{$feat}{$dna_seg_id}{$locus_id}{$feat_id} = \@line;
 			
-			# dna_segs_id index #
-			$dna_segs_ids{$locus_id} = $dna_seg_id;
-			
-			# name index #
-			$name_index{$dna_seg_id} = $taxon_name;
 			}
 		}
 		
-		#print Dumper @dna_segs_order;
+		#print Dumper @dna_segs_order; exit;
 		#print Dumper %dna_segs; exit;
-		#print Dumper %dna_segs_ids; exit;
-		#print Dumper %name_index; exit;
-	return \%dna_segs, \@dna_segs_order, \%header, \%dna_segs_ids ,\%name_index;
+	return \%dna_segs, \@dna_segs_order, \%header;
 	}
-
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
 
 
 __END__
