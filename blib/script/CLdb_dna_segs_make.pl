@@ -139,7 +139,7 @@ sub write_dna_segs{
 					$end,
 					1,				# strand
 					$col,
-					1, 1, 8, 1,	
+					1, 0.5, 8, 1,	# plot formatting
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
@@ -164,7 +164,7 @@ sub write_dna_segs{
 					$end,
 					1, 				# strand 
 					1,				# col
-					1, 0.2, 8, 1,
+					1, 0.2, 8, 1,	# plot formatting
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
@@ -194,9 +194,9 @@ sub write_dna_segs{
 					$alias,
 					$start,
 					$end,
-					get_strand($start, $end), 				# strand 
+					get_strand($start, $end), 		# strand 
 					$col,
-					1, 1, 8, 1,
+					1, 1, 8, 1,				# plot formatting
 					"arrows", 				# end of required columns
 					$taxon_name,
 					$locus_id,

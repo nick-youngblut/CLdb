@@ -130,10 +130,10 @@
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_dna_segs_make.pl \-\- making dna_segs table for plotting
+CLdb_comparison_make.pl \-\- making comparisons table for plotting
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_dna_segs_make.pl [flags] > dna_segs.txt
+CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-d 	CLdb database." 4
@@ -144,22 +144,16 @@ CLdb_dna_segs_make.pl [flags] > dna_segs.txt
 .IP "\-ITEP" 4
 .IX Item "-ITEP"
 .PD
-Get gene cluster info from \s-1ITEP\s0. 2 arguments required: (ITEP_sqlite_file, cluster_runID).
+\&\s-1ITEP\s0 database. Used to get BLASTp info.
+.IP "\-spacer" 4
+.IX Item "-spacer"
+Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['blast']
 .IP "\-cutoff" 4
 .IX Item "-cutoff"
-Spacer clustering cutoff for spacer coloring (0.8 \- 1). [1]
-.IP "\-subtype" 4
-.IX Item "-subtype"
-Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine which sequences are returned.
+Spacer clustering cutoff (if clustering used). [1]
+.IP "\-blastp" 4
+.IX Item "-blastp"
+Blastp percent identity cutoff. [30]
 .IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v 	Verbose output. [FALSE]"
 .PD 0
@@ -168,25 +162,33 @@ Extra sql to refine which sequences are returned.
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_dna_segs_make.pl
+perldoc CLdb_comparison_make.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make a basic dna_segs object needed for plotting.
-.SS "Coloring genes by gene cluster"
-.IX Subsection "Coloring genes by gene cluster"
-Provide and \s-1ITEP\s0 sqlite file name and cluster run \s-1ID\s0
-to add cluster info to the table (used for coloring)
+Make a table of comparisons between genes & 
+spacers in the plot. A dna_segs table is used
+for determining which comparisons to add to
+the comparisons table.
+.PP
+Spacer comparisons can be based on clustering 
+of spacer sequences (CLdb_hclusterArrays.pl must
+be run prior), or by pairwise spacer blasts 
+(CLdb_spacerPairwiseBlast.pl must be run prior).
+.PP
+Gene comparisons are obtained from \s-1ITEP\s0.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Plotting all loci classified as subtype 'I\-A'"
-.IX Subsection "Plotting all loci classified as subtype 'I-A'"
-CLdb_dna_segs_make.pl \-d CLdb.sqlite \-sub I\-A
-.SS "Gene cluster info from \s-1ITEP\s0"
-.IX Subsection "Gene cluster info from ITEP"
-CLdb_dna_segs_make.pl \-d CLdb.sqlite \-sub I\-A  \-I \s-1DATABASE\s0.sqlite all_I_2.0_c_0.4_m_maxbit
-.SS "No broken loci"
-.IX Subsection "No broken loci"
-CLdb_dna_segs_make.pl \-da CLdb.sqlite \-sub I\-A \-q \*(L"\s-1AND\s0 loci.operon_status != 'broken'\*(R"
+.SS "Just comparisons among spacers (using BLASTn info)"
+.IX Subsection "Just comparisons among spacers (using BLASTn info)"
+CLdb_comparison_make.pl \-da CLdb.sqlite  < dna_segs.txt > compare.txt
+.SS "Just comparisons among spacers (using clustering info)"
+.IX Subsection "Just comparisons among spacers (using clustering info)"
+CLdb_comparison_make.pl \-da CLdb.sqlite \-s cluster < dna_segs.txt > compare.txt
+.SS "Comparisons among spacers and genes"
+.IX Subsection "Comparisons among spacers and genes"
+CLdb_comparison_make.pl \-da CLdb.sqlite \-I ITEP_database.sqlite < dna_segs.txt > compare.txt
+.SS ""
+.IX Subsection ""
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
