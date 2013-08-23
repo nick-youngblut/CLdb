@@ -302,4 +302,81 @@ Workflows
 	$ CLdb_classifyArraysByDR_validate.pl -da CLdb.sqlite
 
 
+***
+## Plotting loci
 
+Multiple elements can be used to create a loci plot from CLdb.
+These include:
+
+* A 'dna_segs' table (required). This includes start-stop info for all CRISRP and gene features.
+
+* An 'xlims' table (required). This provides the start-stop of the loci to plot.
+
+* A tree showing loci relatedness. This orders the loci by the tree.
+
+* A 'comparisons' table. This shows comparisons (e.g. BLASTp) between spacers or genes from adjacent loci in the plot.
+
+The plotting script names have the table name involved first (e.g CLdb_dna_segs_make.pl), so hopefully they are easier
+to find by tab-completion
+
+#### Making a dna_segs table
+
+* Just selecting Subtype I-A in this example:
+
+	$ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A > dna_segs_I-A.txt
+
+* Also get gene cluster information from an ITEP database:
+
+	$ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit > dna_segs_I-A.txt
+
+* Just completely intact loci (no 'broken')
+
+	$ CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'" > dna_segs_I-A.txt
+
+##### Making an xlims table
+
+* Just subtype I-A in this example:
+
+	$ CLdb_xlims_make.pl -da CLdb.sqlite -sub I-A > xlims_I-A.txt
+
+* Just completely intact loci (no 'broken')
+
+	$ CLdb_xlims.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'" > xlims_I-A.txt
+
+##### Ordering the dna_segs table by a tree
+
+* Needed if a tree is added to the plot. The tree is pruned to just the taxa in the dna\_segs table.
+Leaves will be added if any taxa have multiple loci in the dna_segs table.
+
+	$ CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_order.txt
+	
+##### Ordering the xlims table by a tree
+
+* Needed if a tree is added to the plot. The same tree editting will be done
+as with a dna_segs table, but an editted tree will not be written.
+
+	$ CLdb_dna_segs_orderByTree.pl -t tree.nwk < xlims.txt > xlims_order.txt
+
+##### Making a comparisons table
+
+* Use an tree-ordered dna_segs table if plotting with a tree
+
+	$ CLdb_comparison_make.pl -da CLdb.sqlite < dna_segs_order.txt > comparisons.txt
+
+##### Formatting colors of genes, spacers, and direct repeats
+
+* This will make the feature colors more discernable and remove any
+coloring that is not needed to descriminate related features in different
+loci (i.e. coloring is not needed if a related feature is only
+found in adjacent loci and comparisons are connecting them all).
+
+	$ CLdb_dna_segs_formatColor.pl -c comparisons.txt < dna_segs_order.txt > dna_segs_order_col.txt
+	
+##### Plotting with R functions 
+
+* A set of functions can be used to pull in and do some final edits on all of the
+plot elements (tables & tree). These functions (along with an example at the end of the script)
+are found in:
+
+	$ CLdb_loci_plot_func.r
+	
