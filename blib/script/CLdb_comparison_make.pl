@@ -446,7 +446,7 @@ Spacer clustering cutoff (if clustering used). [1]
 
 =item -blastp
 
-Blastp percent identity cutoff. [30]
+BLASTp percent identity cutoff. [30]
 
 =item -v 	Verbose output. [FALSE]
 

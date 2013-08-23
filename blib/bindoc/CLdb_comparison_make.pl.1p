@@ -153,7 +153,7 @@ Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['blast'
 Spacer clustering cutoff (if clustering used). [1]
 .IP "\-blastp" 4
 .IX Item "-blastp"
-Blastp percent identity cutoff. [30]
+BLASTp percent identity cutoff. [30]
 .IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v 	Verbose output. [FALSE]"
 .PD 0

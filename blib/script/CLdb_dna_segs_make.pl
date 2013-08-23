@@ -397,6 +397,7 @@ spacers.spacer_end,
 spacer_hclust.cluster_id
 FROM Loci, Spacers, Spacer_hclust
 WHERE Loci.locus_id = Spacers.locus_id
+AND Spacers.locus_id = Spacer_hclust.locus_id
 AND Spacers.spacer_id = Spacer_hclust.spacer_id
 AND Spacer_hclust.cutoff = $spacer_cutoff
 $join_sql
@@ -414,11 +415,18 @@ $extra_query
 	
 	my %spacer_clusters; 
 	foreach my $row (@$ret){
+		# sanity check #
+		die " ERROR: multiple entries for $$row[0], $$row[1], $$row[2]!\n"
+			if exists $dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]};
+		
+		# loading dna_segs_r #
 		$dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]} = [@$row[3..$#$row]];
-		$spacer_clusters{$$row[5]}++;
+		$spacer_clusters{$$row[5]}++;			# unique clusters 
 		}
 	
-	#print Dumper %$dna_segs_r; exit;
+		#print Dumper %$dna_segs_r; exit;
+		#print Dumper \%spacer_clusters; exit;
+		#exit;
 	return \%spacer_clusters;
 	}
 
