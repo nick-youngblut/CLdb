@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_DNA_SEGS_ORDERBYTREE 1"
-.TH CLDB_DNA_SEGS_ORDERBYTREE 1 "2013-08-21" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_DNA_SEGS_ORDERBYTREE 1 "2013-08-23" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,6 +152,9 @@ Tree file format. [newick]
 .IP "\-name" 4
 .IX Item "-name"
 Output file name for pruned tree. ['\-tree' + '_prn.nwk']
+.IP "\-xlims" 4
+.IX Item "-xlims"
+Ordering xlims table instead of dna_segs. An editted tree will not be written.
 .IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v 	Verbose output. [FALSE]"
 .PD 0
@@ -182,10 +185,10 @@ if the tree is used for plotting!
 .PP
 CLdb_dna_segs_orderByTree.pl \-t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 .PP
-\fIOrdering the complemenary xlims table\fR
-.IX Subsection "Ordering the complemenary xlims table"
+\fIOrdering the complemenary xlims table (editted tree not written).\fR
+.IX Subsection "Ordering the complemenary xlims table (editted tree not written)."
 .PP
-CLdb_dna_segs_orderByTree.pl \-t tree.nwk < xlims.txt > xlims.txt
+CLdb_dna_segs_orderByTree.pl \-t tree.nwk \-x < xlims.txt > xlims.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

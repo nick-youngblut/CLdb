@@ -14,11 +14,12 @@ use Bio::TreeIO;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $tree_in, $format, $tree_name);
+my ($verbose, $tree_in, $format, $tree_name, $xlims_bool);
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
-	   "name=s" => \$tree_name,	   
+	   "name=s" => \$tree_name,	
+	   "xlims" => \$xlims_bool,  			# xlims input? 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -46,7 +47,7 @@ $treeo = prune_tree($dna_segs_r, $treeo);
 $treeo = add_leaves($dna_segs_r, $treeo, $dna_segs_ids_r);
 	
 ## writing editted tree ##
-tree_write($treeo, $tree_name);
+tree_write($treeo, $tree_name) unless $xlims_bool;
 
 # ordering dna_segs by tree #
 ## getting tree order ##
@@ -300,7 +301,6 @@ CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
 
 CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
 
-
 =head2 Required flags
 
 =over
@@ -322,6 +322,10 @@ Tree file format. [newick]
 =item -name
 
 Output file name for pruned tree. ['-tree' + '_prn.nwk']
+
+=item -xlims
+
+Ordering xlims table instead of dna_segs. An editted tree will not be written.
 
 =item -v 	Verbose output. [FALSE]
 
@@ -354,9 +358,9 @@ if the tree is used for plotting!
 
 CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
-=head3 Ordering the complemenary xlims table
+=head3 Ordering the complemenary xlims table (editted tree not written).
 
-CLdb_dna_segs_orderByTree.pl -t tree.nwk < xlims.txt > xlims.txt
+CLdb_dna_segs_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
 
 =head1 AUTHOR
 
