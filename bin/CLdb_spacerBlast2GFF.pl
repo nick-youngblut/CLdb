@@ -51,10 +51,14 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my $join_sqls .= join_query_opts_or(\@staxon_id, \@staxon_name);
 
 # getting blast hits #
-my $blast_hits_r = get_blast_hits($dbh, $join_sqls, $extra_query);
+my $blast_hits_r = get_blast_hits($dbh, $join_sqls, $join_sql, $extra_query);
+
+	#print Dumper $blast_hits_r; exit;
 
 # getting spacer group length #
 my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
+
+	#print Dumper $spacer_len_r; exit;
 
 # filter spacer hits to just full length hits if needed #
 $blast_hits_r = apply_hit_len_cutoff($blast_hits_r, $spacer_len_r, $hit_len_cutoff) 
@@ -167,7 +171,7 @@ $join_sql";
 
 sub get_blast_hits{
 # 3 table join #
-	my ($dbh, $join_sql, $extra_query) = @_;
+	my ($dbh, $join_sqls, $join_sql, $extra_query) = @_;
 	
 	# basic query #
 	my $query = "SELECT 
@@ -186,6 +190,7 @@ FROM Loci, Spacers, Blast_hits
 WHERE Loci.locus_id == Spacers.locus_id
 AND blast_hits.spacer_group == spacers.spacer_group
 AND blast_hits.CRISPR_array == 'no'
+$join_sqls
 $join_sql";
 	$query =~ s/[\n\r]+/ /g;
 	
