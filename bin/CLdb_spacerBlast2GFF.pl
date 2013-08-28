@@ -106,7 +106,7 @@ sub blast2gff3{
 				"ID=\"$$hit[1]\"",		# query taxon_name
 				"Name=\"$$hit[2]\"",	# query taxon_id
 				"Alias=$$hit[9]",		# locus_id
-				"Note=\"mismatch:$$hit[7];pident:$$hit[8];spacer_group:$$hit[0]\""
+				"Note='mismatch:$$hit[7]  pident:$$hit[8]  spacer_group:$$hit[0]'"
 				)
 			), "\n";
 		}

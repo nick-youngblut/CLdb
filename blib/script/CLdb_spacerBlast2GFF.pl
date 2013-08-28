@@ -51,14 +51,10 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my $join_sqls .= join_query_opts_or(\@staxon_id, \@staxon_name);
 
 # getting blast hits #
-my $blast_hits_r = get_blast_hits($dbh, $join_sqls, $join_sql, $extra_query);
-
-	#print Dumper $blast_hits_r; exit;
+my $blast_hits_r = get_blast_hits($dbh, $join_sqls, $extra_query);
 
 # getting spacer group length #
 my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
-
-	#print Dumper $spacer_len_r; exit;
 
 # filter spacer hits to just full length hits if needed #
 $blast_hits_r = apply_hit_len_cutoff($blast_hits_r, $spacer_len_r, $hit_len_cutoff) 
@@ -127,7 +123,7 @@ sub apply_hit_len_cutoff{
 		my $hit_end = $$hit[5];
 		
 		# length cutoff #
-		die " ERROR: $$hit[0] not found in spacer length index!\n"
+		die " ERROR: $$hit[0] not found in spacer length index!\n Did you mean to use '-staxon' instead of '-taxon'?"
 			unless exists $spacer_len_r->{$$hit[0]};
 		push (@filt_hits, $hit) if abs($hit_end - $hit_start + 1)  /  $spacer_len_r->{$$hit[0]}
 			>= $hit_len_cutoff;
@@ -171,7 +167,7 @@ $join_sql";
 
 sub get_blast_hits{
 # 3 table join #
-	my ($dbh, $join_sqls, $join_sql, $extra_query) = @_;
+	my ($dbh, $join_sqls, $extra_query) = @_;
 	
 	# basic query #
 	my $query = "SELECT 
@@ -190,8 +186,7 @@ FROM Loci, Spacers, Blast_hits
 WHERE Loci.locus_id == Spacers.locus_id
 AND blast_hits.spacer_group == spacers.spacer_group
 AND blast_hits.CRISPR_array == 'no'
-$join_sqls
-$join_sql";
+$join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
 	$query = join(" ", $query, $extra_query);
@@ -203,7 +198,6 @@ $join_sql";
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
-	
 	
 	return $ret;
 	}
