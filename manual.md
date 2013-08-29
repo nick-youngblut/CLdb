@@ -126,7 +126,7 @@ Example database setup
 
 #### adding number of scaffolds to the loci table
 
-	$ CLdb_addScaffolds.pl -d CLdb.sqlite
+	$ CLdb_addScaffoldCount.pl -d CLdb.sqlite
 
 ***
 

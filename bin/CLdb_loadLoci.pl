@@ -7,14 +7,17 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
+use File::Path;
+use File::Copy;
 use DBI;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose, $database_file, $quiet);
 GetOptions(
 	   "database=s" => \$database_file,
+	   "quiet" => \$quiet,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -47,8 +50,11 @@ check_headers($header_r);
 # adding scaffold values if not found #
 add_scaffold_ID($loci_r, $header_r);
 
+# copying array files & genbanks if not in ./genbank & ./array #
+make_genbank_array_dirs($loci_r, $header_r);
+
 # striping off paths from file columns #
-remove_paths($loci_r, $header_r);
+	#remove_paths($loci_r, $header_r);
 
 # updating / loading_db #
 load_new_entries($dbh, $loci_r->{"new_entry"}, $header_r);
@@ -59,6 +65,50 @@ $dbh->disconnect();
 exit;
 
 ### Subroutines
+sub make_genbank_array_dirs{
+	my ($loci_r, $header_r) = @_;
+	
+	# current directory #
+	my $dir = File::Spec->rel2abs(File::Spec->curdir());
+
+	#print STDERR "...Removing any paths in file names\n" unless $verbose;
+	
+	my @cp_warning;
+	foreach my $entry_type (keys %$loci_r){
+		foreach my $row (@{$loci_r->{$entry_type}}){
+			if( $$row[$header_r->{"genbank"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"genbank"}] );
+
+				# making genbank dir; copying file #
+				if(File::Spec->rel2abs($parts[1]) ne "$dir/genbank"){
+					mkdir "$dir/genbank" unless -d "$dir/genbank";
+					unless(-e "$dir/genbank/$parts[2]"){
+						copy($$row[$header_r->{"genbank"}], "$dir/genbank/$parts[2]") or die $!;
+						print STDERR "...Copied ", $$row[$header_r->{"genbank"}], 
+							" to $dir/genbank/$parts[2]\n" unless $quiet;
+						}
+					}
+				# stripping path from genbank value #
+				$$row[$header_r->{"genbank"}] = $parts[2];
+				
+				} 
+			if( $$row[$header_r->{"array_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
+
+				# making genbank dir; copying file #
+				if(File::Spec->rel2abs($parts[1]) ne "$dir/array"){
+					mkdir "$dir/array" unless -d "$dir/array";
+					unless(-e "$dir/array/$parts[2]"){
+						copy($$row[$header_r->{"array_file"}], "$dir/array/$parts[2]") or die $!;
+						print STDERR "...Copied ", $$row[$header_r->{"array_file"}], 
+							" to $dir/array/$parts[2]\n" unless $quiet;
+						}
+					}
+				}
+			}
+		}
+	}
+
 sub remove_paths{
 	my ($loci_r, $header_r) = @_;
 	
@@ -170,9 +220,13 @@ sub check_headers{
 	my ($header_r) = @_;
 	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status crispr_array_status genbank array_file author/;
 	
-	my @not_found;
+	# checking for required headers not found #
+	my (@not_found, @found);
 	foreach (@req){
-		unless (exists $header_r->{$_}){
+		if (exists $header_r->{$_}){
+			push @found, $_;
+			}
+		else{
 			push @not_found, $_;
 			}
 		}
@@ -181,8 +235,8 @@ sub check_headers{
 		print STDERR "ERROR: Required columns not found in loci table!\n\n";
 		print STDERR "### Required columns not found (capitalization does not matter) ###\n";
 		print STDERR join(",\n", sort @not_found), "\n";
-		print STDERR "\n### Headers found in the loci table (capitalization does not matter) ###\n";
-		print STDERR join(",\n", sort keys %$header_r), "\n";
+		print STDERR "\n### Correct headers found in the loci table (capitalization does not matter) ###\n";
+		print STDERR join(",\n", sort @found), "\n";
 		exit;
 		}
 	
@@ -209,6 +263,7 @@ sub load_loci_table{
 
 		if($line_cnt == 1){ 					# loading header
 			tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
+			tr/ /_/;
 			my @line = split /\t/;
 			for my $i (0..$#line){
 				next unless exists $column_list_r->{$line[$i]};		# only including columns in loci DB table
