@@ -57,7 +57,6 @@ my $tree_order_r = get_tree_order($treeo);
 order_dna_segs($dna_segs_r, $tree_order_r, $header_r, $name_index_r);
 
 
-
 ### Subroutines
 sub tree_write{
 	my ($treeo, $tree_name) = @_;
@@ -80,13 +79,21 @@ sub order_dna_segs{
 		my $taxon_name = $name_index_r->{$leaf};
 		die " ERROR: leaf -> \"$taxon_name\" not found in dna_segs table!\n"
 			unless exists $dna_segs_r->{$taxon_name};
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
+		
+		if($leaf =~ /__cli\d+$/){							## if lociID already in name (prevents duplicates)
+			(my $locus_id = $leaf) =~ s/.+__cli(\d+).*/$1/ if $leaf =~ /__cli\d+$/;
 			foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 				print join("\t", @$row), "\n";
+				}		
+			}
+		else{												## if 1 lociID per taxon_name
+			foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
+				foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
+					print join("\t", @$row), "\n";
+					}
 				}
 			}
 		}
-
 	}
 
 sub get_tree_order{
