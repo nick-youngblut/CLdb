@@ -255,9 +255,9 @@ sub check_multi{
 	$multi_subtype = 1 if scalar keys %subtype_sum > 1;
 
 	# status #
-	print STDERR "...Found multiple loci for 1 or more taxa. Adding leaves to the tree! Adding loci_ids to leaves & dna_segs table!\n"
+	print STDERR "...Found multiple loci for 1 or more taxa. Adding loci_ids to names in dna_segs table!\n"
 		if $multi_loci;
-	print STDERR "...Found multiple subtypes. Adding subtype to names in tree & dna_segs table!\n"
+	print STDERR "...Found multiple subtypes. Adding subtype to names in dna_segs table!\n"
 		if $multi_subtype;
 		
 	return $multi_loci, $multi_subtype;

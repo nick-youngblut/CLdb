@@ -232,23 +232,33 @@ Workflows
 	
 ### Getting a fasta of all direct repeat consensus sequences
 
-	$ CLdb_DBconsensus2fasta.pl -d CLdb.sqlite > DR_consensus.fna
+	$ CLdb_DRconsensus2fasta.pl -d CLdb.sqlite > DR_consensus.fna
 
 ***
 
 ### Spacer BLASTs vs subject genomes or other databases
 
+##### BLASTn against 1 subject genome
+
 	$ CLdb_spacerBlast.pl -d CLdb.sqlite -subject A_woodii.fna 931626.1 "Acetobacterium woodii"
 		
-* "A_woodii.fna" is the fasta of the genome that will be BLASTed against
+* "A_woodii.fna" is the fasta of the genome that will be BLASTed against (the subject)
 		
-* "931626.1" is the taxon_id (FIG_ID)
+* "931626.1" is the subject's taxon_id (FIG_ID)
 		
-* "Acetobacterium woodii" is the taxon_name
+* "Acetobacterium woodii" is the subject's taxon_name
 	
 * blastn-short is used to BLAST selected spacer groups against the genome
 	
 * the blast results are then stored in CLdb
+
+##### BLASTn against multiple genomes
+
+	Make a 3-column, tab-delimited table: "fasta	subject_taxon_id	subject_taxon_name"
+	
+	This is the 'subject_list' table that will be used for BLASTing against all subjects.
+
+	$ CLdb_spacerBlast.pl -d CLdb.sqlite -subject subject_list.txt
 
 ***
 
