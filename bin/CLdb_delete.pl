@@ -90,6 +90,7 @@ simple_delete($dbh, $loci_r, "leaderseqs") if exists $tables_r->{"leaderseqs"};
 simple_delete($dbh, $loci_r, "draft") if exists $tables_r->{"draft"};
 simple_delete($dbh, $loci_r, "genes") if exists $tables_r->{"genes"};
 simple_delete($dbh, $loci_r, "loci") if exists $tables_r->{"loci"};
+simple_delete($dbh, $loci_r, "spacer_hclust") if exists $tables_r->{"spacer_hclust"};
 
 
 $dbh->commit();

@@ -95,13 +95,19 @@ sub get_leader_seq{
 		# loadign genbank #
 		my $seqio = Bio::SeqIO->new(-format => "genbank", 
 								-file => "$genbank_path/$genbank_file");
-		
 		while( my $seqo = $seqio->next_seq ){
+			# checking for sequence in genbank file; if not provided, die #
+			unless($seqo->seq){ 
+				print STDERR " ERROR: no genomic sequence found in $genbank_file! Cannot extract the leader sequence from the genome!\n";
+				next;
+				}
 			foreach my $locus (@{$genbank_loci_index{ $genbank_file }} ){
 				foreach my $loc (@{$leader_loc_r->{$locus}}){		# if both ends, must get both
-					# only comparing on the same scaffole
+					
+					# only comparing on the same scaffold (or just 1 scaffold)
 					my $leader_scaf = ${$array_se_r->{$locus}}[4];
-					next unless $leader_scaf eq $seqo->display_id;
+					next unless $leader_scaf eq "CLDB__ONE_CHROMOSOME" ||
+						$leader_scaf eq $seqo->display_id;
 					
 					# determining leader region start-end
 					my $leader_start;
