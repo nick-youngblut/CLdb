@@ -19,6 +19,7 @@ my @subject_in;
 my $blast_params = "-evalue 0.00001";
 my $extra_query = "";
 my $range = 30;		# spacer-DR blast hit overlap (bp)
+my $Ncpu = 1;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -28,6 +29,7 @@ GetOptions(
 	   "blast=s" => \$blast_params,
 	   "subject=s{,}" => \@subject_in,		# blast subject
 	   "range=i" => \$range,
+	   "cpu=i" => \$Ncpu,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -89,7 +91,7 @@ foreach my $subject (@$sub_in_r){
 sub call_CLdb_loadBlastHits{
 	my ($filt_blast_out, $database_file, $subject) = @_;
 
-		#my $cmd = "~/perl/projects/CLdb/bin/CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
+	#my $cmd = "perl ~/perl/projects/CLdb/bin/CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
 	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];
@@ -114,7 +116,7 @@ sub DR_blast{
 	
 	my $out = "$blast_dir/DR_blast.txt";
 		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
-	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $DR_fasta > $out $blast_params";
+	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $DR_fasta -num_threads $Ncpu > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
 	
@@ -126,7 +128,7 @@ sub spacer_blast{
 
 	my $out = "$blast_dir/spacer_blast.txt";
 		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
-	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta > $out $blast_params";
+	my $cmd = "blastn -task 'blastn-short' -outfmt 6 -db $blast_db -query $spacer_fasta -num_threads $Ncpu > $out $blast_params";
 		#print Dumper $cmd; exit;
 	`$cmd`;
 	
@@ -280,6 +282,10 @@ BLASTn parameters (besides required flags). [-evalue 0.00001]
 =item -range
 
 Range allowable between spacer & DR blast hit (bp). [30]
+
+=item -cpu
+
+Use for '-num_threads' parameter in BLASTn. [1]
 
 =item -v	Verbose output
 

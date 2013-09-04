@@ -104,7 +104,7 @@ sub load_subject_fasta{
 	
 	$dbh->commit;
 	
-	print STDERR "...Number of blast subject entries added/updated in database: $entry_cnt\n";
+	print STDERR "...Number of blast subject entries added/updated in database:\t$entry_cnt\n";
 	}
 	
 sub add_entry{
@@ -129,7 +129,7 @@ sub get_blast_hits{
 	my $sql = $dbh->prepare($cmd);
 
 	# data stream of blast hits #
-	my $entry_cnt = 0;
+	my %entry_cnt = ("total" => 0, "array" => 0);
 	my %scafs;
 	while(<>){
 		chomp;
@@ -185,23 +185,25 @@ sub get_blast_hits{
 			print STDERR " WARNING: taxon_name -> \"$line[14]\" not found in Loci table! The Genome is not in CLdb!\n";
 			}
 		
-		# getting date of loading #
-		
 		
 		# loading db #
 		$sql->execute( @line, $taxon_id, $taxon_name );
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
 			}
-		else{ $entry_cnt++; }
-		
+		else{ 
+			$entry_cnt{"total"}++; 
+			$entry_cnt{"array"}++ if $line[12] =~ /yes/i;
+			}
+
 		# loading scafs #
 		$scafs{$line[1]} = 1 unless $just_hit_scafs;
 		}
 		
 	$dbh->commit;	
 	
-	print STDERR "...Number of BLAST hit entries added/updated in database: $entry_cnt\n";
+	print STDERR "...Number of BLAST hit entries added/updated in database:\t$entry_cnt{'total'}\n";
+	print STDERR "...Number of those BLAST hits that hit a CRISPR array:\t\t$entry_cnt{'array'}\n";
 	
 	return \%scafs, $taxon_id, $taxon_name;
 	}
