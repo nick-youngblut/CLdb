@@ -90,7 +90,6 @@ sub make_genbank_array_dirs{
 					}
 				# stripping path from genbank value #
 				$$row[$header_r->{"genbank"}] = $parts[2];
-				
 				} 
 			if( $$row[$header_r->{"array_file"}] ){
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
@@ -104,6 +103,8 @@ sub make_genbank_array_dirs{
 							" to $dir/array/$parts[2]\n" unless $quiet;
 						}
 					}
+				# stripping path from array value #
+				$$row[$header_r->{"array_file"}] = $parts[2];
 				}
 			}
 		}
