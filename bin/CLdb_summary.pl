@@ -64,20 +64,22 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 
 # checking for tables of interest #
 my $table_list_r = list_tables($dbh);
+$table_list_r = entry_count($dbh, $table_list_r);
 
 # make 'group by' sql #
 my $group_by_r = make_group_by_sql($subtype, $taxon_id, $taxon_name);
 
 # summary #
 ## loci ##
-if (grep{/loci/i} @$table_list_r){
+if ( exists $table_list_r->{"loci"} ){
 	sum_loci($dbh, $group_by_r);
 	}	
 else{ print STDERR "...no loci table found, skipping loci summary!\n"; }
 
+
 ## spacers ##
-if ( (scalar grep{/loci|spacers/i} @$table_list_r) >= 2){
-	if( grep{/spacer_hclust/i} @$table_list_r ){
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"spacers"} ){
+	if( exists $table_list_r->{"spacer_hclust"} && $table_list_r->{"spacer_hclust"} > 0){
 		sum_spacers_DR_hclust($dbh, "spacer", $group_by_r, \@cutoff);
 		}
 	else{
@@ -86,9 +88,10 @@ if ( (scalar grep{/loci|spacers/i} @$table_list_r) >= 2){
 	}	
 else{ print STDERR "...no loci and/or spacer tables found, skipping spacer summary!\n"; }
 
+
 ## DR ##
-if ( (scalar grep{/loci|DirectRepeats/i} @$table_list_r) >= 2){
-	if( grep{/directrepeat_hclust/i} @$table_list_r ){
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"directrepeats"} ){ 
+	if( exists $table_list_r->{"directrepeat_hclust"} && $table_list_r->{"directrepeat_hclust"} > 0){
 		sum_spacers_DR_hclust($dbh, "DirectRepeat", $group_by_r, \@cutoff);
 		}
 	else{
@@ -98,7 +101,19 @@ if ( (scalar grep{/loci|DirectRepeats/i} @$table_list_r) >= 2){
 else{ print STDERR "...no loci and/or DirectRepeat tables found, skipping DirectRepeat summary!\n"; }
 
 
-### need to finish ###
+## genes ##
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"genes"} ) {
+	sum_genes($dbh, $group_by_r);
+	}	
+else{ print STDERR "...no loci and/or genes tables found, skipping gene summary!\n"; }
+
+
+## leaderseqs ##
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"leaderseqs"} ) {
+	sum_leaderseqs($dbh, $group_by_r);
+	}	
+else{ print STDERR "...no loci and/or leaderseqs tables found, skipping leader sequence summary!\n"; }
+
 
 
 # disconnect #
@@ -107,6 +122,62 @@ exit;
 
 
 ### Subroutines
+sub sum_leaderseqs{
+	my ($dbh, $group_by_r) = @_;
+
+	# by operon/array status #
+	my @select;
+	push @select, @$group_by_r if @$group_by_r;
+	push @select, qw/b.Leader_group/;
+	my $select = join(",", @select);
+
+	my $q = "SELECT $select,'NA',count(*) FROM Loci a, Leaderseqs b WHERE a.locus_id=b.locus_id GROUP BY $select";
+	foreach (@{$dbh->selectall_arrayref($q)}){
+		map{$_ = "NULL" unless $_} @$_;
+		print join("\t", "leaderseqs", @$_), "\n";
+		}	
+
+	# total #
+	if(@$group_by_r){
+		my $group_by = join(",", @$group_by_r);
+		$q = "SELECT $group_by,count(*) FROM Loci a, Leaderseqs b WHERE a.locus_id=b.locus_id GROUP BY $group_by";
+		}
+	else{ $q = "SELECT count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id"; }
+
+	foreach (@{$dbh->selectall_arrayref($q)}){
+		map{$_ = "NULL" unless $_} @$_;
+		print join("\t", "leaderseqs", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
+		}	
+	}
+
+sub sum_genes{
+	my ($dbh, $group_by_r) = @_;
+
+	# by operon/array status #
+	my @select;
+	push @select, @$group_by_r if @$group_by_r;
+	push @select, qw/b.In_operon/;
+	my $select = join(",", @select);
+
+	my $q = "SELECT $select,'NA',count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id GROUP BY $select";
+	foreach (@{$dbh->selectall_arrayref($q)}){
+		map{$_ = "NULL" unless $_} @$_;
+		print join("\t", "genes", @$_), "\n";
+		}	
+
+	# total #
+	if(@$group_by_r){
+		my $group_by = join(",", @$group_by_r);
+		$q = "SELECT $group_by,count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id GROUP BY $group_by";
+		}
+	else{ $q = "SELECT count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id"; }
+
+	foreach (@{$dbh->selectall_arrayref($q)}){
+		map{$_ = "NULL" unless $_} @$_;
+		print join("\t", "genes", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
+		}	
+	}
+
 sub sum_spacers_DR_hclust{
 	my ($dbh, $cat, $group_by_r, $cutoff_r) = @_;
 	
@@ -125,7 +196,7 @@ sub sum_spacers_DR_hclust{
 	
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "$cat\_summary", @$_), "\n";
+		print join("\t", $cat . "s", @$_), "\n";
 		}
 	}
 
@@ -139,7 +210,7 @@ sub sum_spacers_DR{
 	my $q = "SELECT $select,'NA','NA',count(*) FROM Loci a, $table b WHERE a.locus_id=b.locus_id GROUP BY $select";	
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "$cat\_summary", @$_), "\n";
+		print join("\t", "$cat", @$_), "\n";
 		}
 	}
 
@@ -156,7 +227,7 @@ sub sum_loci{
 		#print Dumper $q; exit;
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "loci_summary", @$_), "\n";
+		print join("\t", "loci", @$_), "\n";
 		}	
 
 	# total #
@@ -168,7 +239,7 @@ sub sum_loci{
 
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "loci_summary", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
+		print join("\t", "loci", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
 		}	
 	}
 
@@ -181,6 +252,19 @@ sub make_group_by_sql{
 	#if(@group_by){ return join(",", @group_by); }
 	#else{ return ""; }
 	return \@group_by;
+	}
+	
+sub entry_count{
+	my ($dbh, $table_list_r) = @_;
+	my %table;
+	foreach my $table (@$table_list_r){
+		my $q = "SELECT count(*) FROM $table";
+		my $res = $dbh->selectall_arrayref($q);
+		$table =~ tr/A-Z/a-z/;
+		$table{$table} = $$res[0][0];
+		}
+		#print Dumper %table; exit;
+	return \%table;
 	}
 
 sub list_tables{

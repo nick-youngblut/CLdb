@@ -83,6 +83,9 @@ sub make_genbank_array_dirs{
 				if(File::Spec->rel2abs($parts[1]) ne "$dir/genbank"){
 					mkdir "$dir/genbank" unless -d "$dir/genbank";
 					unless(-e "$dir/genbank/$parts[2]"){
+						die " ERROR: cannot find ", $$row[$header_r->{"genbank"}], "\n"
+							unless -e $$row[$header_r->{"genbank"}];
+							
 						copy($$row[$header_r->{"genbank"}], "$dir/genbank/$parts[2]") or die $!;
 						print STDERR "...Copied ", $$row[$header_r->{"genbank"}], 
 							" to $dir/genbank/$parts[2]\n" unless $quiet;
@@ -98,6 +101,9 @@ sub make_genbank_array_dirs{
 				if(File::Spec->rel2abs($parts[1]) ne "$dir/array"){
 					mkdir "$dir/array" unless -d "$dir/array";
 					unless(-e "$dir/array/$parts[2]"){
+						die " ERROR: cannot find ", $$row[$header_r->{"array_file"}], "\n"
+							unless -e $$row[$header_r->{"array_file"}];
+							
 						copy($$row[$header_r->{"array_file"}], "$dir/array/$parts[2]") or die $!;
 						print STDERR "...Copied ", $$row[$header_r->{"array_file"}], 
 							" to $dir/array/$parts[2]\n" unless $quiet;
