@@ -118,7 +118,7 @@ sub add_leaves{
 		my @loci = keys %{$dna_segs_r->{$node->id}};		# locus_ids for each taxon_name 
 		
 		for my $i (0..$#loci){
-			if ($i > 0){		# adding nodes if needed 	
+			if ($#loci > 0){		# adding nodes if needed 	
 				# sanity check #
 				die " ERROR: locus_id -> $loci[$i] not found in dna_segs_ids!\n"
 					unless exists $dna_segs_ids_r->{$loci[$i]};
@@ -130,10 +130,12 @@ sub add_leaves{
 									
 				my $new_node = new Bio::Tree::Node(
 							-id => $dna_segs_ids_r->{$loci[$i]},
-							-branch_length => $brlen);					
+							-branch_length => 0);					
 				
 				#$new_node->id( join("__", $new_node_id, "cli$loci[$i]") );					
-				$anc_node->add_Descendent($new_node);
+				$node->add_Descendent($new_node);
+				
+				$node->id(100) if $i == $#loci;
 				}
 			else{	# appending locus_id #				
 				# changing node id #

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_COMPARISON_MAKE 1"
-.TH CLDB_COMPARISON_MAKE 1 "2013-08-22" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_COMPARISON_MAKE 1 "2013-09-04" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -147,10 +147,12 @@ CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 \&\s-1ITEP\s0 database. Used to get BLASTp info.
 .IP "\-spacer" 4
 .IX Item "-spacer"
-Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['blast']
+Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['cluster']
 .IP "\-cutoff" 4
 .IX Item "-cutoff"
-Spacer clustering cutoff (if clustering used). [1]
+If \-spacer 'cluster': Clustering cutoff. [1]
+.Sp
+If \-spacer 'blast': blast pident cutoff. [100]
 .IP "\-blastp" 4
 .IX Item "-blastp"
 BLASTp percent identity cutoff. [30]
