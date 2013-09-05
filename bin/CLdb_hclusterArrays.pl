@@ -59,7 +59,6 @@ my $dr_fasta = call_array2fasta($dir, $database_file, "-r") if $dr_bool;
 # 'hcluster' #
 my %spacer_hclust;
 my %DR_hclust;
-
 for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[2]){
 	print STDERR "...clustering at cutoff $i\n" unless $verbose;
 	
@@ -73,8 +72,8 @@ for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[
 	}
 	
 # updating db #
-add_entry($dbh, \%spacer_hclust, "spacers") if $spacer_bool;
-add_entry($dbh, \%DR_hclust, "DR") if $dr_bool;
+add_entry($dbh, \%spacer_hclust, "spacer") if $spacer_bool;
+add_entry($dbh, \%DR_hclust, "directrepeat") if $dr_bool;
 
 # disconnect #
 $dbh->disconnect();
@@ -93,8 +92,8 @@ sub check_cluster{
 sub add_entry{
 # add_entry to *_hcluster #
 	my ($dbh, $clust_r, $cat) = @_;
-
-	my $cmd = "INSERT into spacer_hclust(locus_id, spacer_id, cutoff, cluster_id) values(?,?,?,?)";
+	
+	my $cmd = "INSERT into $cat\_hclust(locus_id, $cat\_id, cutoff, cluster_id) values(?,?,?,?)";
 	
 	my $sql = $dbh->prepare($cmd);
 	
