@@ -93,6 +93,10 @@ sub make_genbank_array_dirs{
 					}
 				# stripping path from genbank value #
 				$$row[$header_r->{"genbank"}] = $parts[2];
+				# sanity check #
+				my $file_chk = join("/", $dir, "genbank", $$row[$header_r->{"genbank"}]);
+				die " ERROR: cannot find ", $file_chk, "\n"
+					unless -e $file_chk;
 				} 
 			if( $$row[$header_r->{"array_file"}] ){
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
@@ -111,6 +115,10 @@ sub make_genbank_array_dirs{
 					}
 				# stripping path from array value #
 				$$row[$header_r->{"array_file"}] = $parts[2];
+				# sanity check #
+				my $file_chk = join("/", $dir, "array", $$row[$header_r->{"array_file"}]);
+				die " ERROR: cannot find ", $file_chk, "\n"
+					unless -e $file_chk;
 				}
 			}
 		}

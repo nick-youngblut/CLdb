@@ -95,10 +95,17 @@ sub load_array_table{
 	while(<IN>){
 		chomp;
 		next if /^\s*$/;
+		s/^\s+//;
 		my @line = split /\t/;
-
+		map{$_ =~ s/\s+//g} @line;
+		
+		# sanity check #
 		die " ERROR: table not formatted correctly (>=4 columns required)\n"
 			if scalar(@line) < 4;
+		die " ERROR: $array_file not formatted correctely!\n"
+			unless $line[0] =~ /^\d+$/;
+		die " ERROR: $array_file not formatted correctely!\n"
+			unless $line[1] =~ /^[A-Z-]+$/;
 		
 		# repeat count #
 		$repeat_cnt++;
@@ -139,6 +146,8 @@ sub determine_positions{
 	$pos[2] = $$line_r[0] + length($$line_r[1]) if $$line_r[2]; 							# spacer start
 	#$pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) -2 if $$line_r[2];	# spacer end
 	$pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) if $$line_r[2];		# spacer end
+	
+		die "HERE" unless $$line_r[0];
 	
 	return \@pos;
 	}
