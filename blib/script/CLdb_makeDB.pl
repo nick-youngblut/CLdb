@@ -249,10 +249,11 @@ HERE
 DROP TABLE IF EXISTS directrepeat_hclust;
 
 CREATE TABLE directrepeat_hclust (
-Repeat_ID	TEXT	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
+DirectRepeat_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Repeat_ID, Cutoff, Cluster_ID)
+UNIQUE (Locus_ID, DirectRepeat__ID, Cutoff)
 ON CONFLICT REPLACE
 );
 

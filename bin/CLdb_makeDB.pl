@@ -253,7 +253,7 @@ Locus_ID	TEXT	NOT NULL,
 DirectRepeat_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, DirectRepeat__ID, Cutoff)
+UNIQUE (Locus_ID, DirectRepeat_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 

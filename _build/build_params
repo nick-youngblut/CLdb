@@ -145,6 +145,7 @@ do{ my $x = [
                              './bin/CLdb_dna_segs_formatColor.pl',
                              './bin/CLdb_subtypePA_ITOL.pl',
                              './bin/CLdb_delete.pl',
+                             './bin/CLdb_summary.pl',
                              './bin/CLdb_loadLeaders.pl',
                              './bin/CLdb_DRconsensus2fasta.pl'
                            ],
