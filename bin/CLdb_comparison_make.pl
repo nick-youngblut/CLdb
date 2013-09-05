@@ -16,7 +16,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $CLdb_sqlite, $ITEP_sqlite);
 my $spacer_cutoff = 1;
 my $blastp_cutoff = 30;
-my $spacer_opt = "blast";
+my $spacer_opt = "cluster";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s" => \$ITEP_sqlite,
@@ -33,6 +33,7 @@ die " ERROR: provide a database file name!\n"
 	unless $CLdb_sqlite;
 die " ERROR: cannot find CLdb database file!\n"
 	unless -e $CLdb_sqlite;
+$spacer_cutoff = 100 if $spacer_opt =~ /blast/i;
 	
 # checking ITEP input #
 if($ITEP_sqlite){
@@ -92,16 +93,17 @@ sub write_compare{
 	my ($compare_r, $dna_segs_order_r) = @_;
 	
 	# header #
-	print join("\t", qw/start1 end1 start2 end2 col dna_segs_id1 dna_segs_id2 feat feat_id/), "\n";
+	print join("\t", qw/start1 end1 start2 end2 col dna_segs_id1 dna_segs_id2 feat feat_id sfeat_id/), "\n";
 	
 	# body #
 	foreach my $dna_seg1 (@$dna_segs_order_r){
 		foreach my $feat (keys %$compare_r){
 			foreach my $dna_seg2 (keys %{$compare_r->{$feat}{$dna_seg1}}){
 				foreach my $feat_id (keys %{$compare_r->{$feat}{$dna_seg1}{$dna_seg2}}){
-					foreach my $row (@{$compare_r->{$feat}{$dna_seg1}{$dna_seg2}{$feat_id}}){
+					foreach my $sfeat_id (keys %{$compare_r->{$feat}{$dna_seg1}{$dna_seg2}{$feat_id}}){
+						my $row = $compare_r->{$feat}{$dna_seg1}{$dna_seg2}{$feat_id}{$sfeat_id};
 						print join("\t", @$row, 
-							$dna_seg1, $dna_seg2, $feat, $feat_id), "\n";
+						$dna_seg1, $dna_seg2, $feat, $feat_id, $sfeat_id), "\n";
 						}
 					}
 				}
@@ -170,15 +172,15 @@ AND locus_id = ?
 				next unless @$res_s;
 			
 				# loading hash #
-				$compare_r->{"gene"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} =
-					[[$$res_q[0][0], $$res_q[0][1],
+				$compare_r->{"gene"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$subject_gene_id} =
+					[$$res_q[0][0], $$res_q[0][1],
 					 $$res_s[0][0], $$res_s[0][1], 	
 					 $blastp_res_r->{$feat_id}{$subject_gene_id}
-					 ]];
+					 ];
 				}
 			}
 		}
-		#print Dumper %{$compare_r->{"gene"}}; exit;
+		#print Dumper "here", %{$compare_r->{"gene"}}; exit;
 	}
 
 sub get_ITEP_blastp{
@@ -243,7 +245,9 @@ sub get_spacer_pairwise_blast{
 SELECT  
 b.spacer_start, b.spacer_end, 
 c.spacer_start, c.spacer_end, 
-a.pident
+a.pident, 
+a.Query_locus_ID, a.Subject_locus_ID,
+a.Query_spacer_ID, a.Subject_spacer_ID
 FROM spacer_pairwise_blast a, spacers b, spacers c
 WHERE a.query_locus_id = b.locus_id 
 AND a.subject_locus_id = c.locus_id
@@ -251,7 +255,8 @@ AND a.subject_spacer_id = c.spacer_id
 AND a.query_spacer_id = ? 
 AND b.spacer_id = ? 
 AND a.query_locus_id = ?
-AND a.subject_locus_id = ?;
+AND a.subject_locus_id = ?
+AND a.pident >= ?
 ";
 	print STDERR "$query\n" if $verbose;
 	
@@ -271,12 +276,14 @@ AND a.subject_locus_id = ?;
 		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id2}}){
 			$locus_id2 = $locus_id;
 			}
+			
 		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
 			#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2; exit;
 			$sth->bind_param(1, $feat_id);
 			$sth->bind_param(2, $feat_id);			
 			$sth->bind_param(3, $locus_id1);			# query locus
 			$sth->bind_param(4, $locus_id2);			# subject locus
+			$sth->bind_param(5, $spacer_cutoff);
 			$sth->execute();
 			my $res = $sth->fetchall_arrayref();
 			
@@ -284,7 +291,12 @@ AND a.subject_locus_id = ?;
 			next unless @$res;
 			
 			# loading hash #
-			$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} = $res;
+			foreach my $row (@$res){
+				die " ERROR: feature IDs don't match"
+					unless $feat_id eq $$row[7];
+				my $sfeat_id = $$row[8];
+				$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$sfeat_id} = [@$row[0..4]];
+				}
 			}
 		}
 		#print Dumper %$compare_r; exit;
@@ -298,18 +310,17 @@ sub get_spacer_hclust{
 	my $query = "
 SELECT 
 c.spacer_start, c.spacer_end,
-d.spacer_start, d.spacer_end
+d.spacer_start, d.spacer_end,
+c.spacer_id, d.spacer_id
 FROM
-(SELECT a.locus_id, b.spacer_start, b.spacer_end,
-a.cluster_id
+(SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
 FROM spacer_hclust a, spacers b
 WHERE a.locus_id=b.locus_id
 AND a.spacer_id = b.spacer_id
 AND a.spacer_id= ?
 AND a.cutoff = ?
 AND a.locus_id = ?) c,
-(SELECT a.locus_id, b.spacer_start, b.spacer_end,
-a.cluster_id
+(SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
 FROM spacer_hclust a, spacers b
 WHERE a.locus_id=b.locus_id
 AND a.spacer_id=b.spacer_id
@@ -352,10 +363,14 @@ WHERE c.cluster_id = d.cluster_id
 			map{ push(@$_, $spacer_cutoff * 100) } @$res;
 			
 			# loading hash #
-			$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id} = $res;
+			foreach my $row (@$res){
+				my $sfeat_id = $$row[5];
+				$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$sfeat_id} = [@$row[0..3,$#$row]];
+				}
 			}
 		}
 		#print Dumper %$compare_r; exit;
+		#print "exit\n"; exit;
 	}
 
 sub load_dna_segs{
@@ -438,11 +453,13 @@ ITEP database. Used to get BLASTp info.
 
 =item -spacer
 
-Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['blast']
+Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['cluster']
 
 =item -cutoff
 
-Spacer clustering cutoff (if clustering used). [1]
+If -spacer 'cluster': Clustering cutoff. [1]
+
+If -spacer 'blast': blast pident cutoff. [100]
 
 =item -blastp
 

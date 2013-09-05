@@ -68,14 +68,14 @@ if($tree_in){
 	}
 
 # adjacency-based color formatting #
-if($compare_in){
-	my $compare_r = load_compare($compare_in);
+#if($compare_in){
+#	my $compare_r = load_compare($compare_in);
 	
-	check_adjacency($dna_segs_r, $dna_segs_order_r, $compare_r, \%color_mod, "spacer", $header_r)
-		if $spacer_color_opt == 2 || $spacer_color_opt == 3;
-	check_adjacency($dna_segs_r, $dna_segs_order_r, $compare_r, \%color_mod, "gene", $header_r)
-		if $gene_color_opt == 2 || $gene_color_opt == 3;
-	}
+check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer", $header_r)
+	if $spacer_color_opt == 2 || $spacer_color_opt == 3;
+check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "gene", $header_r)
+	if $gene_color_opt == 2 || $gene_color_opt == 3;
+#	}
 
 # editting colors #
 ## finding colors that need descriminating hexadecimal coloring ##
@@ -175,6 +175,67 @@ sub find_descrim_color{
 	}
 
 sub check_adjacency{
+# making adjacency list for taxa by color #
+	my ($dna_segs_r, $dna_segs_order_r, $color_mod_r, $feat, $header_r) = @_;
+
+	#print Dumper $dna_segs_r->{"spacer"}; exit;
+
+	# making and checking adjacency list #
+	foreach my $col (keys %{$dna_segs_r->{$feat}}){			# for each spacer, gene, or DR
+		#next if exists $color_mod_r->{$feat}{$col};		# next if color already assigned
+		
+		my %adjlist;
+		for my $i (0..($#$dna_segs_order_r-1)){				# order
+			my $dna_segs_id1 = $$dna_segs_order_r[$i];
+			my $dna_segs_id2 = $$dna_segs_order_r[$i+1];			
+			
+			if(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1} &&		# adjacent taxa found in same color
+				exists $dna_segs_r->{$feat}{$col}{$dna_segs_id2}){
+				$adjlist{$dna_segs_id1} = $dna_segs_id2;				# color must be found in adjacent 
+				#print Dumper $dna_segs_id1, $dna_segs_id2
+				#	if $dna_segs_id1 eq "3.F.A.2.12__cli74" || $dna_segs_id2 eq "3.F.A.2.12__cli74";
+				}
+			elsif(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1}){	# if 'loner'
+				$adjlist{$dna_segs_id1} = 0;
+				}
+			}
+			#print Dumper $col, %adjlist;
+			
+		# checking adjacencies #
+		my $adjcnt=0;			# number of adjacency strings
+		my $i = 0;
+		my $adjlen = 0;											# total adjacency length; for checking 'loners'
+		while(1){												# finding 1st adjacency; moving through dna_seg_order
+			last if $i >= $#$dna_segs_order_r;
+			if(exists $adjlist{$$dna_segs_order_r[$i]}){		# found adjacency or loner; following
+				$adjlen++;										# length of adjacency
+				
+				# following adjacency #
+				while(1){										# last in adjacency
+					$i++;
+					if(exists $adjlist{$$dna_segs_order_r[$i]}){
+						$adjlen++ if $adjlist{$$dna_segs_order_r[$i]};				
+						}
+					else{
+						last;
+						}
+					}
+				# counting adjacency if len > 1 #
+				$adjcnt++;
+				}
+			$i++;
+			}	
+		#print Dumper "adjcnt: $adjcnt; adjlen: $adjlen";
+		$color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt <= 1;
+		}
+		
+		#exit;
+		#print Dumper %{$color_mod_r->{"spacer"}}; exit;
+		#print Dumper %debug; exit;
+		#print Dumper scalar keys %{$color_mod_r->{"spacer"}}; exit;
+	}
+
+sub check_adjacency_old{
 # making adjacency list for taxa by color #
 	my ($dna_segs_r, $dna_segs_order_r, $compare_r, $color_mod_r, $feat, $header_r) = @_;
 	

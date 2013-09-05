@@ -164,7 +164,7 @@ sub write_dna_segs{
 					$end,
 					1, 				# strand 
 					1,				# col
-					1, 0.2, 8, 1,	# plot formatting
+					1, 0.1, 8, 1,	# plot formatting
 					"blocks", 		# end of required columns
 					$taxon_name,
 					$locus_id,
