@@ -12,7 +12,6 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "verbose" => \$verbose,
