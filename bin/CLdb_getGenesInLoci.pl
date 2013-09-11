@@ -14,9 +14,13 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $quiet);
 my ($all_genes, $existing, $conflicting);
+my (@subtype, @taxon_id, @taxon_name);
 my $query = "";
 GetOptions(
 	   "database=s" => \$database_file,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name,
 	   "sql=s" => \$query,
 	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
 	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
@@ -42,8 +46,14 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
 # getting loci start - end from loci table (& genbank file names)
-my $loci_se_r = get_loci_start_end($dbh, $query);
+my $loci_se_r = get_loci_start_end($dbh, $query, $join_sql);
 
 # getting CDS info for CDS features in loci regions #
 my $loci_tbl_r = call_genbank_get_region($loci_se_r, $genbank_path);
@@ -269,10 +279,10 @@ sub call_genbank_get_region{
 
 sub get_loci_start_end{
 # getting locus start and locus end from loci table in db #
-	my ($dbh, $query) = @_;
+	my ($dbh, $query, $join_sql) = @_;
 	
 	my %loci_se;
-	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank, Operon_start, Operon_end, CRISPR_Array_Start, CRISPR_Array_End from loci $query where Operon_start is not null or Operon_end is not null";
+	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank_File, Operon_start, Operon_end, Array_Start, Array_End from loci where (Operon_start is not null or Operon_end is not null) $join_sql $query";
 
 	my $loci_se_r = $dbh->selectall_arrayref($cmd);	
 	die " ERROR: no locus start-end values found!\n" unless $loci_se_r;	
@@ -284,6 +294,15 @@ sub get_loci_start_end{
 	return \%loci_se;
 	}
 
+sub join_query_opts{
+# joining query options for selecting loci #
+	my ($vals_r, $cat) = @_;
+
+	return "" unless @$vals_r;	
+	
+	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+	return join("", " AND $cat IN (", join(", ", @$vals_r), ")");
+	}
 
 
 __END__

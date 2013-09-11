@@ -123,52 +123,77 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADARRAYS 1"
-.TH CLDB_LOADARRAYS 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_LOADSPACERBLAST 1"
+.TH CLDB_LOADSPACERBLAST 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
+CLdb_loadSpacerBlast.pl \-\- Parse blast output (xml format)
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadArrays.pl [flags]
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
-.PD 0
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+CLdb_loadSpacerBlast.pl [options] < file.blast.xml > file.blast.txt
+.SS "options"
+.IX Subsection "options"
+.IP "\-taxa_summary" 4
+.IX Item "-taxa_summary"
+Print a summary of taxa hit
+.IP "\-evalue" 4
+.IX Item "-evalue"
+e\-value cutoff (examples: '10' or '1e\-5'). [10]
+.IP "\-hsp_length" 4
+.IX Item "-hsp_length"
+Hit length (gaps included)
+.IP "\-query_length" 4
+.IX Item "-query_length"
+Query length (gaps included)
+.IP "\-percent_identity" 4
+.IX Item "-percent_identity"
+Percent identity (values from 0\-100)
+.IP "\-bit_score" 4
+.IX Item "-bit_score"
+Bit score
+.IP "\-header" 4
+.IX Item "-header"
+Print header? [\s-1TRUE\s0]
+.IP "\-sequence" 4
+.IX Item "-sequence"
+Subject sequence column? [\s-1FALSE\s0]
+.IP "\-type_strain" 4
+.IX Item "-type_strain"
+Just type strain hit (no 'uncultured')? [\s-1FALSE\s0
+.IP "\-help" 4
+.IX Item "-help"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadArrays.pl
+perldoc CLdb_loadSpacerBlast.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the CLdb database.
+Parse the xml output from blast+ (and probably blast).
 .PP
-Array file names are obtained from the loci table in the
-\&\s-1CRISPR\s0 database.
-.PP
-Array files must be in \f(CW$CLdb_HOME\fR/array/
+A summary of taxa hit can also be produced. The summary can be grouped by different categories.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-CLdb_loadArrays.pl \-d CLdb.sqlite
+.SS "Parse blast output"
+.IX Subsection "Parse blast output"
+CLdb_loadSpacerBlast.pl < file.blast.xml > file.blast.txt
+.SS "Make a taxa-hit summary count (grouping by hitID & queryID)"
+.IX Subsection "Make a taxa-hit summary count (grouping by hitID & queryID)"
+CLdb_loadSpacerBlast.pl \-taxa 1 < file.blast.xml > file.taxa\-hit.txt
+.SS "Make a taxa-hit summary stats (grouping by hitID)"
+.IX Subsection "Make a taxa-hit summary stats (grouping by hitID)"
+CLdb_loadSpacerBlast.pl \-taxa 2 < file.blast.xml > file.taxa\-hit.txt
+.SS "Make a taxa-hit summary stats (grouping by hitID & queryID)"
+.IX Subsection "Make a taxa-hit summary stats (grouping by hitID & queryID)"
+CLdb_loadSpacerBlast.pl \-taxa 3 < file.blast.xml > file.taxa\-hit.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+sharchaea.life.uiuc.edu:/home/git/NY_misc_perl/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

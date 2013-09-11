@@ -54,7 +54,7 @@ sub update_db{
 # updating scaffold info #
 	my ($dbh, $scaf_cnt_r) = @_;
 	
-	my $cmd = "Update Loci SET scaffold_count = ? where genbank = ?";
+	my $cmd = "Update Loci SET scaffold_count = ? where genbank_file = ?";
 	my $sql = $dbh->prepare($cmd);
 	foreach my $genbank (keys %$scaf_cnt_r){
 		
@@ -87,7 +87,7 @@ sub get_genbank_names{
 # querying genbank names from sqlite loci table #
 	my ($dbh) = @_;
 	
-	my $cmd = "SELECT distinct genbank from loci";
+	my $cmd = "SELECT distinct genbank_file from loci";
 	my $names_r = $dbh->selectall_arrayref($cmd);
 	
 	die " ERROR: no genbank names found!\n" unless $names_r;
