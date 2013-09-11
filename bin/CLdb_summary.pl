@@ -16,7 +16,7 @@ use DBI;
 			# subtype
 			# taxon_name/id
 	# total
-# number of spacers, DR, genes, leaderseqs, consensus seqs
+# number of spacers, DR, genes, leaders, consensus seqs
 	# by cutoff (when possible)
 		# broken down by:
 			# loci
@@ -90,15 +90,15 @@ else{ print STDERR "...no loci and/or spacer tables found, skipping spacer summa
 
 
 ## DR ##
-if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"directrepeats"} ){ 
-	if( exists $table_list_r->{"directrepeat_hclust"} && $table_list_r->{"directrepeat_hclust"} > 0){
-		sum_spacers_DR_hclust($dbh, "DirectRepeat", $group_by_r, \@cutoff);
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"drs"} ){ 
+	if( exists $table_list_r->{"dr_hclust"} && $table_list_r->{"dr_hclust"} > 0){
+		sum_spacers_DR_hclust($dbh, "DR", $group_by_r, \@cutoff);
 		}
 	else{
-		sum_spacers_DR($dbh, "DirectRepeat", $group_by_r);
+		sum_spacers_DR($dbh, "DR", $group_by_r);
 		}
 	}	
-else{ print STDERR "...no loci and/or DirectRepeat tables found, skipping DirectRepeat summary!\n"; }
+else{ print STDERR "...no loci and/or DR tables found, skipping DR summary!\n"; }
 
 
 ## genes ##
@@ -108,11 +108,11 @@ if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"genes"} ) {
 else{ print STDERR "...no loci and/or genes tables found, skipping gene summary!\n"; }
 
 
-## leaderseqs ##
-if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"leaderseqs"} ) {
-	sum_leaderseqs($dbh, $group_by_r);
+## leaders ##
+if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"leaders"} ) {
+	sum_leaders($dbh, $group_by_r);
 	}	
-else{ print STDERR "...no loci and/or leaderseqs tables found, skipping leader sequence summary!\n"; }
+else{ print STDERR "...no loci and/or leaders tables found, skipping leader sequence summary!\n"; }
 
 
 
@@ -122,7 +122,7 @@ exit;
 
 
 ### Subroutines
-sub sum_leaderseqs{
+sub sum_leaders{
 	my ($dbh, $group_by_r) = @_;
 
 	# by operon/array status #
@@ -131,22 +131,22 @@ sub sum_leaderseqs{
 	push @select, qw/b.Leader_group/;
 	my $select = join(",", @select);
 
-	my $q = "SELECT $select,'NA',count(*) FROM Loci a, Leaderseqs b WHERE a.locus_id=b.locus_id GROUP BY $select";
+	my $q = "SELECT $select,'NA',count(*) FROM Loci a, leaders b WHERE a.locus_id=b.locus_id GROUP BY $select";
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "leaderseqs", @$_), "\n";
-		}	
+		print join("\t", "leaders", @$_), "\n";
+		}
 
 	# total #
 	if(@$group_by_r){
 		my $group_by = join(",", @$group_by_r);
-		$q = "SELECT $group_by,count(*) FROM Loci a, Leaderseqs b WHERE a.locus_id=b.locus_id GROUP BY $group_by";
+		$q = "SELECT $group_by,count(*) FROM Loci a, leaders b WHERE a.locus_id=b.locus_id GROUP BY $group_by";
 		}
 	else{ $q = "SELECT count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id"; }
 
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
-		print join("\t", "leaderseqs", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
+		print join("\t", "leaders", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
 		}	
 	}
 
@@ -220,7 +220,7 @@ sub sum_loci{
 	# by operon/array status #
 	my @select;
 	push @select, @$group_by_r if @$group_by_r;
-	push @select, qw/a.operon_status a.CRISPR_array_status/;
+	push @select, qw/a.operon_status a.array_status/;
 	my $select = join(",", @select);
 
 	my $q = "SELECT $select,count(*) FROM Loci a, Loci b WHERE a.locus_id=b.locus_id GROUP BY $select";
@@ -312,7 +312,7 @@ Group summary by taxon_name?
 
 =item -cutoff
 
-Which Spacer/DirectRepeat clustering cutoffs to summarize (>= 1 argument)? [1]
+Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
 
 =item -v 	Verbose output. [FALSE]
 

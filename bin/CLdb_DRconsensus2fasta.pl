@@ -73,12 +73,12 @@ sub get_consensus{
 	# make query #
 	my $query;
 	if($iupac_consensus){
-		$query = "SELECT DirectRepeatConsensus.Locus_ID, DirectRepeatConsensus.Consensus_Sequence_IUPAC
-FROM DirectRepeatConsensus, Loci WHERE DirectRepeatConsensus.locus_id = Loci.locus_id $join_sql";
+		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_IUPAC
+FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
 		}
 	else{			# consensus threshold
-		$query = "SELECT DirectRepeatConsensus.Locus_ID, DirectRepeatConsensus.Consensus_Sequence_Threshold
-FROM DirectRepeatConsensus, Loci WHERE DirectRepeatConsensus.locus_id = Loci.locus_id $join_sql";
+		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_Threshold
+FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
 		}
 
 	$query = join(" ", $query, $extra_query);
