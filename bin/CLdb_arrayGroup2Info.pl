@@ -70,7 +70,7 @@ sub load_groups{
 		next if /^\s*$/;
 		
 		my @line = split /\t/;
-		$line[$group_column - 1] =~ s/^group//i;
+		$line[$group_column - 1] =~ s/^group\.//i;
 		die " ERROR: group column naming not reconcnized!\n"
 			unless $line[$group_column - 1] =~ /^\d+$/;
 		push @groups, $line[$group_column - 1];
@@ -90,7 +90,7 @@ sub get_arrays_join{
 	my $group_str = join(",", @$groups_r);
 	my $query;
 	if($spacer_bool){		# direct repeat
-		$query = "SELECT b.repeat_group, b.repeat_ID, a.Locus_ID, a.Taxon_name, a.Taxon_id, a.Subtype FROM loci a, directrepeats b WHERE a.locus_id = b.locus_id $join_sql AND Repeat_group = ?";
+		$query = "SELECT b.DR_group, b.DR_ID, a.Locus_ID, a.Taxon_name, a.Taxon_id, a.Subtype FROM loci a, DRs b WHERE a.locus_id = b.locus_id $join_sql AND DR_group = ?";
 		}
 	else{					# spacer
 		$query = "SELECT b.spacer_group, b.spacer_ID, a.Locus_ID, a.Taxon_name, a.Taxon_id, a.Subtype FROM loci a, spacers b WHERE a.locus_id = b.locus_id $join_sql AND Spacer_group = ?";

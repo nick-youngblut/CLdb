@@ -244,10 +244,10 @@ sub get_unclassified_arrays{
 	
 	# make query #
 	my $query = "SELECT 
-directrepeats.Repeat_sequence,
+DRs.DR_sequence,
 loci.locus_id
-FROM directrepeats, loci 
-WHERE directrepeats.locus_id = loci.locus_id 
+FROM DRs, loci 
+WHERE DRs.locus_id = loci.locus_id 
 AND (loci.subtype IS NULL
 OR loci.subtype = \"\")
 $rogue_sql
@@ -286,11 +286,11 @@ sub get_classified_arrays{
 	
 	# make query #
 	my $query = "SELECT 
-directrepeats.Repeat_sequence,
+DRs.DR_sequence,
 loci.subtype,
 loci.locus_id
-FROM directrepeats, loci 
-WHERE directrepeats.locus_id = loci.locus_id 
+FROM DRs, loci 
+WHERE DRs.locus_id = loci.locus_id 
 AND loci.operon_status = 'intact'
 AND loci.subtype IS NOT NULL
 ";

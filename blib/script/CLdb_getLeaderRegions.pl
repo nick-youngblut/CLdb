@@ -310,7 +310,7 @@ sub print_itree{
 sub get_DR_seq{
 	my ($dbh, $array_se_r) = @_;
 
-	my $cmd = "SELECT repeat_id, repeat_start, repeat_end, repeat_group from DirectRepeats where Locus_ID = ?";
+	my $cmd = "SELECT DR_id, DR_start, DR_end, DR_group from DRs where Locus_ID = ?";
 	my $sql = $dbh->prepare($cmd);
 	
 	my %leader_loc;
@@ -380,7 +380,7 @@ sub get_array_se{
 # getting the array start-end from loci table #
 	my ($dbh, $join_sql, $extra_query) = @_;
 	
-	my $cmd = "SELECT Locus_ID, crispr_array_start, crispr_array_end, genbank, scaffold FROM loci WHERE (crispr_array_start is not null or crispr_array_end is not null) $join_sql $extra_query";
+	my $cmd = "SELECT Locus_ID, array_start, array_end, genbank_file, scaffold FROM loci WHERE (array_start is not null or array_end is not null) $join_sql $extra_query";
 	my $ret = $dbh->selectall_arrayref($cmd);
 
 	my %array_se;
