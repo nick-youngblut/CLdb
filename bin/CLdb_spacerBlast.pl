@@ -51,6 +51,9 @@ my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
 	or die " Can't connect to $database_file!\n";
 
+# getting all taxon_name/taxon_id from loci table #
+my $taxon_name_id_r = get_taxon_name_id($dbh);
+
 # loading subject #
 my $sub_in_r = load_subject(\@subject_in);
 
@@ -65,10 +68,11 @@ my $DR_fasta = call_CLdb_array2fasta($database_file, \@subtype, \@taxon_id, \@ta
 foreach my $subject (@$sub_in_r){
 	print STDERR "### BLAST subject: \"$$subject[0]\" ###\n";
 	
-	unless ($$subject[1] || $$subject[2]){
-		print STDERR " WARNING: no Taxon_ID or Taxon_Name provided for $$subject[0]! Skipping!\n";
-		next;
-		}
+	# checking for existing taxon_name / taxon_in in CLdb #
+	#next if check_taxon_name_id($taxon_name_id_r, \@subject_in);
+	
+	# change line breaks #
+	conv_line_breaks($$subject[0]);
 	
 	# make blast db #
 	my $blast_db = make_blast_db($subject, $blast_dir);
@@ -80,22 +84,71 @@ foreach my $subject (@$sub_in_r){
 	# filtering blast #
 	my $filt_blast_out = call_CLdb_spacerBlastDRFilter($blast_dir, $spacer_blast_out, $DR_blast_out, $range);
 	
-		#exit if $$subject[0] eq "/home/gtl-shared/annotation/130614_RAST_gtlenv-a5udCFS/fasta/Methanosarcina_sp_2.H.T.1A.8.fna";
-	
 	# loading blast into db #
 	call_CLdb_loadBlastHits($filt_blast_out, $database_file, $subject);
 	}
 
-
 ### Subroutines
+sub check_taxon_name_id{
+	my ($taxon_name_id_r, $subject) = @_;
+	
+	unless ($$subject[1] || $$subject[2]){
+		print STDERR " WARNING: no Taxon_ID or Taxon_Name provided for $$subject[0]! Skipping!\n";
+		next;
+		}
+		
+	unless (exists $taxon_name_id_r->{"taxon_id"}{$$subject[1]} ||
+			exists $taxon_name_id_r->{"taxon_name"}{$$subject[2]} ){
+		if($$subject[2]){		# taxon_name
+			print STDERR " WARNING: '$$subject[2]' does not exist in CLdb Loci table! Skipping! Use '-v' to get a list of taxon_name values in the Loci table\n";	
+			print join("\n", "### taxon_name values in loci table ###", keys %{$taxon_name_id_r->{"taxon_name"}}), "\n" if $verbose;
+			return 1;
+			}
+		elsif($$subject[1]){	# taxon_id
+			print STDERR " WARNING: '$$subject[1]' does not exist in CLdb Loci table! Skipping! Use '-v' to get a list of taxon_name values in the Loci table\n";
+			print join("\n", "### taxon_id values in loci table ###", keys %{$taxon_name_id_r->{"taxon_id"}}), "\n" if $verbose;
+			return 1;
+			}
+		else{ die " LOGIC ERROR: $!\n"; }
+		}
+	return 0;
+	}
+
+sub get_taxon_name_id{
+	my ($dbh) = @_;
+	my $q = "SELECT taxon_name, taxon_id from loci";
+	my $res = $dbh->selectall_arrayref($q);
+	
+	my %taxon_name_id;
+	foreach my $row (@$res){
+		$taxon_name_id{"taxon_name"}{$$row[0]} = 1 if $$row[0];
+		$taxon_name_id{"taxon_id"}{$$row[1]} = 1 if $$row[1];
+		}
+	
+		#print Dumper %taxon_name_id; exit;
+	return \%taxon_name_id;
+	}
+
+sub conv_line_breaks{
+	my ($subject_fasta) = @_;
+	die " ERROR: $subject_fasta not found!\n" unless -e $subject_fasta;
+	
+	# windows to unix #
+	my $cmd = "perl -pi -e 's/\\r\$//' $subject_fasta";
+	`$cmd`;
+
+	# mac to unix #
+	$cmd = "perl -pi -e 's/\\r//' $subject_fasta";
+	`$cmd`;	
+	}
+
 sub call_CLdb_loadBlastHits{
 	my ($filt_blast_out, $database_file, $subject) = @_;
 
-	#my $cmd = "perl ~/perl/projects/CLdb/bin/CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
-	my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
+	my $cmd = "perl ~/perl/projects/CLdb/bin/CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
+	#my $cmd = "CLdb_loadBlastHits.pl -database $database_file -subject $$subject[0] < $filt_blast_out";
 	$cmd = join(" ", $cmd, "-taxon_id", $$subject[1]) if $$subject[1];
 	$cmd = join(" ", $cmd, "-taxon_name", $$subject[2]) if $$subject[2];
-		#print Dumper $cmd; exit;
 	system($cmd);
 	}
 
@@ -105,7 +158,7 @@ sub call_CLdb_spacerBlastDRFilter{
 	
 	(my $out = $spacer_blast_out) =~ s/\.[^.]+$|$/_filt.txt/;
 	my $cmd = "CLdb_spacerBlastDRFilter.pl -a -r $range $spacer_blast_out $DR_blast_out > $out";
-		#print Dumper $cmd; exit;
+		#print Dumper $cmd; 
 	`$cmd`;
 	
 	return $out;
