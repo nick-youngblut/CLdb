@@ -51,9 +51,6 @@ my $fasta_aln_r = load_fasta($ARGV[1]);
 # determining orientation of aligned sequence #
 my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
 
-# getting array start-end #
-##my $array_se_r = get_array_se($dbh, $ori_r);
-
 # determining trim start-end #
 trim_se($fasta_aln_r, $ori_r, $trim_length, $rm_gap);
 
@@ -83,7 +80,7 @@ sub update_loci_table{
 
 	# preparing sql #	
 	my $cmd = "UPDATE Loci SET 
-locus_start=?, locus_end=?, operon_start=?, operon_end=?, CRISPR_array_start=?, CRISPR_array_end=? 
+locus_start=?, locus_end=?, operon_start=?, operon_end=?, array_start=?, array_end=? 
 where locus_id = ?";
 	$cmd =~ s/[\r\n]//g;
 	my $sql = $dbh->prepare($cmd);
@@ -103,7 +100,6 @@ where locus_id = ?";
 			}
 		else{ $cnt++; }
 		}
-	
 
 	
 	print STDERR "...Number of entries updated in loci table: $cnt\n"
@@ -228,15 +224,14 @@ sub get_loci_table{
 # getting loci table for updating #
 	my ($dbh) = @_;
 	
-	my $cmd = "SELECT locus_id, locus_start, locus_end, operon_start, operon_end, CRISPR_array_start, CRISPR_array_end from loci";
+	my $cmd = "SELECT locus_id, locus_start, locus_end, operon_start, operon_end, array_start, array_end from loci";
 	my $ret = $dbh->selectall_arrayref($cmd);
 	
 	my %loci_tbl;
 	foreach my $row (@$ret){
 		$loci_tbl{$$row[0]} = [@$row[1..$#$row]];
 		}
-	
-		#print Dumper %loci_tbl; exit;
+		
 	return \%loci_tbl;
 	}
 
@@ -244,12 +239,15 @@ sub load_leader{
 # loading leader info into db #
 	my ($dbh, $fasta_aln_r) = @_;
 	
-	my $cmd = "INSERT INTO LeaderSeqs(Locus_ID, Leader_start, Leader_end, Leader_sequence) values (?,?,?,?)";
+	my $cmd = "INSERT INTO Leaders(Locus_ID, Leader_start, Leader_end, Leader_sequence) values (?,?,?,?)";
 	my $sql = $dbh->prepare($cmd);
 	
 	my $cnt = 0;
 	foreach my $locus (keys %$fasta_aln_r){
 		(my $tmp_locus = $locus) =~ s/cli\.//;
+		#print Dumper ($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
+		#					int ${$fasta_aln_r->{$locus}{"meta"}}[4], 
+		#					$fasta_aln_r->{$locus}{"seq"}); 
 		$sql->execute($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
 							int ${$fasta_aln_r->{$locus}{"meta"}}[4], 
 							$fasta_aln_r->{$locus}{"seq"});
@@ -260,7 +258,7 @@ sub load_leader{
 		}
 	$dbh->commit;
 
-	print STDERR "...Number entries added/updated in leaderseqs table: $cnt\n";
+	print STDERR "...Number entries added/updated in leaders table: $cnt\n";
 	}
 
 sub trim_se{
@@ -360,7 +358,7 @@ sub get_array_se{
 # getting the array start-end from loci table #
 	my ($dbh, $ori_r) = @_;
 	
-	my $cmd = "SELECT crispr_array_start, crispr_array_end FROM loci where locus_id = ?";
+	my $cmd = "SELECT array_start, array_end FROM loci where locus_id = ?";
 	my $sql = $dbh->prepare($cmd);
 
 	my %array_se;
