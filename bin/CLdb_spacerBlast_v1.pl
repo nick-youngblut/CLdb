@@ -16,7 +16,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $spacer_bool, $by_group);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
-my $blast_params = "-evalue 0.00001";
+my $blast_params = "-evalue 0.00001";		# 1e-5
 my $extra_query = "";
 my $range = 30;		# spacer-DR blast hit overlap (bp)
 my $Ncpu = 1;
@@ -29,7 +29,7 @@ GetOptions(
 	   "blast=s" => \$blast_params,
 	   "subject=s{,}" => \@subject_in,		# blast subject
 	   "range=i" => \$range,
-	   "cpu=i" => \$Ncpu,
+	   "num_thread=i" => \$Ncpu,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
