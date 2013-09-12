@@ -185,32 +185,34 @@ HERE
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
-spacer_DR	TEXT	NOT NULL,
-Group_ID	TEXT	NOT NULL,
-S_taxon_ID	TEXT,
-S_taxon_name	TEXT,
-S_accession	TEXT,
-S_GI	TEXT,
-pident	REAL	NOT NULL,
-length	INTEGER	NOT NULL,
-mismatch	INTEGER	NOT NULL,
-gapopen	INTEGER	NOT NULL,
-qstart	INTEGER	NOT NULL,
-qend	INTEGER	NOT NULL,
-sstart	INTEGER	NOT NULL,
-send	INTEGER	NOT NULL,
-evalue	TEXT	NOT NULL,
-bitscore	INTEGER	NOT NULL,
-slen	INTEGER	NOT NULL,
-array_hit	TEXT,
-date	DATE,
-UNIQUE( spacer_DR, Group_ID, S_taxon_ID, S_taxon_name, S_accession, sstart, send)
+blast_id    TEXT    NOT NULL,
+spacer_DR    TEXT    NOT NULL,
+Group_ID    TEXT    NOT NULL,
+S_taxon_ID    TEXT,
+S_taxon_name    TEXT,
+S_accession    TEXT,
+S_GI    TEXT,
+sseqid    TEXT    NOT NULL,
+pident    REAL    NOT NULL,
+len    INTEGER    NOT NULL,
+mismatch    INTEGER    NOT NULL,
+gapopen    INTEGER    NOT NULL,
+qstart    INTEGER    NOT NULL,
+qend    INTEGER    NOT NULL,
+sstart    INTEGER    NOT NULL,
+send    INTEGER    NOT NULL,
+evalue    TEXT    NOT NULL,
+bitscore    INTEGER    NOT NULL,
+slen    INTEGER    NOT NULL,
+array_hit    TEXT,
+run_date    DATE,
+UNIQUE( blast_id )
 ON CONFLICT REPLACE
 );
 
 CREATE TRIGGER blast_update_trg AFTER INSERT ON blast_hits
 begin
-  UPDATE blast_hits SET date = DATETIME('NOW') where rowid = new.rowid;
+  UPDATE blast_hits SET run_date = DATETIME('NOW') where rowid = new.rowid;
 end;
 
 HERE

@@ -17,10 +17,9 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $query_file);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
-my $blast_params = "-evalue 0.00001";		# 1e-5
 my $extra_query = "";
-my $range = 30;		# spacer-DR blast hit overlap (bp)
-my $Ncpu = 1;
+my $blast_params = "-evalue 0.00001";		# 1e-5
+my $num_threads = 1;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "fasta=s" => \$query_file,
@@ -29,7 +28,7 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "blast=s" => \$blast_params,
-	   "num_thread=i" => \$Ncpu,
+	   "num_threads=i" => \$num_threads,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -56,7 +55,9 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 	or die " Can't connect to $database_file!\n";
 
 # checking fasta query (query_file); determine if repeat or spacer #
-my $spacer_DR = check_query_fasta($query_file);		# spacer|DR
+check_query_fasta($query_file);		# spacer|DR
+
+
 
 # subject selection #
 ## making blast directory ##
@@ -70,32 +71,158 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 ## getting/making fasta files for all selected subject taxa ##
 my $subject_loci_r = get_loci_fasta_genbank($dbh, $join_sql);
+
 my $fasta_dir = make_fasta_dir($db_path);
-genbank2fasta($subject_loci_r, $fasta_dir);
+my $loci_update = genbank2fasta($subject_loci_r, $fasta_dir);
+update_loci($dbh, $subject_loci_r) if $loci_update;
 
-## making blast dbs from subject fasta files (foreach subject) ##
+## making blast DBs from subject fasta files (foreach subject) ##
+make_blast_db($subject_loci_r, $fasta_dir, $blast_dir);
 
-
-# blasting (foreach subject) #
+# blasting (foreach subject blast DB) #
 ## blastn & loading blastn output ##
-
+blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
 
 
 ### Subroutines
+sub blastn_call_load{
+# calling blastn, loading blast results directly into DB #
+	my ($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file) = @_;
+	
+	# status #
+	print STDERR "...BLASTing each subject genome database\n";
+	
+	# preparing sql #
+	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore slen/;
+		
+	# blasting each subject genome #
+	my $insert_cnt = 0;				# summing number of entries for all subjects 
+	foreach my $row (@$subject_loci_r){
+		next unless $$row[3];			# skipping if no fasta & thus no blast db
+		my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore slen";
+		my $cmd = "blastn -task 'blastn-short' -outfmt '$outfmt' -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
+
+		# blasting and loading db #
+		## blast ##
+		open PIPE, $cmd or die $!;
+		while(<PIPE>){
+			chomp;
+			next if /^\s*$?/;
+			
+			my @line = split /\t/;
+			
+			# spacer or DR? #
+			(my $spacer_DR = $line[0]) =~ s/_.+//;
+			$line[0] =~ s/.+\.//;
+			
+			# adding input values #
+			unshift @line, ($spacer_DR, $$row[0], $$row[1]);
+			my $blast_id = join("_", @line[(0..4,11..12)] );
+			unshift @line, $blast_id;
+			
+			# quoting #
+			$line[0] = $dbh->quote($line[0]);
+			$line[1] = $dbh->quote($line[1]);
+			$line[2] = $dbh->quote($line[2]);
+			$line[5] = $dbh->quote($line[5]);
+			
+			# making command #
+			my $sql = join(" ", "INSERT INTO Blast_hits( ",
+					join(",", @blast_hits_col),
+					") VALUES( ",
+					join(",", @line), 
+					")" );
+			
+			# loading line #
+			$dbh->do( $sql );
+			if($DBI::err){
+				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
+				}
+			else{ $insert_cnt++; }
+			}
+		close PIPE;
+		}
+	$dbh->commit();
+	
+	print STDERR "...Number of blast entries added to CLdb: $insert_cnt\n";
+	}
+
+sub make_blast_db{
+# foreach fasta, making a blast DB #
+	my ($subject_loci_r, $fasta_dir, $blast_dir) = @_;
+	
+	# sanity check #
+	die " ERROR: cannot find $fasta_dir!\n" unless -d $fasta_dir;
+	die " ERROR: cannot find $blast_dir!\n" unless -d $blast_dir;
+	
+	# status #
+	print STDERR "...making blast databases in $blast_dir\n";
+	
+	# making blast dbs #
+	foreach my $row (@$subject_loci_r){
+		next unless $$row[3]; 		# next unless fasta file present
+
+		# sanity check #
+		die " ERROR: cannnot find $fasta_dir/$$row[3]!"
+			unless -e "$fasta_dir/$$row[3]"; 		
+		
+		# making symlink in blast directory #
+		unless(-e "$blast_dir/$$row[3]" || -l "$blast_dir/$$row[3]"){
+			symlink("$fasta_dir/$$row[3]", "$blast_dir/$$row[3]") or die $!;
+			}
+		
+		# making blast db #
+		my $cmd = "makeblastdb -dbtype nucl -in $blast_dir/$$row[3]";
+		`$cmd`;		
+		}
+	}
+
+sub update_loci{
+# updating loci w/ fasta file info for newly written fasta #
+	my ($dbh, $subject_loci_r) = @_;
+	
+	# status#
+	print STDERR "...updating Loci table with newly made fasta files\n";
+	
+	# sql #
+	my $q = "UPDATE loci SET fasta_file=? WHERE genbank_file=?";
+	my $sth = $dbh->prepare($q);
+	
+	foreach my $row (@$subject_loci_r){
+		next unless $$row[3]; 						# if no fasta_file; skipping
+		my @parts = File::Spec->splitpath($$row[3]);
+
+		$sth->bind_param(1, $parts[2]);				# fasta_file (just file name)
+		$sth->bind_param(2, $$row[2]);				# array_file
+		$sth->execute( );
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$row), "\n";
+			}
+		}
+	$dbh->commit();
+	
+	print STDERR "...updates committed!\n";
+	}
+
 sub genbank2fasta{
 # getting fasta from genbank unless -e fasta #
 	my ($subject_loci_r, $fasta_dir) = @_;
 	
+	my $update_cnt = 0;
 	foreach my $loci (@$subject_loci_r){
 		if(! $$loci[3]){		# if no fasta file
 			print STDERR " WARNING: no fasta for taxon_name->$$loci[0] taxon_id->$$loci[1]! Trying to extract sequence from genbank...\n";
 			$$loci[3] = genbank2fasta_extract($$loci[2], $fasta_dir);
+			$update_cnt++;
 			}
-		elsif($$loci[3] && ! -e $$loci[3]){
+		elsif($$loci[3] && ! -e "$fasta_dir/$$loci[3]"){
 			print STDERR " WARNING: cannot find $$loci[3]! Trying to extract sequence from genbank...\n";
 			$$loci[3] = genbank2fasta_extract($$loci[2], $fasta_dir);
+			$update_cnt++;
 			}
 		}
+	return $update_cnt;		# if >0; update loci tbl
 	}
 	
 sub genbank2fasta_extract{
@@ -109,10 +236,14 @@ sub genbank2fasta_extract{
 	# output #
 	my @parts = File::Spec->splitpath($genbank_file);
 	$parts[2] =~ s/\.[^.]+$|$/.fasta/;
-	open OUT, ">$fasta_dir/$parts[2]" or die $!;
+	my $fasta_out = "$fasta_dir/$parts[2]";
+	open OUT, ">$fasta_out" or die $!;
 	
 	# writing #
+	my $seq_cnt = 0;
 	while(my $seqo = $seqio->next_seq){
+		$seq_cnt++;
+		
 		# seqID #
 		my $scafID = $seqo->display_id;
 		print OUT ">$scafID\n";
@@ -121,19 +252,30 @@ sub genbank2fasta_extract{
 			}
 		}
 	close OUT;
+	
+	# if genome seq found and fasta written, return fasta #
+	if($seq_cnt == 0){
+		print STDERR " WARNING: no genome sequnece found in Genbank file: $genbank_file!\nSkipping BLAST!\n";
+		unlink $fasta_out;
+		return 0;
+		}
+	else{ 
+		print STDERR "...fasta file extracted from $genbank_file written: $fasta_out\n";
+		return $fasta_out; 
+		}
 	}
 
 sub get_loci_fasta_genbank{
 # querying CLdb for fasta & genbank files for each taxon #
 	my ($dbh, $join_sql) = @_;
 	
-	my $q = "SELECT taxon_name, taxon_id, genbank_file, fasta_file FROM loci $join_sql GROUP BY taxon_name, taxon_id";
+	my $q = "SELECT taxon_name, taxon_id, genbank_file, fasta_file FROM loci WHERE locus_id=locus_id $join_sql GROUP BY taxon_name, taxon_id";
 	
 	my $res = $dbh->selectall_arrayref($q);
 	die " ERROR: no matches found to query!\n"
 		unless @$res;
 
-		# print Dumper @$res;
+		#print Dumper @$res; exit;
 	return $res;
 	}
 
@@ -183,22 +325,13 @@ sub check_query_fasta{
 	
 	my %spacer_DR;
 	while(<IN>){
-		if(/^>/){
+		if (/^>/){
 			die " ERROR: $error\n" unless /(spacer|DR)_group\./i;
-			
-			if(/spacer/i){ $spacer_DR{"spacer"} = 1; }
-			elsif(/DR/i){ $spacer_DR{"DR"} = 1;}
-			else{ $spacer_DR{"NA"} = 1;}
 			}
 		}
 	close IN;
 	
-	die " ERROR: $error\n" if exists $spacer_DR{"NA"} || scalar keys %spacer_DR > 1;
-	
-	foreach my $key (keys %spacer_DR){
-		return $key; 
-		last;
-		}
+	die " ERROR: $error\n" if exists $spacer_DR{"NA"};
 	}
 
 
@@ -208,23 +341,23 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlast.pl -- wrapper for spacer blasting
+CLdb_spacerBlastGenome.pl -- BLASTn-short of spacers and/or DRs against a genome in CLdb
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlast.pl [flags]
+CLdb_spacerBlastGenome.pl [flags]
 
 =head2 Required flags
 
 =over
 
-=item -database
+=item -database  <char>
 
 CLdb database.
 
-=item -subject
+=item -fasta  <char>
 
-Either subject file or 1-3 arguments (see DESCRIPTION).
+A fasta of either spacer or DR group sequences (use: CLdb_array2fasta.pl -g)
 
 =back
 
@@ -232,81 +365,87 @@ Either subject file or 1-3 arguments (see DESCRIPTION).
 
 =over
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -blast
+=item -blast  <char>
 
 BLASTn parameters (besides required flags). [-evalue 0.00001]
 
-=item -range
-
-Range allowable between spacer & DR blast hit (bp). [30]
-
-=item -cpu
+=item -num_threads  <int>
 
 Use for '-num_threads' parameter in BLASTn. [1]
 
-=item -v	Verbose output
+=item -v  <bool>
 
-=item -h	This help message
+Verbose output
+
+=item -h  <bool>
+
+This help message
 
 =back
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlast.pl
+perldoc CLdb_spacerBlastGenome.pl
 
 =head1 DESCRIPTION
 
-A wrapper around other CLdb scripts for blasting all or
-a subset of spacer groups.
+Run blastn-short against one or more genomes
+already in CLdb. Specific genomes can be
+selected by subtype ('-subtype'), taxon_name
+('-taxon_name'), taxon_id ('taxon_id'), or
+other sql refinements of the query ('-query').
 
-=head2 The script's procedure is:
+Genomes are obtained from the 'fasta_file'
+values in the loci table.
+Fasta files should be in the CLdb/fasta/ directory 
+(copied by CLdb_loadLoci.pl).
+If no fasta file is found, the genome sequence
+is extracted from the genbank file ('genbank_file'
+in loci table). The genome is skipped if still 
+no sequence can be found.
 
-=over
+Spacer and DR groups can be blasted at the same time.
 
-=item * Select spacer & direct repeat (DR) groups (can refine to particular taxa & subtypes)
-
-=item * BLASTn-short of spacer & DR groups against provide subjects (e.g. genomes)
-
-=item * Determining which spacer blast hits are hitting CRISPR arrays (if DRs hit adjacent)
-
-=item * Adding the blast hits and subjects (sequences with a hit) to CLdb
-
-=back
-
-=head2 '-subject' flag
-
-Provide either a subject fasta file and a Taxon_ID and/or a Taxon_Name,
-or provide a tab-delimited file (3 columns) with subject fasta files and
-a Taxon_IDs and/or Taxon_Names (columns: fasta_file, Taxon_id, Taxon_Name).
-
-Example1 "-subject ecoli.fna 666666.452 escherichia_coli"
-
-Example2 "-subject ecoli.fna '' escherichia_coli"
-
-The Taxon_IDs and Taxon_names can be used, for example, to see if CRISPR
-spacers are hitting other places in the same genome (and not in other CRISPR arrays).
+It may be best to blast all DRs at once for 
+subsequent spacer array screening (spacers that
+have adjacent DR hits are considered to be located
+in CRISPR arrays and are thus not protospacers).
 
 =head1 EXAMPLES
 
-=head2 Spacer blast of subtype I-B I-C spacers against Ecoli
+=head2 Blasting all spacers against all genomes in CLdb
 
-CLdb_spacerBlast.pl -da CLdb.sqlite -subtype I-B I-C -subject ecoli.fna 666666.452 Escherichia_coli
+CLdb_array2fasta.pl -g > all_spacer_groups.fna
+
+CLdb_spacerBlastGenome.pl -d CLdb.sqlite -f all_spacer_groups.fna
+
+=head2 Blasting all DRs against all genomes in CLdb
+
+CLdb_array2fasta.pl -r -g > all_DR_groups.fna
+
+CLdb_spacerBlastGenome.pl -d CLdb.sqlite -f all_DR_groups.fna
+
+=head2 Blasting all spacers against 1 genome
+
+CLdb_array2fasta.pl -g > all_spacer_groups.fna
+
+CLdb_spacerBlastGenome.pl -d CLdb.sqlite -f all_spacer_groups.fna -taxon_name "e.coli"
 
 =head1 AUTHOR
 
