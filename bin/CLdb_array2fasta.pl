@@ -50,7 +50,7 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my $arrays_r = get_arrays_join($dbh, $spacer_bool, $extra_query, $join_sql);
 
 # writing fasta #
-write_arrays_fasta($arrays_r);
+write_arrays_fasta($arrays_r, $spacer_bool);
 
 # disconnect #
 $dbh->disconnect();
@@ -60,12 +60,17 @@ exit;
 ### Subroutines
 sub write_arrays_fasta{
 # writing arrays as fasta
-	my ($arrays_r) = @_;
+	my ($arrays_r, $spacer_bool) = @_;
 	
 	foreach my $locus_id (keys %$arrays_r){
 		foreach my $x_id (keys %{$arrays_r->{$locus_id}}){
-			if($by_group){
-				print join("\n", ">Group.$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+			if($by_group){				
+				if($spacer_bool){
+					print join("\n", ">DR_Group.$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+					}
+				else{
+					print join("\n", ">Spacer_Group.$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+					}
 				}
 			else{
 				print join("\n", ">cli.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";

@@ -93,7 +93,7 @@ Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL,
 UNIQUE (Taxon_ID, Taxon_name, Scaffold, Locus_Start, Locus_End)
-ON CONFLICT REPLACE
+ON CONFLICT IGNORE
 );
 
 HERE

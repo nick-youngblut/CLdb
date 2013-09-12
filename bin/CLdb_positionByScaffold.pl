@@ -69,10 +69,10 @@ foreach my $unmerged (keys %$gen_list_r){
 	my %tables_oi;
 	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
 		if exists $tables_r->{"spacers"};
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "directrepeats", "repeat")
-		if exists $tables_r->{"directrepeats"};
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "leaderseqs", "leader", "locus")
-		if exists $tables_r->{"leaderseqs"};
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "drs", "dr")
+		if exists $tables_r->{"drs"};
+	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "leaders", "leader", "locus")
+		if exists $tables_r->{"leaders"};
 	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "genes", "gene")
 		if exists $tables_r->{"genes"};
 	
@@ -83,10 +83,10 @@ foreach my $unmerged (keys %$gen_list_r){
 	update_loci($dbh, $loci_r);
 	update_other_table($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
 		if exists $tables_r->{"spacers"};
-	update_other_table($dbh, $loci_r, \%tables_oi, "directrepeats", "repeat")
-		if exists $tables_r->{"directrepeats"};
-	update_other_table($dbh, $loci_r, \%tables_oi, "leaderseqs", "leader", "locus")
-		if exists $tables_r->{"leaderseqs"};
+	update_other_table($dbh, $loci_r, \%tables_oi, "drs", "dr")
+		if exists $tables_r->{"drs"};
+	update_other_table($dbh, $loci_r, \%tables_oi, "leaders", "leader", "locus")
+		if exists $tables_r->{"leaders"};
 	update_other_table($dbh, $loci_r, \%tables_oi, "genes", "gene")
 		if exists $tables_r->{"genes"};
 	}
@@ -110,7 +110,7 @@ sub update_loci_genbank{
 	my ($dbh, $gen_list_r) = @_;
 	print STDERR "...updating genbank file names in loci table\n";
 	
-	my $cmd = "UPDATE loci SET genbank=? where genbank=?";		# merged to unmerged
+	my $cmd = "UPDATE loci SET genbank_file=? where genbank_file=?";		# merged to unmerged
 	my $sql = $dbh->prepare($cmd);
 
 	my $cnt = 0;
@@ -215,7 +215,7 @@ sub update_loci{
 	my ($dbh, $loci_r) = @_;
 	
 	my $cmd = "UPDATE Loci SET scaffold=?, locus_start=?, locus_end=?,
-operon_start=?, operon_end=?, CRISPR_array_start=?, CRISPR_array_end=?
+operon_start=?, operon_end=?, array_start=?, array_end=?
 WHERE locus_id=?";
 	$cmd =~ s/[\n\r]/ /g;
 	
@@ -334,7 +334,7 @@ sub check_scaffold_span{
 sub get_other_tables_oi{
 # other tables that need position updating:
 ## spacers
-## directrepeats
+## drs
 ## leaderseqs
 ## genes
 
@@ -360,8 +360,8 @@ sub get_loci_oi{
 	my @parts = File::Spec->splitpath($merged_genbank);
 	
 	my $cmd = "SELECT locus_id, scaffold, locus_start, locus_end, 
-operon_start, operon_end, CRISPR_array_start, CRISPR_array_end
-FROM Loci where genbank = \'$parts[2]\'";
+operon_start, operon_end, array_start, array_end
+FROM Loci where genbank_file = \'$parts[2]\'";
 	$cmd =~ s/[\n\r]/ /g;
 	my $ret = $dbh->selectall_arrayref($cmd);
 	
