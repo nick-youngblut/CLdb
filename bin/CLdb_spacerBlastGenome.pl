@@ -95,7 +95,7 @@ sub blastn_call_load{
 	print STDERR "...BLASTing each subject genome database\n";
 	
 	# preparing blast_hits insert #
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore slen qlen frag extension/;
+	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen frag extension/;
 		
 	# blasting each subject genome #
 	my $insert_cnt = 0;				# summing number of entries for all subjects 

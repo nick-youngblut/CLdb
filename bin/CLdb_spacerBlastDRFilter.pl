@@ -8,96 +8,157 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use Set::IntervalTree;
+use DBI;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $array_bool);
+my ($verbose, $array_bool, $database_file, $full_length);
 my $range = 30;
+my $DR_cnt = 2;				# how many DR hit must land next to spacer?
 GetOptions(
-	   "range=i" => \$range,
-	   "array" => \$array_bool, 			# just provide a column stating in_array or not
+	   "database=s" => \$database_file,
+	   "range=i" => \$range,			# range beyond hit to consider overlap
+	   "full" => \$full_length, 		# just full length hits
+	   "DR=i" => \$DR_cnt,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 ### I/O error & defaults
-die " ERROR: provide a spacer blast table & a direct repeat blast table!\n"
-	unless $ARGV[0] && $ARGV[1];		# spacer blast, DR blast
-$range++;
+die " ERROR: provide a database file name!\n"
+	unless $database_file;
+die " ERROR: cannot find database file!\n"
+	unless -e $database_file;
 
 ### MAIN
-my $itrees_r = make_DR_itree($ARGV[1], $range);
-filter_spacer_blast($ARGV[0], $itrees_r, $array_bool);
+# connect 2 db #
+my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
+my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
+	or die " Can't connect to $database_file!\n";
+
+my $itrees_r = make_DR_itrees($dbh, $range);
+filter_spacer_blast($dbh, $itrees_r);
 
 ### Subroutines
 sub filter_spacer_blast{
-	my ($blast_in, $itrees_r, $array_bool) = @_;
+	my ($dbh, $itrees_r) = @_;
 	
-	open IN, $blast_in or die $!;
-	while(<IN>){
-		chomp;
-		my @line = split /\t/;
+	# selecting spacers #
+	# selecting DRs from DB #
+	my $q = "SELECT 
+S_taxon_id, S_taxon_name, S_accession, 
+sseqid, sstart, send, 
+qstart, qend, qlen, 
+array_hit, blast_id
+FROM blast_hits
+WHERE spacer_DR='Spacer'";
+	$q =~ s/\n/ /g;
+	
+	my $res = $dbh->selectall_arrayref($q);
+	die " ERROR: no spacer blast hits found! Nothing to filter!\n" unless @$res;
+	
+	# updating sql #
+	my $u = "UPDATE blast_hits
+SET array_hit=?
+WHERE blast_id=?";
+	$u =~ s/\n/ /g;
+	my $sth = $dbh->prepare($u);
+	
+	my %summary;
+	foreach my $line (@$res){
+		map{$_ = "" unless $_} @$line[0..2];
+		my $genome_id = join("_", @$line[0..2]);
 		
-		if(exists $itrees_r->{$line[1]}){		# hit on same taxon-scaffold of DR & spacer
-			my $res;
-			if( $line[8] < $line[9] ){
-				$res = $itrees_r->{$line[1]}->fetch($line[8], $line[9]);
-				}
-			else{
-				$res = $itrees_r->{$line[1]}->fetch($line[9], $line[8]);
-				}
-			
-			
-			if($array_bool){
-				if(scalar @$res >=2){			# spacer is adjacent to 2 DR (in array)
-					print "$_\tyes\n"; 			# in array
-					}
-				else{
-					print "$_\tno\n";			# not in array
-					}
-				}
-			else{ 
-				print "$_\n" unless @$res && scalar @$res >=2; 		# if spacer is adjacent to 2 DR
-				}			
+		# check for existence of genome/scaffold #
+		unless( exists $itrees_r->{$genome_id}{$$line[3]} ){
+			print STDERR "No DRs found for '$genome_id'! Skipping!\n";
+			next;
 			}
-		else{			# do not hit on the same scaffold as a DR
-			if($array_bool){
-				print "$_\tno\n";
-				}
-			else{
-				print "$_\n";
-				}
-			}
-		}
-	
-	}
-
-sub make_DR_itree{
-	my ($blast_in, $range) = @_;
-	
-	open IN, $blast_in or die $!;
-	
-	my %itrees;
-	while(<IN>){
-		chomp;
-		my @line = split /\t/;
 		
-		# making itree #
-		unless(exists  $itrees{$line[1]}){  
-			$itrees{$line[1]} = Set::IntervalTree->new();
-			}
-			
-		# loading itree #
-		if($line[8] < $line[9]){
-			$itrees{$line[1]}->insert($., $line[8] - $range,  $line[9] + $range);		
+		# querying itree #
+		my $res;
+		if( $$line[4] <= $$line[5] ){
+			$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($$line[4], $$line[5]);
 			}
 		else{
-			$itrees{$line[1]}->insert($., $line[9] - $range,  $line[8] + $range);		
+			$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($$line[5], $$line[4]);
 			}
+		
+		# updating 'array_hit' value # spacer hit adjacent to DR hits?
+		$sth->bind_param(2, $$line[10]);
+		if(scalar @$res >= $DR_cnt){		# updating array_hit to 1
+			$sth->bind_param(1, "yes");
+			$summary{"array"}++;
+			}
+		else{						# updating array_hit to 0
+			$sth->bind_param(1, "no");
+			$summary{"proto"}++;			# protospacer hit
+			}
+		
+		$sth->execute();
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: ", join(",", @$line), "\n";
+			}
+		else{ $summary{"update"}++; }
 		}
-	close IN;
+	$dbh->commit();
+		
+	# status #
+	print STDERR "...Number of spacer blast hits identified as hitting an array: ", $summary{"array"}, "\n";
+	print STDERR "...Number of spacer blast hits identified as hitting a protospacer: ", $summary{"proto"}, "\n";
+	print STDERR "...Number of spacer blast hits updated in CLdb blast_hits table: ", $summary{"update"}, "\n";		
+	}
+
+sub make_DR_itrees{
+	my ($dbh, $range) = @_;
 	
+	# selecting DRs from DB #
+	my $q = "SELECT 
+S_taxon_id, S_taxon_name, S_accession, 
+sseqid, sstart, send,
+qstart, qend, qlen
+FROM blast_hits
+WHERE spacer_DR='DR'";
+	$q =~ s/\n/ /g;
+
+	my $res = $dbh->selectall_arrayref($q);
+	die " ERROR: no DR blast hits found! Cannot filter spacer blast hits!\n" unless @$res;	
+	
+	my %itrees;
+	my %summary;
+	foreach my $line (@$res){
+		#print Dumper $line; exit;
+	
+		# checking for full length hits #
+		if(abs($$line[7] - $$line[6] + 1) != $$line[8]){		# if short
+			$summary{"short"}++;			
+			next if $full_length;				# not include if $full_length
+			}
+
+		# genome_id: initializing itree #
+		map{$_ = "" unless $_} @$line[0..2];
+		my $genome_id = join("_", @$line[0..2]);
+		unless( exists $itrees{$genome_id}{$$line[3]} ){  
+			$itrees{$genome_id}{$$line[3]} = Set::IntervalTree->new();
+			}
+		
+			
+		if($$line[4] <= $$line[5]){		# start <= end 
+			$itrees{$genome_id}{$$line[3]}->insert($., $$line[4] - $range -1,  $$line[5] + $range + 1);
+			}
+		else{
+			$itrees{$genome_id}{$$line[3]}->insert($., $$line[5] - $range - 1,  $$line[4] + $range + 1);
+			}
+		$summary{"added"}++;
+		}
+
+	# status #
+	print STDERR "...Number of DRs hits selected: ", scalar @$res, "\n";
+	print STDERR "...Number of DRs hits not full length: ", $summary{"short"}, "\n";
+	print STDERR "...Number of DRs hits used for spacer filtering: ", $summary{"added"}, "\n";
+
+		#print Dumper %itrees; exit;
 	return \%itrees;
 	}
 
@@ -108,23 +169,45 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlastDRFilter.pl -- filter spacer blast using direct-repeat blast
+CLdb_spacerBlastDRFilter.pl -- which spacer blast hits hit CRISPR arrays or protospacers?
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+CLdb_spacerBlastDRFilter.pl [flags]
 
-=head2 options
+=head2 Required flags
 
 =over
 
-=item -r 	Range allowable between spacer & DR blast hit (bp). [30]
+=item -database  <char>
 
-=item -a 	Do not filter hit. Instead, add an In_Array column (yes|no). [FALSE]
+CLdb database.
 
-=item -v	Verbose output
+=back
 
-=item -h	This help message
+=head2 Optional flags
+
+=over
+
+=item -range  <int>
+
+Range allowable between spacer & DR blast hit (bp). [30]
+
+=item -DR  <int>
+
+Number of adjacent DR hits to a spacer to ID the spacer hit as an array hit. [2]
+
+=item -full_length  <bool>
+
+Use just full length DR hits? [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output.
+
+=item -help  <bool>
+
+This help message
 
 =back
 
@@ -136,17 +219,21 @@ perldoc CLdb_spacerBlastDRFilter.pl
 
 Filter out spacer blast hits to CRISPR arrays by
 removing all spacer blast hits that hit adjacent
-to 2 direct repeat blast hits.
+to direct repeat blast hits.
 
-Use '-a' if you want all hits including spacer
-hits to an array (last column will designate whether
-spacer hit falls in a CRISPR array).
+All DR hits (or just full length hits) will be
+used for the filtering process.
+
+The 'array_hit' column in the CLdb blast_hits
+table will be updated with either 'yes' or 'no'
+if the spacer hit is determined to hit an
+array or protospacer, respectively.
 
 =head1 EXAMPLES
 
 =head2 Basic Usage:
 
-CLdb_spacerBlastDRFilter.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
+CLdb_spacerBlastDRFilter.pl -d CLdb.sqlite
 
 =head1 AUTHOR
 
