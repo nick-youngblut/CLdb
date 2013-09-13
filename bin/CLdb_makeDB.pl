@@ -222,6 +222,7 @@ HERE
 DROP TABLE IF EXISTS spacer_blast_subject;
 
 CREATE TABLE spacer_blast_subject (
+Blast_subject_ID	TEXT	NOT NULL,
 Taxon_ID	TEXT,
 Taxon_name	TEXT,
 Accession	TEXT,
@@ -231,7 +232,7 @@ Fragment_start	INTEGER	NOT NULL,
 Fragment_end	INTEGER	NOT NULL,
 Extension	INTEGER	NOT NULL,
 Date	DATE,
-UNIQUE (Taxon_ID, Taxon_name, Accession, Scaffold_name)
+UNIQUE (Blast_subject_ID)
 ON CONFLICT REPLACE
 );
 

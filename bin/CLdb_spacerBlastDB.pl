@@ -14,23 +14,17 @@ use Bio::SeqIO;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $query_file);
-my (@subtype, @taxon_id, @taxon_name);
-my @subject_in;
+my ($verbose, $database_file, $query_file, $blast_db);
 my $extra_query = "";
 my $blast_params = "-evalue 0.00001";		# 1e-5
 my $num_threads = 1;
-my $extend = 20;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "fasta=s" => \$query_file,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name,
+	   "db=s" => \$blast_db,
 	   "query=s" => \$extra_query,
 	   "blast=s" => \$blast_params,
 	   "num_threads=i" => \$num_threads,
-	   "xtend=i" => \$extend,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -59,27 +53,6 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 # checking fasta query (query_file); determine if repeat or spacer #
 check_query_fasta($query_file);		# spacer|DR
 
-
-# subject selection #
-## making blast directory ##
-my $blast_dir = make_blast_dir($db_path);
-
-## joining query options (for table join) ##
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
-## getting/making fasta files for all selected subject taxa ##
-my $subject_loci_r = get_loci_fasta_genbank($dbh, $join_sql);
-
-my $fasta_dir = make_fasta_dir($db_path);
-my $loci_update = genbank2fasta($subject_loci_r, $fasta_dir);
-update_loci($dbh, $subject_loci_r) if $loci_update;
-
-## making blast DBs from subject fasta files (foreach subject) ##
-make_blast_db($subject_loci_r, $fasta_dir, $blast_dir);
-
 # blasting (foreach subject blast DB) #
 ## blastn & loading blastn output ##
 blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
@@ -88,25 +61,19 @@ blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads,
 ### Subroutines
 sub blastn_call_load{
 # calling blastn, loading blast results directly into DB #
-# also loading blast subject hit #
 	my ($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file) = @_;
 	
 	# status #
 	print STDERR "...BLASTing each subject genome database\n";
 	
-	# preparing blast_hits insert #
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore slen qlen frag extension/;
+	# preparing sql #
+	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore slen/;
 		
 	# blasting each subject genome #
 	my $insert_cnt = 0;				# summing number of entries for all subjects 
 	foreach my $row (@$subject_loci_r){
 		next unless $$row[3];			# skipping if no fasta & thus no blast db
-		
-		# loading fasta #
-		my $fasta_r = load_fasta("$blast_dir/$$row[3]");
-		
-		# setting blast cmd #
-		my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
+		my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore slen";
 		my $cmd = "blastn -task 'blastn-short' -outfmt '$outfmt' -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
 
 		# blasting and loading db #
@@ -128,37 +95,19 @@ sub blastn_call_load{
 			unshift @line, $blast_id;
 			
 			# quoting #
-			$line[0] = $dbh->quote($line[0]);		# blast_id
-			$line[1] = $dbh->quote($line[1]);		# spacer_DR (qseqid)
-			$line[2] = $dbh->quote($line[2]);		# S_taxon_name
-			$line[3] = $dbh->quote($line[3]);		# S_taxon_ID
-			my $scaf = $line[5];
-			$line[5] = $dbh->quote($line[5]);		# sseqid (scaffold)
+			$line[0] = $dbh->quote($line[0]);
+			$line[1] = $dbh->quote($line[1]);
+			$line[2] = $dbh->quote($line[2]);
+			$line[5] = $dbh->quote($line[5]);
 			
-			# frag & extension #
-			## substr of fasta ##
-			my $frag;
-			if($line[1] =~ /Spacer/){				# if spacer blast hit
-				die " ERROR: '$scaf' not found in fasta!" unless exists $fasta_r->{"$scaf"};
-				my $start = $line[12];
-				my $end = $line[13];
-				my $slen = $line[$#line];
-				$frag = get_seq_frag($start, $end, $slen, $extend, $fasta_r->{"$scaf"});
-				$frag = $dbh->quote($frag);			
-				}
-			else{ $frag = $dbh->quote(""); }
-			push @line, $frag;
-			push @line, $extend;
-			
-			# blast_hits #
-			## making blast_hit sql ##
+			# making command #
 			my $sql = join(" ", "INSERT INTO Blast_hits( ",
 					join(",", @blast_hits_col),
 					") VALUES( ",
 					join(",", @line), 
 					")" );
 			
-			## loading line ##
+			# loading line #
 			$dbh->do( $sql );
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
@@ -171,58 +120,6 @@ sub blastn_call_load{
 	
 	print STDERR "...Number of blast entries added to CLdb: $insert_cnt\n";
 	}
-
-sub get_seq_frag{
-	my ($start, $end, $slen, $extend, $seq) = @_;
-	
-	#print Dumper $start, $end; exit;
-	if($start > $end){			# need rev-comp of string 
-		$start += $extend;
-		$start = $slen if $start > $slen;
-		$end -= $extend;
-		$end = 0 if $end < 0;
-		return revcomp(substr($seq, $end, $start - $end));
-		}
-	else{
-		$start -= $extend;
-		$start = 0 if $start < 0;
-		$end += $extend;
-		$end = $slen if $end > $slen;
-		return substr($seq, $start, $end - $start);	
-		}
-	}
-
-sub revcomp{
-	# reverse complements DNA #
-	my $seq = shift;
-	$seq = reverse($seq);
-	$seq =~ tr/[a-z]/[A-Z]/;
-	$seq =~ tr/ACGTNBVDHKMRYSW\.-/TGCANVBHDMKYRSW\.-/;
-	return $seq;
-	}
-
-sub load_fasta{
-# loading fasta file as a hash #
-	my $fasta_in = shift;
-	open IN, $fasta_in or die $!;
-	my (%fasta, $tmpkey);
-	while(<IN>){
-		chomp;
- 		s/#.+//;
- 		next if  /^\s*$/;	
- 		
- 		if(/^>.+/){
- 			s/^>//;
- 			$fasta{$_} = "";
- 			$tmpkey = $_;	# changing key
- 			}
- 		else{$fasta{$tmpkey} .= $_; }
-		}
-	close IN;
-		#print Dumper %fasta; exit;
-	return \%fasta;
-	} #end load_fasta
-
 
 sub make_blast_db{
 # foreach fasta, making a blast DB #
