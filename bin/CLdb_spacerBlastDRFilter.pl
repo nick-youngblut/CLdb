@@ -13,14 +13,15 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $array_bool, $database_file, $full_length);
+my ($verbose, $array_bool, $database_file);
 my $range = 30;
-my $DR_cnt = 2;				# how many DR hit must land next to spacer?
+my $DR_cnt = 1;
+my $full_length = 0.66;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "range=i" => \$range,			# range beyond hit to consider overlap
-	   "full" => \$full_length, 		# just full length hits
-	   "DR=i" => \$DR_cnt,
+	   "full=f" => \$full_length, 		# just full length hits
+	   "DR=i" => \$DR_cnt,				# number of sides that a DR must hit (adjacent to spacer)
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -65,7 +66,7 @@ WHERE blast_id=?";
 	$u =~ s/\n/ /g;
 	my $sth = $dbh->prepare($u);
 	
-	my %summary;
+	my %summary = ("proto" => 0, "array" => 0, "update" => 0);
 	foreach my $line (@$res){
 		map{$_ = "" unless $_} @$line[0..2];
 		my $genome_id = join("_", @$line[0..2]);
@@ -78,23 +79,38 @@ WHERE blast_id=?";
 		
 		# querying itree #
 		my $res;
-		if( $$line[4] <= $$line[5] ){
-			$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($$line[4], $$line[5]);
+		my ($qstart, $qend);
+		if( $$line[4] <= $$line[5] ){ 
+			$qstart = $$line[4];
+			$qend = $$line[5];
 			}
 		else{
-			$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($$line[5], $$line[4]);
+			$qstart = $$line[5];
+			$qend = $$line[4];
 			}
+		$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($qstart, $qend);
 		
-		# updating 'array_hit' value # spacer hit adjacent to DR hits?
-		$sth->bind_param(2, $$line[10]);
-		if(scalar @$res >= $DR_cnt){		# updating array_hit to 1
+		# updating 'array_hit' value # spacer hit adjacent to DR hits? #
+		my @LR = (0,0); 		# DR hit to left & right of spacer?
+		foreach my $line (@$res){
+				#print Dumper "$$line[0], $qstart, $$line[1], $qend";
+			if($$line[0] <= $qstart){ $LR[0]++; }
+			elsif( $$line[1] >= $qend){ $LR[1]++; }
+			}
+			
+		if($LR[0] > 0 && $LR[1] > 0){		# updating array_hit to 1
 			$sth->bind_param(1, "yes");
 			$summary{"array"}++;
 			}
-		else{						# updating array_hit to 0
+		elsif($DR_cnt == 1 && ($LR[0] > 0 || $LR[1] > 0) ){
+			$sth->bind_param(1, "yes");
+			$summary{"array"}++;		
+			}
+		else{								# updating array_hit to 0
 			$sth->bind_param(1, "no");
 			$summary{"proto"}++;			# protospacer hit
 			}
+		$sth->bind_param(2, $$line[10]);
 		
 		$sth->execute();
 		if($DBI::err){
@@ -117,7 +133,8 @@ sub make_DR_itrees{
 	my $q = "SELECT 
 S_taxon_id, S_taxon_name, S_accession, 
 sseqid, sstart, send,
-qstart, qend, qlen
+qstart, qend, qlen,
+Group_ID
 FROM blast_hits
 WHERE spacer_DR='DR'";
 	$q =~ s/\n/ /g;
@@ -126,14 +143,13 @@ WHERE spacer_DR='DR'";
 	die " ERROR: no DR blast hits found! Cannot filter spacer blast hits!\n" unless @$res;	
 	
 	my %itrees;
-	my %summary;
+	my %summary = ("short" => 0, "added" => 0);
 	foreach my $line (@$res){
-		#print Dumper $line; exit;
 	
 		# checking for full length hits #
-		if(abs($$line[7] - $$line[6] + 1) != $$line[8]){		# if short
+		if(abs($$line[7] - $$line[6] + 1) / $$line[8] < $full_length){		# if short
 			$summary{"short"}++;			
-			next if $full_length;				# not include if $full_length
+			next;
 			}
 
 		# genome_id: initializing itree #
@@ -143,19 +159,23 @@ WHERE spacer_DR='DR'";
 			$itrees{$genome_id}{$$line[3]} = Set::IntervalTree->new();
 			}
 		
-			
-		if($$line[4] <= $$line[5]){		# start <= end 
-			$itrees{$genome_id}{$$line[3]}->insert($., $$line[4] - $range -1,  $$line[5] + $range + 1);
+		# loading itree #
+		if($$line[4] <= $$line[5]){		# start <= end
+			my $xstart =  $$line[4] - $range -1;
+			my $xend =  $$line[5] + $range + 1;
+			$itrees{$genome_id}{$$line[3]}->insert([$xstart,$xend], $xstart, $xend);
 			}
 		else{
-			$itrees{$genome_id}{$$line[3]}->insert($., $$line[5] - $range - 1,  $$line[4] + $range + 1);
+			my $xstart =  $$line[5] - $range -1;
+			my $xend =  $$line[4] + $range + 1;
+			$itrees{$genome_id}{$$line[3]}->insert([$xstart,$xend], $xstart, $xend);
 			}
 		$summary{"added"}++;
 		}
 
 	# status #
 	print STDERR "...Number of DRs hits selected: ", scalar @$res, "\n";
-	print STDERR "...Number of DRs hits not full length: ", $summary{"short"}, "\n";
+	print STDERR "...Number of DRs hits < length cutoff: ", $summary{"short"}, "\n";
 	print STDERR "...Number of DRs hits used for spacer filtering: ", $summary{"added"}, "\n";
 
 		#print Dumper %itrees; exit;
@@ -197,9 +217,9 @@ Range allowable between spacer & DR blast hit (bp). [30]
 
 Number of adjacent DR hits to a spacer to ID the spacer hit as an array hit. [2]
 
-=item -full_length  <bool>
+=item -full_length  <float>
 
-Use just full length DR hits? [FALSE]
+Length cutoff for DR hit (DR_hit / DR_seq_length), (>=). [0.66]
 
 =item -verbose  <bool>
 

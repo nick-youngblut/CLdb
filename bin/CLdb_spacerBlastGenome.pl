@@ -95,10 +95,10 @@ sub blastn_call_load{
 	print STDERR "...BLASTing each subject genome database\n";
 	
 	# preparing blast_hits insert #
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen frag extension/;
+	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen frag xstart xend/;
 		
 	# blasting each subject genome #
-	my $insert_cnt = 0;				# summing number of entries for all subjects 
+	my %insert_cnt;			# summing number of entries for all subjects 
 	foreach my $row (@$subject_loci_r){
 		next unless $$row[3];			# skipping if no fasta & thus no blast db
 		
@@ -137,18 +137,21 @@ sub blastn_call_load{
 			
 			# frag & extension #
 			## substr of fasta ##
-			my $frag;
+			my ($frag, $xstart, $xend);
 			if($line[1] =~ /Spacer/){				# if spacer blast hit
 				die " ERROR: '$scaf' not found in fasta!" unless exists $fasta_r->{"$scaf"};
 				my $start = $line[12];
 				my $end = $line[13];
 				my $slen = $line[$#line];
-				$frag = get_seq_frag($start, $end, $slen, $extend, $fasta_r->{"$scaf"});
+				($frag, $xstart, $xend) = get_seq_frag($start, $end, $slen, $extend, $fasta_r->{"$scaf"});
 				$frag = $dbh->quote($frag);			
 				}
-			else{ $frag = $dbh->quote(""); }
-			push @line, $frag;
-			push @line, $extend;
+			else{ 
+				$frag = $dbh->quote(""); 
+				$xstart = $line[12];
+				$xend = $line[13];
+				}
+			push @line, $frag, $xstart, $xend;
 			
 			# blast_hits #
 			## making blast_hit sql ##
@@ -163,13 +166,16 @@ sub blastn_call_load{
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
 				}
-			else{ $insert_cnt++; }
+			else{ $insert_cnt{$spacer_DR}++; }
 			}
 		close PIPE;
 		}
 	$dbh->commit();
 	
-	print STDERR "...Number of blast entries added to CLdb: $insert_cnt\n";
+	$insert_cnt{"Spacer"} = 0 unless exists $insert_cnt{"Spacer"};
+	print STDERR "...Number of spacer blast entries added to CLdb: $insert_cnt{'Spacer'}\n";
+	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
+	print STDERR "...Number of DR blast entries added to CLdb: $insert_cnt{'DR'}\n";
 	}
 
 sub get_seq_frag{
@@ -181,14 +187,14 @@ sub get_seq_frag{
 		$start = $slen if $start > $slen;
 		$end -= $extend;
 		$end = 0 if $end < 0;
-		return revcomp(substr($seq, $end, $start - $end));
+		return revcomp(substr($seq, $end, $start - $end)), $start, $end;
 		}
 	else{
 		$start -= $extend;
 		$start = 0 if $start < 0;
 		$end += $extend;
 		$end = $slen if $end > $slen;
-		return substr($seq, $start, $end - $start);	
+		return substr($seq, $start, $end - $start), $start, $end;	
 		}
 	}
 
@@ -465,6 +471,10 @@ BLASTn parameters (besides required flags). [-evalue 0.00001]
 =item -num_threads  <int>
 
 Use for '-num_threads' parameter in BLASTn. [1]
+
+=item -x  <int>
+
+Retain blast hit subject sequence fragment + '-x' bp on either side of fragment. [20]
 
 =item -v  <bool>
 
