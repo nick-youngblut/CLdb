@@ -16,7 +16,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $array_bool, $database_file);
 my $range = 30;
 my $DR_cnt = 1;
-my $full_length = 0.66;
+my $full_length = 0.7;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "range=i" => \$range,			# range beyond hit to consider overlap
@@ -68,34 +68,34 @@ WHERE blast_id=?";
 	
 	my %summary = ("proto" => 0, "array" => 0, "update" => 0);
 	foreach my $line (@$res){
+	
 		map{$_ = "" unless $_} @$line[0..2];
 		my $genome_id = join("_", @$line[0..2]);
 		
 		# check for existence of genome/scaffold #
-		unless( exists $itrees_r->{$genome_id}{$$line[3]} ){
-			print STDERR "No DRs found for '$genome_id'! Skipping!\n";
-			next;
-			}
+		my @LR = (0,0); 				# DR hit to left & right of spacer?
+		if( exists $itrees_r->{$genome_id}{$$line[3]} ){
+
+			# querying itree #
+			my $res;
+			my ($qstart, $qend);
+			if( $$line[4] <= $$line[5] ){ 
+				$qstart = $$line[4];
+				$qend = $$line[5];
+				}
+			else{
+				$qstart = $$line[5];
+				$qend = $$line[4];
+				}
+			$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($qstart, $qend);
 		
-		# querying itree #
-		my $res;
-		my ($qstart, $qend);
-		if( $$line[4] <= $$line[5] ){ 
-			$qstart = $$line[4];
-			$qend = $$line[5];
-			}
-		else{
-			$qstart = $$line[5];
-			$qend = $$line[4];
-			}
-		$res = $itrees_r->{$genome_id}{$$line[3]}->fetch($qstart, $qend);
-		
-		# updating 'array_hit' value # spacer hit adjacent to DR hits? #
-		my @LR = (0,0); 		# DR hit to left & right of spacer?
-		foreach my $line (@$res){
-				#print Dumper "$$line[0], $qstart, $$line[1], $qend";
-			if($$line[0] <= $qstart){ $LR[0]++; }
-			elsif( $$line[1] >= $qend){ $LR[1]++; }
+			# updating 'array_hit' value # spacer hit adjacent to DR hits? #
+
+			foreach my $line (@$res){
+					#print Dumper "$$line[0], $qstart, $$line[1], $qend";
+				if($$line[0] <= $qstart){ $LR[0]++; }
+				elsif( $$line[1] >= $qend){ $LR[1]++; }
+				}
 			}
 			
 		if($LR[0] > 0 && $LR[1] > 0){		# updating array_hit to 1
@@ -124,6 +124,12 @@ WHERE blast_id=?";
 	print STDERR "...Number of spacer blast hits identified as hitting an array: ", $summary{"array"}, "\n";
 	print STDERR "...Number of spacer blast hits identified as hitting a protospacer: ", $summary{"proto"}, "\n";
 	print STDERR "...Number of spacer blast hits updated in CLdb blast_hits table: ", $summary{"update"}, "\n";		
+	}
+
+
+sub flip_se{
+	my ($start, $end) = @_;
+	return $end, $start;
 	}
 
 sub make_DR_itrees{
@@ -219,7 +225,7 @@ Number of adjacent DR hits to a spacer to ID the spacer hit as an array hit. [2]
 
 =item -full_length  <float>
 
-Length cutoff for DR hit (DR_hit / DR_seq_length), (>=). [0.66]
+Length cutoff for DR hit (DR_hit / DR_seq_length), (>=). [0.7]
 
 =item -verbose  <bool>
 

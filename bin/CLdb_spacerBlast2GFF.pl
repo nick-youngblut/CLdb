@@ -14,18 +14,15 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
-my (@subtype, @taxon_id, @taxon_name);
-my (@staxon_id, @staxon_name); 				# blast subject query refinement
+my (@staxon_id, @staxon_name, @sacc); 				# blast subject query refinement
 my $extra_query = "";
-my $hit_len_cutoff = 0.9;
+my $len_cutoff = 1;
 GetOptions(
 	   "database=s" => \$database_file,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name,
 	   "staxon_id=s{,}" => \@staxon_id,
 	   "staxon_name=s{,}" => \@staxon_name,
-	   "length=f" => \$hit_len_cutoff,			# blast hit must be full length of query
+	   "sacc=s{,}" => \@sacc,
+	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -44,21 +41,14 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 	or die " Can't connect to $database_file!\n";
 
 # joining query options (for table join) #
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-my $join_sqls .= join_query_opts_or(\@staxon_id, \@staxon_name);
+my $join_sqls = join_query_opts_or(\@staxon_id, \@staxon_name, \@sacc);
 
 # getting blast hits #
 my $blast_hits_r = get_blast_hits($dbh, $join_sqls, $extra_query);
 
-# getting spacer group length #
-my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
-
 # filter spacer hits to just full length hits if needed #
-$blast_hits_r = apply_hit_len_cutoff($blast_hits_r, $spacer_len_r, $hit_len_cutoff) 
-	unless $hit_len_cutoff == 1;
+#$blast_hits_r = apply_hit_len_cutoff($blast_hits_r, $spacer_len_r, $hit_len_cutoff) 
+#	unless $hit_len_cutoff == 1;
 
 # convert blast data to GFF3 format #
 blast2gff3($blast_hits_r);
@@ -87,82 +77,37 @@ sub blast2gff3{
 	
 	#print Dumper $blast_hits_r; exit;
 	foreach my $hit (@$blast_hits_r){
+		# applying length cutoff #
+		next if abs($$hit[15] - $$hit[14] + 1) / $$hit[16] < $len_cutoff;
+		
 		# getting strand #
 		my $strand;
-		if($$hit[4] <= $$hit[5]){ $strand = "+"; }
+		
+		if($$hit[9] <= $$hit[10]){ $strand = "+"; }
 		else{ $strand = "-"; }
+		
+		# query_id #
+		map{$_ = "" unless $_} @$hit[1..4];
+		(my $locus_sid = join("__", $$hit[1], $$hit[4])) =~ s/^/cli./;
 		
 		# writing table #
 		print join("\t",
-			$$hit[10],					# subject scaffold
+			$$hit[8],					# subject scaffold
 			"CLdb_spacer_blast",		# source
 			"region",
-			$$hit[4],			# hit start
-			$$hit[5],			# hit end
-			$$hit[6],			# evalue
+			$$hit[9],			# hit start (sstart)
+			$$hit[10],			# hit end	(send)
+			$$hit[11],			# evalue
 			$strand,
 			".",				# phase
 			join(";", 
-				"ID=\"$$hit[1]\"",		# query taxon_name
-				"Name=\"$$hit[2]\"",	# query taxon_id
-				"Alias=$$hit[9]",		# locus_id
-				"Note='mismatch:$$hit[7]  pident:$$hit[8]  spacer_group:$$hit[0]'"
+				"ID=\"$$hit[3]\"",			# query taxon_name
+				"Name=\"$$hit[2]\"",		# query taxon_id
+				"Alias=\"$locus_sid\"",			# locus_id
+				"Note='mismatch:$$hit[12]  pident:$$hit[13]  spacer_group:$$hit[0]'"
 				)
 			), "\n";
 		}
-	}
-
-sub apply_hit_len_cutoff{
-# hit must be so much of total query length #
-	my ($blast_hits_r, $spacer_len_r, $hit_len_cutoff) = @_;
-
-	my @filt_hits;
-	foreach my $hit (sort @$blast_hits_r){	
-		# start - end #
-		my $hit_start = $$hit[4];
-		my $hit_end = $$hit[5];
-		
-		# length cutoff #
-		die " ERROR: $$hit[0] not found in spacer length index!\n Did you mean to use '-staxon' instead of '-taxon'?"
-			unless exists $spacer_len_r->{$$hit[0]};
-		push (@filt_hits, $hit) if abs($hit_end - $hit_start + 1)  /  $spacer_len_r->{$$hit[0]}
-			>= $hit_len_cutoff;
-			
-		}
-	
-		#print Dumper @filt_hits; exit;
-	return \@filt_hits;
-	}
-
-sub get_spacer_group_length{
-# getting spacer group length for removing spacers that do not meet length cutoff #
-	my ($dbh, $join_sql, $extra_query) = @_;
-	
-	# basic query #
-	my $query = "SELECT spacers.spacer_group, spacers.spacer_start, spacers.spacer_end
-from Loci, Spacers
-WHERE Loci.locus_id == Spacers.locus_id
-$join_sql";
-	$query =~ s/[\n\r]+/ /g;
-	
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	
-	# making hash (spacer_group => spacer_length) #
-	my %spacer_length;
-	foreach my $row (@$ret){
-		$spacer_length{$$row[0]} = abs($$row[2] - $$row[1]);
-		}
-	
-	return \%spacer_length;
 	}
 
 sub get_blast_hits{
@@ -171,21 +116,28 @@ sub get_blast_hits{
 	
 	# basic query #
 	my $query = "SELECT 
-blast_hits.Spacer_group, 
-loci.Taxon_ID, 
-loci.Taxon_name, 
-blast_hits.Subject, 
+blast_hits.group_id, 
+loci.locus_id,
+loci.taxon_name,
+loci.taxon_id,
+spacers.spacer_id,
+blast_hits.S_Taxon_ID, 
+blast_hits.S_Taxon_name,
+blast_hits.S_accession,
+blast_hits.sseqid,
 blast_hits.sstart, 
 blast_hits.send, 
 blast_hits.evalue,
 blast_hits.mismatch,
 blast_hits.pident,
-loci.locus_id,
-blast_hits.subject
+blast_hits.qstart,
+blast_hits.qend,
+blast_hits.qlen
 FROM Loci, Spacers, Blast_hits
 WHERE Loci.locus_id == Spacers.locus_id
-AND blast_hits.spacer_group == spacers.spacer_group
-AND blast_hits.CRISPR_array == 'no'
+AND blast_hits.group_id == spacers.spacer_group
+AND blast_hits.array_hit == 'no'
+AND blast_hits.spacer_DR == 'Spacer'
 $join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
@@ -199,17 +151,19 @@ $join_sqls";
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
 	
+		#print Dumper @$ret; exit;
 	return $ret;
 	}
 
 sub join_query_opts_or{
-	my ($staxon_id_r, $staxon_name_r) = @_;
+	my ($staxon_id_r, $staxon_name_r, $sacc_r) = @_;
 	
-	return "" unless @$staxon_id_r || @$staxon_name_r;
+	return "" unless @$staxon_id_r || @$staxon_name_r || @$sacc_r;
 	
 	# adding quotes #
 	map{ s/"*(.+)"*/'$1'/ } @$staxon_id_r;
 	map{ s/"*(.+)"*/'$1'/ } @$staxon_name_r;	
+	map{ s/"*(.+)"*/'$1'/ } @$sacc_r;	
 	
 	if(@$staxon_id_r && @$staxon_name_r){
 		return join("", " AND (blast_hits.taxon_id IN (", join(", ", @$staxon_id_r),
@@ -217,10 +171,13 @@ sub join_query_opts_or{
 						"))");
 		}
 	elsif(@$staxon_id_r){
-		return join("", " AND blast_hits.taxon_id IN (", join(", ", @$staxon_id_r), ")");
+		return join("", " AND blast_hits.s_taxon_id IN (", join(", ", @$staxon_id_r), ")");
 		}
 	elsif(@$staxon_name_r){
-		return join("", " AND blast_hits.taxon_name IN (", join(", ", @$staxon_name_r), ")");	
+		return join("", " AND blast_hits.s_taxon_name IN (", join(", ", @$staxon_name_r), ")");	
+		}
+	elsif(@$sacc_r){
+		return join("", " AND blast_hits.s_accession IN (", join(", ", @$sacc_r), ")");		
 		}
 	}
 
@@ -261,33 +218,21 @@ CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 
 =over
 
-=item -subtype
+=item -staxon_id
 
-Refine query to specific a subtype(s) (>1 argument allowed).
+Refine query to specific a subject taxon_id(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -staxon_name
 
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
+Refine query to specific a subject taxon_name(s) (>1 argument allowed).
 
 =item -query
 
 Extra sql to refine the query.
 
-=item -staxon_id
-
-BLAST subject taxon_id (>1 argument allowed)
-
-=item -staxon_name
-
-BLAST subject taxon_name (>1 argument allowed)
-
 =item -length
 
-Length cutoff for blast hit (>=; fraction of spacer length). [0.9]
+Length cutoff for blast hit (>=; fraction of spacer length). [1]
 
 =item -v	Verbose output. [FALSE]
 

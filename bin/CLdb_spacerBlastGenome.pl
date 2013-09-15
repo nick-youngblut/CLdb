@@ -95,7 +95,7 @@ sub blastn_call_load{
 	print STDERR "...BLASTing each subject genome database\n";
 	
 	# preparing blast_hits insert #
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen frag xstart xend/;
+	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name S_taxon_ID Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq frag xstart xend/;
 		
 	# blasting each subject genome #
 	my %insert_cnt;			# summing number of entries for all subjects 
@@ -106,8 +106,9 @@ sub blastn_call_load{
 		my $fasta_r = load_fasta("$blast_dir/$$row[3]");
 		
 		# setting blast cmd #
-		my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
+		my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq";
 		my $cmd = "blastn -task 'blastn-short' -outfmt '$outfmt' -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
+		print STDERR "$cmd\n" unless $verbose;
 
 		# blasting and loading db #
 		## blast ##
@@ -135,6 +136,10 @@ sub blastn_call_load{
 			my $scaf = $line[5];
 			$line[5] = $dbh->quote($line[5]);		# sseqid (scaffold)
 			
+			# qseq; not need if direct repeat #
+			if($spacer_DR eq "DR"){ $line[18] = $dbh->quote(""); }		
+			else{ $line[18] = $dbh->quote($line[18]); }	
+			
 			# frag & extension #
 			## substr of fasta ##
 			my ($frag, $xstart, $xend);
@@ -142,7 +147,7 @@ sub blastn_call_load{
 				die " ERROR: '$scaf' not found in fasta!" unless exists $fasta_r->{"$scaf"};
 				my $start = $line[12];
 				my $end = $line[13];
-				my $slen = $line[$#line];
+				my $slen = $line[17];
 				($frag, $xstart, $xend) = get_seq_frag($start, $end, $slen, $extend, $fasta_r->{"$scaf"});
 				$frag = $dbh->quote($frag);			
 				}
@@ -229,7 +234,6 @@ sub load_fasta{
 	return \%fasta;
 	} #end load_fasta
 
-
 sub make_blast_db{
 # foreach fasta, making a blast DB #
 	my ($subject_loci_r, $fasta_dir, $blast_dir) = @_;
@@ -256,6 +260,7 @@ sub make_blast_db{
 		
 		# making blast db #
 		my $cmd = "makeblastdb -dbtype nucl -in $blast_dir/$$row[3]";
+		print STDERR "$cmd\n" unless $verbose;
 		`$cmd`;		
 		}
 	}
@@ -322,7 +327,7 @@ sub genbank2fasta_extract{
 	my $fasta_out = "$fasta_dir/$parts[2]";
 	open OUT, ">$fasta_out" or die $!;
 	
-	# writing #
+	# writing fasta #
 	my $seq_cnt = 0;
 	while(my $seqo = $seqio->next_seq){
 		$seq_cnt++;
@@ -344,7 +349,7 @@ sub genbank2fasta_extract{
 		}
 	else{ 
 		print STDERR "...fasta file extracted from $genbank_file written: $fasta_out\n";
-		return $fasta_out; 
+		return $parts[2]; 			# just fasta name
 		}
 	}
 
@@ -478,7 +483,7 @@ Retain blast hit subject sequence fragment + '-x' bp on either side of fragment.
 
 =item -v  <bool>
 
-Verbose output
+Verbose output. [TRUE]
 
 =item -h  <bool>
 

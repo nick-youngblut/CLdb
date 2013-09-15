@@ -108,11 +108,11 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlastDRFilter.pl -- filter spacer blast using direct-repeat blast
+CLdb_spacerBlastDRFilter_raw.pl -- filter spacer blast table using direct-repeat blast table
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+CLdb_spacerBlastDRFilter_raw.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
 
 =head2 options
 
@@ -130,7 +130,7 @@ CLdb_spacerBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_bla
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlastDRFilter.pl
+perldoc CLdb_spacerBlastDRFilter_raw.pl
 
 =head1 DESCRIPTION
 
@@ -146,7 +146,7 @@ spacer hit falls in a CRISPR array).
 
 =head2 Basic Usage:
 
-CLdb_spacerBlastDRFilter.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
+CLdb_spacerBlastDRFilter_raw.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
 
 =head1 AUTHOR
 

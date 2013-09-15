@@ -67,22 +67,15 @@ sub blastn_call_load{
 	my ($dbh, $blast_db, $blast_params, $num_threads, $query_file) = @_;
 	
 	# preparing sql #
-	my @blast_hits_col = qw/blast_id spacer_DR S_accession S_GI Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen frag xstart xend/;
+	my @blast_hits_col = qw/blast_id spacer_DR S_accession S_GI Group_ID sseqid pident len mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq frag xstart xend/;
 		
-	my $outfmt = "6 sacc sgi qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen";
+	my $outfmt = "6 sacc sgi qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq";
 	my $cmd = "blastn -task 'blastn-short' -outfmt '$outfmt' -db $blast_db -query $query_file -num_threads $num_threads $blast_params |";
 	print STDERR "$cmd\n" unless $verbose;
 
 	# genbank connect object #
 	my $gb = new Bio::DB::GenBank;
 	
-		#my $acc = "CP000099";
-		#my $seqio = $gb->get_Stream_by_acc( $acc );
-		#while( my $seq = $seqio->next_seq ) {
-		#	print Dumper $seq->seq(); exit;
-		#	}
-		#print Dumper $seqio; exit;
-
 	# blasting and loading db #
 	## blast ##
 	open PIPE, $cmd or die $!;
@@ -104,7 +97,11 @@ sub blastn_call_load{
 
 		# frag & extension #
 		## getting frag of sequence from genbank ##
-		push @line, get_frag($gb, $line[2], $line[5], $line[12], $line[13], $line[$#line]);	# gb-object, accession, start, end, slen
+		push @line, get_frag($gb, $line[2], $line[5], $line[12], $line[13], $line[17]);	# gb-object, accession, start, end, slen
+		if($spacer_DR eq "DR"){	# DR -> no frag or qseq needed 
+			$line[18] = ""; 
+			$line[19] = "";
+			}
 
 		# quoting #
 		$line[0] = $dbh->quote($line[0]);		# blast_ID
@@ -112,7 +109,8 @@ sub blastn_call_load{
 		$line[2] = $dbh->quote($line[2]);		# S_accession
 		$line[3] = $dbh->quote($line[3]);		# S_GI
 		$line[5] = $dbh->quote($line[5]);		# sseqid
-		$line[18] = $dbh->quote($line[18]);		# frag
+		$line[18] = $dbh->quote($line[18]);		# qseq
+		$line[19] = $dbh->quote($line[19]);		# frag
 	
 		# blast_hits #
 		## making blast_hit sql ##
@@ -128,7 +126,6 @@ sub blastn_call_load{
 			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
 			}
 		else{ $insert_cnt{$spacer_DR}++; }
-		
 		}
 		
 	close PIPE;
