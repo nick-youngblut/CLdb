@@ -210,15 +210,9 @@ frag	TEXT,
 xstart	INTEGER,
 xend	INTEGER,
 array_hit    TEXT,
-run_date    DATE,
 UNIQUE( blast_id )
 ON CONFLICT REPLACE
 );
-
-CREATE TRIGGER blast_update_trg AFTER INSERT ON blast_hits
-begin
-  UPDATE blast_hits SET run_date = DATETIME('NOW') where rowid = new.rowid;
-end;
 
 HERE
 
@@ -236,15 +230,9 @@ Scaffold_sequence	TEXT	NOT NULL,
 Fragment_start	INTEGER	NOT NULL,
 Fragment_end	INTEGER	NOT NULL,
 Extension	INTEGER	NOT NULL,
-Date	DATE,
 UNIQUE (Blast_subject_ID)
 ON CONFLICT REPLACE
 );
-
-CREATE TRIGGER blast_subject_update_trg AFTER INSERT ON spacer_blast_subject
-begin
-  UPDATE spacer_blast_subject SET Date = DATETIME('NOW') where rowid = new.rowid;
-end;
 
 HERE
 
@@ -328,7 +316,7 @@ Replace existing database.
 
 =item -t  <char>
 
-Table(s) to keep as is (if they exist). ["leaderseqs" "genes"]
+Table(s) to keep as is (if they exist). ["leaders" "genes"]
 
 =item -d  <bool>
 

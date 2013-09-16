@@ -67,7 +67,7 @@ sub bin_mismatches{
 	my ($blast_hits_r, $bin) = @_;
 	
 	# header #
-	print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype spacer_group spacer_id s_taxon_name s_taxon_id s_accession/), "\n";
+	print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype spacer_group spacer_id s_taxon_id s_taxon_name s_accession/), "\n";
 	
 	# body #
 	foreach my $entry (@$blast_hits_r){
