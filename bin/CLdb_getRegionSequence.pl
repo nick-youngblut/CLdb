@@ -111,8 +111,8 @@ sub region_oi_check{
 	elsif($region_oi =~ /operon/i){
 		return [qw/operon_start operon_end/];
 		}
-	elsif($region_oi =~ /crispr_array/i){
-		return [qw/CRISPR_array_start CRISPR_array_end/];
+	elsif($region_oi =~ /array/i){
+		return [qw/array_start array_end/];
 		}
 	else{ die " ERROR: region of interest not found in table!\n"; }
 	}
@@ -132,7 +132,7 @@ sub get_regions{
 	my ($dbh, $region_oi_r, $extra_query, $join_sql) = @_;
 	
 	# make query #
-	my $query = join(" ", "SELECT locus_id, genbank, ", 
+	my $query = join(" ", "SELECT locus_id, genbank_file, ", 
 					join(",", @$region_oi_r),
 					"FROM loci",
 					$join_sql);

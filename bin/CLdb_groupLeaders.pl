@@ -61,7 +61,7 @@ sub update_db{
 # update group column #
 	my ($dbh, $clust_r) = @_;
 
-	my $cmd = "UPDATE LeaderSeqs SET leader_group = ? WHERE locus_id = ?";
+	my $cmd = "UPDATE Leaders SET leader_group = ? WHERE locus_id = ?";
 	
 	my $sql = $dbh->prepare($cmd);
 	

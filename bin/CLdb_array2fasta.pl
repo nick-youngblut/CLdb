@@ -47,15 +47,10 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # getting arrays of interest from database #
-#if($join_sql){		# table-join query
 my $arrays_r = get_arrays_join($dbh, $spacer_bool, $extra_query, $join_sql);
-#	}
-#else{				# simple query of all spacers/DR
-#	$arrays_r = get_arrays($dbh, $spacer_bool, $extra_query);
-#	}
 
 # writing fasta #
-write_arrays_fasta($arrays_r);
+write_arrays_fasta($arrays_r, $spacer_bool);
 
 # disconnect #
 $dbh->disconnect();
@@ -65,12 +60,17 @@ exit;
 ### Subroutines
 sub write_arrays_fasta{
 # writing arrays as fasta
-	my ($arrays_r) = @_;
+	my ($arrays_r, $spacer_bool) = @_;
 	
 	foreach my $locus_id (keys %$arrays_r){
 		foreach my $x_id (keys %{$arrays_r->{$locus_id}}){
-			if($by_group){
-				print join("\n", ">Group$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+			if($by_group){				
+				if($spacer_bool){
+					print join("\n", ">DR_Group.$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+					}
+				else{
+					print join("\n", ">Spacer_Group.$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
+					}
 				}
 			else{
 				print join("\n", ">cli.$locus_id\__$x_id", $arrays_r->{$locus_id}{$x_id}), "\n";
@@ -86,10 +86,10 @@ sub get_arrays{
 	my $query;
 	if($spacer_bool){		# direct repeat
 		if($by_group){
-			$query = "SELECT Locus_ID, repeat_group, Repeat_sequence FROM directrepeats GROUP BY repeat_group";
+			$query = "SELECT Locus_ID, DR_group, DR_sequence FROM DRs GROUP BY DR_group";
 			}
 		else{
-			$query = "SELECT Locus_ID, Repeat_ID, Repeat_sequence FROM directrepeats";
+			$query = "SELECT Locus_ID, DR_ID, DR_sequence FROM DRs";
 			}
 		}
 	else{					# spacer
@@ -105,6 +105,9 @@ sub get_arrays{
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
 	
 	my %arrays;
 	foreach my $row (@$ret){
@@ -124,10 +127,10 @@ sub get_arrays_join{
 	my $query;
 	if($spacer_bool){		# direct repeat
 		if($by_group){
-			$query = "SELECT directrepeats.Locus_ID, directrepeats.Repeat_group, directrepeats.Repeat_sequence FROM directrepeats, loci WHERE loci.locus_id = directrepeats.locus_id $join_sql GROUP BY directrepeats.repeat_group";
+			$query = "SELECT DRs.Locus_ID, DRs.DR_group, DRs.DR_sequence FROM DRs, loci WHERE loci.locus_id = DRs.locus_id $join_sql GROUP BY DRs.DR_group";
 			}
 		else{
-			$query = "SELECT directrepeats.Locus_ID, directrepeats.Repeat_ID, directrepeats.Repeat_sequence FROM directrepeats, loci WHERE directrepeats.locus_id = loci.locus_id $join_sql";
+			$query = "SELECT DRs.Locus_ID, DRs.DR_ID, DRs.DR_sequence FROM DRs, loci WHERE DRs.locus_id = loci.locus_id $join_sql";
 			}
 		}
 	else{					# spacer
@@ -150,6 +153,8 @@ sub get_arrays_join{
 	
 	my %arrays;
 	foreach my $row (@$ret){
+		die " ERROR: not spacer/repeat group found!\n\tWas CLdb_groupArrayElements.pl run?\n"
+			unless $$row[1]; 
 		$arrays{$$row[0]}{$$row[1]} = $$row[2];
 		}
 	

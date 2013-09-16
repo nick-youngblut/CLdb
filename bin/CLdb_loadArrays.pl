@@ -12,6 +12,7 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
+my ($verbose, $database_file);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "verbose" => \$verbose,
@@ -62,7 +63,7 @@ sub add_entries{
 		$cmd = "INSERT INTO Spacers(Locus_ID, Spacer_ID, Spacer_start, Spacer_end, Spacer_sequence) values (?,?,?,?,?)";
 		}
 	elsif($cat eq "DR"){
-		$cmd = "INSERT INTO DirectRepeats(Locus_ID, Repeat_ID, Repeat_start, Repeat_end, Repeat_sequence) values (?,?,?,?,?)";
+		$cmd = "INSERT INTO DRs(Locus_ID, DR_ID, DR_start, DR_end, DR_sequence) values (?,?,?,?,?)";
 		}
 	else{ die " LOGIC ERROR: $!\n"; }
 	

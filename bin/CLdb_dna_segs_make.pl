@@ -358,11 +358,11 @@ sub get_DR_info{
 SELECT 
 loci.taxon_name,
 loci.locus_id, 
-directrepeats.repeat_id, 
-directrepeats.repeat_start, 
-directrepeats.repeat_end
-FROM Loci, directrepeats
-WHERE Loci.locus_id = directrepeats.locus_id
+DRs.DR_id, 
+DRs.DR_start, 
+DRs.DR_end
+FROM Loci, DRs
+WHERE Loci.locus_id = DRs.locus_id
 $join_sql
 $extra_query
 ";

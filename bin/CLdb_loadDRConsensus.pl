@@ -86,7 +86,7 @@ sub add_entries{
 # adding entries to DR consensus table #
 	my ($dbh, $DR_con_r) = @_;
 	
-	my $cmd = "INSERT INTO DirectRepeatConsensus(Locus_ID, Consensus_Sequence_IUPAC, Consensus_Sequence_Threshold) values (?,?,?)";
+	my $cmd = "INSERT INTO DR_consensus(Locus_ID, Consensus_Sequence_IUPAC, Consensus_Sequence_Threshold) values (?,?,?)";
 	
 	my $sql = $dbh->prepare($cmd);
 	
@@ -139,10 +139,10 @@ sub get_DR_loci{
 # getting DR loci from directrepeats table #
 	my ($dbh) = @_;
 
-	my $query = "SELECT distinct(locus_id) FROM DirectRepeats";	
+	my $query = "SELECT distinct(locus_id) FROM DRs";	
 	my $ret = $dbh->selectall_arrayref($query);
 
-	die " ERROR: no direct repeat entries found in database!\n"
+	die " ERROR: no direct repeat entries found in database (DRs table)!\n"
 		unless @$ret;
 	
 	return $ret;
@@ -152,7 +152,7 @@ sub get_arrays{
 	my ($arrays_r, $dbh, $DR_loci_r, $extra_query) = @_;
 	
 	# make query #
-	my $query = "SELECT Repeat_ID, Repeat_sequence FROM directrepeats WHERE Locus_id = ?";
+	my $query = "SELECT DR_ID, DR_sequence FROM DRs WHERE Locus_id = ?";
 	$query = join(" ", $query, $extra_query);
 	
 	my $sql = $dbh->prepare($query);
@@ -175,7 +175,7 @@ sub get_arrays_join{
 	my ($arrays_r, $dbh, $DR_loci_r, $extra_query, $join_sql) = @_;
 	
 	# make query #
-	my $query = "SELECT a.Repeat_ID, a.Repeat_sequence FROM directrepeats a left outer join loci b ON a.locus_id = b.locus_id AND b.locus_id = ? $join_sql";
+	my $query = "SELECT a.DR_ID, a.DR_sequence FROM DRs a left outer join loci b ON a.locus_id = b.locus_id AND b.locus_id = ? $join_sql";
 	$query = join(" ", $query, $extra_query);
 	
 	my $sql = $dbh->prepare($query);

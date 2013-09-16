@@ -75,8 +75,8 @@ my $tables_r = list_tables($dbh);
 ## hclust tables ##
 delete_hclust($dbh, $loci_r, "spacers", "spacer_id", "spacer_hclust") 
 	if exists $tables_r->{"spacers_hclust"};
-delete_hclust($dbh, $loci_r, "DirectRepeats", "repeat_id", "directrepeat_hclust")
-	if exists $tables_r->{"directrepeat_hclust"};
+delete_hclust($dbh, $loci_r, "DRs", "DR_id", "DR_hclust")
+	if exists $tables_r->{"DR_hclust"};
 
 ## blast tables ##
 delete_spacer_pairwise_blast($dbh, $loci_r) if exists $tables_r->{"spacer_pairwise_blast"};
@@ -84,10 +84,10 @@ delete_spacer_pairwise_blast($dbh, $loci_r) if exists $tables_r->{"spacer_pairwi
 
 # deleting tables without needing to join; locus_id present #
 simple_delete($dbh, $loci_r, "spacers") if exists $tables_r->{"spacers"};
-simple_delete($dbh, $loci_r, "directrepeats") if exists $tables_r->{"directrepeats"};
-simple_delete($dbh, $loci_r, "directrepeatconsensus") if exists $tables_r->{"directrepeatconsensus"};
-simple_delete($dbh, $loci_r, "leaderseqs") if exists $tables_r->{"leaderseqs"};
-simple_delete($dbh, $loci_r, "draft") if exists $tables_r->{"draft"};
+simple_delete($dbh, $loci_r, "drs") if exists $tables_r->{"drs"};
+simple_delete($dbh, $loci_r, "dr_consensus") if exists $tables_r->{"dr_consensus"};
+simple_delete($dbh, $loci_r, "leaders") if exists $tables_r->{"leaders"};
+#simple_delete($dbh, $loci_r, "draft") if exists $tables_r->{"draft"};
 simple_delete($dbh, $loci_r, "genes") if exists $tables_r->{"genes"};
 simple_delete($dbh, $loci_r, "loci") if exists $tables_r->{"loci"};
 simple_delete($dbh, $loci_r, "spacer_hclust") if exists $tables_r->{"spacer_hclust"};

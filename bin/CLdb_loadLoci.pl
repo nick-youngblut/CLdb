@@ -76,29 +76,31 @@ sub make_genbank_array_dirs{
 	my @cp_warning;
 	foreach my $entry_type (keys %$loci_r){
 		foreach my $row (@{$loci_r->{$entry_type}}){
-			if( $$row[$header_r->{"genbank"}] ){
-				my @parts = File::Spec->splitpath( $$row[$header_r->{"genbank"}] );
+			# genbank file #
+			if( $$row[$header_r->{"genbank_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"genbank_file"}] );
 
 				# making genbank dir; copying file #
 				if(File::Spec->rel2abs($parts[1]) ne "$dir/genbank"){
 					mkdir "$dir/genbank" unless -d "$dir/genbank";
 					unless(-e "$dir/genbank/$parts[2]"){
-						die " ERROR: cannot find ", $$row[$header_r->{"genbank"}], "\n"
-							unless -e $$row[$header_r->{"genbank"}];
+						die " ERROR: cannot find ", $$row[$header_r->{"genbank_file"}], "\n"
+							unless -e $$row[$header_r->{"genbank_file"}];
 							
-						copy($$row[$header_r->{"genbank"}], "$dir/genbank/$parts[2]") or die $!;
-						print STDERR "...Copied ", $$row[$header_r->{"genbank"}], 
+						copy($$row[$header_r->{"genbank_file"}], "$dir/genbank/$parts[2]") or die $!;
+						print STDERR "...Copied ", $$row[$header_r->{"genbank_file"}], 
 							" to $dir/genbank/$parts[2]\n" unless $quiet;
 						}
 					}
 				# stripping path from genbank value #
-				$$row[$header_r->{"genbank"}] = $parts[2];
+				$$row[$header_r->{"genbank_file"}] = $parts[2];
 				# sanity check #
-				my $file_chk = join("/", $dir, "genbank", $$row[$header_r->{"genbank"}]);
+				my $file_chk = join("/", $dir, "genbank", $$row[$header_r->{"genbank_file"}]);
 				die " ERROR: cannot find ", $file_chk, "\n"
 					unless -e $file_chk;
 				} 
-			if( $$row[$header_r->{"array_file"}] ){
+			# array file #
+			if( exists $header_r->{"array_file"} && $$row[$header_r->{"array_file"}] ){
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
 
 				# making genbank dir; copying file #
@@ -120,6 +122,29 @@ sub make_genbank_array_dirs{
 				die " ERROR: cannot find ", $file_chk, "\n"
 					unless -e $file_chk;
 				}
+			# fasta file #
+			if( exists $header_r->{"fasta_file"} && $$row[$header_r->{"fasta_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"fasta_file"}] );
+
+				# making genbank dir; copying file #
+				if(File::Spec->rel2abs($parts[1]) ne "$dir/fasta"){
+					mkdir "$dir/fasta" unless -d "$dir/fasta";
+					unless(-e "$dir/fasta/$parts[2]"){
+						die " ERROR: cannot find ", $$row[$header_r->{"fasta_file"}], "\n"
+							unless -e $$row[$header_r->{"fasta_file"}];
+							
+						copy($$row[$header_r->{"fasta_file"}], "$dir/fasta/$parts[2]") or die $!;
+						print STDERR "...Copied ", $$row[$header_r->{"fasta_file"}], 
+							" to $dir/fasta/$parts[2]\n" unless $quiet;
+						}
+					}
+				# stripping path from array value #
+				$$row[$header_r->{"fasta_file"}] = $parts[2];
+				# sanity check #
+				my $file_chk = join("/", $dir, "fasta", $$row[$header_r->{"fasta_file"}]);
+				die " ERROR: cannot find ", $file_chk, "\n"
+					unless -e $file_chk;
+				}				
 			}
 		}
 	}
@@ -139,6 +164,10 @@ sub remove_paths{
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
 				$$row[$header_r->{"array_file"}] = $parts[2];			
 				}
+			if( $$row[$header_r->{"fasta_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"fasta_file"}] );
+				$$row[$header_r->{"fasta_file"}] = $parts[2];			
+				}				
 			}
 		}
 	}
@@ -177,7 +206,7 @@ sub update_db{
 	
 	$dbh->commit;	
 	
-	print STDERR "...Number of entries updated in loci table: ", (scalar keys %$loci_r) -1, "\n"
+	print STDERR "...Number of entries updated in loci table (locus_ID provided in loci table): ", (scalar keys %$loci_r) -1, "\n"
 		unless $verbose;
 	}
 
@@ -206,7 +235,7 @@ sub load_new_entries{
 		}
 	$dbh->commit;
 
-	print STDERR "...Number of entries added to loci table: ", scalar @$loci_new_r, "\n"
+	print STDERR "...Number of entries added in loci table (no locus_ID provided in loci table): ", scalar @$loci_new_r, "\n"
 		unless $verbose;
 	}
 
@@ -233,7 +262,7 @@ sub add_scaffold_ID{
 
 sub check_headers{
 	my ($header_r) = @_;
-	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status crispr_array_status genbank array_file author/;
+	my @req = qw/taxon_id taxon_name locus_start locus_end operon_status array_status genbank_file array_file author/;
 	
 	# checking for required headers not found #
 	my (@not_found, @found);

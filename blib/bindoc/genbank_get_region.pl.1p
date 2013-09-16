@@ -123,52 +123,67 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_LOADARRAYS 1"
-.TH CLDB_LOADARRAYS 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "GENBANK_GET_REGION 1"
+.TH GENBANK_GET_REGION 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_loadArrays.pl \-\- loading direct repeats & spacers into CRISPR database
+genbank_get_region.pl \-\- Get all CDS features in >=1 specified genome region
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_loadArrays.pl [flags]
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
-.PD 0
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
+genbank_get_region.pl [options] [region_file] < file.gbk > region.txt
+.SS "arguments"
+.IX Subsection "arguments"
+region_file = comma-delimited; each line = (contig), region_start, region_stop
+.PP
+Contig name is optional (needed if multi-locus genbank; ie. multiple '//').
+.SS "options"
+.IX Subsection "options"
+.IP "\-region" 4
+.IX Item "-region"
+List of region start/stop values (use instead of region_file). 
+Example: '\-r 1 1000' for region {1\-1000}  
+Example: '\-r contig_1 1 1000' for region {contig_1: 1\-1000}
+.IP "\-tRNA" 4
+.IX Item "-tRNA"
+Include rRNA features? [\s-1FALSE\s0]
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
-.PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_loadArrays.pl
+perldoc genbank_get_region.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Parse array files (CRISPRFinder format) and load
-the spacers and direct repeats into the CLdb database.
+Get all \s-1CDS\s0 features in >=1 specified genome region.
+Regions can be provided either by '\-region' flag or
+by a region file.
 .PP
-Array file names are obtained from the loci table in the
-\&\s-1CRISPR\s0 database.
+The tag values of all features falling at least 
+partially with a region are written out in a table.
+\&\*(L"\s-1NA\s0\*(R" is written if the tag value is not present in
+the feature. Multiple values for the same tag are 
+combined with \*(L"::\*(R"
 .PP
-Array files must be in \f(CW$CLdb_HOME\fR/array/
+Contig name is optional (needed if multi-locus genbank).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Usage:"
-.IX Subsection "Usage:"
-CLdb_loadArrays.pl \-d CLdb.sqlite
+.SS "\s-1CDS\s0 features in 1\-locus genbank (positions: 1\-1000bp):"
+.IX Subsection "CDS features in 1-locus genbank (positions: 1-1000bp):"
+genbank_get_region.pl \-r 1 1000 < file.gbk > regions.txt
+.SS "\s-1CDS\s0 features in multi-locus genbank (positions: 1\-1000bp)::"
+.IX Subsection "CDS features in multi-locus genbank (positions: 1-1000bp)::"
+genbank_get_region.pl \-r Contig_1 1 1000 < file.gbk > regions.txt
+.SS "\s-1CDS\s0 & tRNA features in 1\-locus genbank:"
+.IX Subsection "CDS & tRNA features in 1-locus genbank:"
+genbank_get_region.pl \-r 1 1000 \-t < file.gbk > regions.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
 .SH "AVAILABILITY"
 .IX Header "AVAILABILITY"
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+sharchaea.life.uiuc.edu:/home/git/annotation/
 .SH "COPYRIGHT"
 .IX Header "COPYRIGHT"
 Copyright 2010, 2011

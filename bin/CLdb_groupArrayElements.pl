@@ -74,7 +74,7 @@ sub update_db{
 		$cmd = "UPDATE spacers SET spacer_group = ? WHERE locus_id = ? and spacer_id = ?";
 		}
 	elsif($cat eq "DR"){
-		$cmd = "UPDATE directrepeats SET repeat_group = ? WHERE locus_id = ? and repeat_id = ?";
+		$cmd = "UPDATE DRs SET DR_group = ? WHERE locus_id = ? and DR_id = ?";
 		}
 	else{ die " LOGIC ERROR: $!\n"; }
 	

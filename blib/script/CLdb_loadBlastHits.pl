@@ -55,9 +55,10 @@ my $scafs_r;
 ($scafs_r, $taxon_id, $taxon_name) = get_blast_hits($dbh, $taxon_info_r, $taxa_r, $taxon_id, $taxon_name, $delimiter);
 
 # loading subject fasta #
-load_subject_fasta($dbh, $subject_in, $scafs_r, $taxon_id, $taxon_name) if $subject_in;
+load_subject_fasta($dbh, $subject_in, $scafs_r, $taxon_id, $taxon_name) if $subject_in;	
 
 # disconnect #
+$dbh->commit();
 $dbh->disconnect();
 exit;
 
@@ -84,12 +85,11 @@ sub load_subject_fasta{
  		 
  		 	# loading last sequence #
  			if($name){
-	 			if(! $just_hit_scafs){ # keeping just hit scaffolds & exists scaff
-	 				$entry_cnt = add_entry($sql, $taxon_id, $taxon_name, $name, $seq, $entry_cnt)
-	 					if exists $scafs_r->{$name};	 			
+	 			if(! $just_hit_scafs && exists $scafs_r->{$name}){ 		# keeping just hit scaffolds & exists scaff
+	 				$entry_cnt += add_entry($sql, $taxon_id, $taxon_name, $name, $seq, $entry_cnt);			
 	 				}		
 		 		else{				# adding all scaffolds 
-	 				$entry_cnt = add_entry($sql, $taxon_id, $taxon_name, $name, $seq, $entry_cnt)
+	 				$entry_cnt += add_entry($sql, $taxon_id, $taxon_name, $name, $seq, $entry_cnt)
 		 			}
 	 			}
 	 		
@@ -187,6 +187,12 @@ sub get_blast_hits{
 		
 		
 		# loading db #
+		## binding params ##
+			#for my $i(0..$#line){ $sql->bind_param($i+1, $line[$i]); }
+			#$sql->bind_param($#line+2, $taxon_id);
+			#$sql->bind_param($#line+3, $taxon_name);
+
+		## executing ##
 		$sql->execute( @line, $taxon_id, $taxon_name );
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
@@ -200,7 +206,10 @@ sub get_blast_hits{
 		$scafs{$line[1]} = 1 unless $just_hit_scafs;
 		}
 		
-	$dbh->commit;	
+	$dbh->commit;
+
+	#my $res = $dbh->selectall_arrayref("SELECT * from blast_hits");
+	#print Dumper "blast_hit", $res; exit;
 	
 	print STDERR "...Number of BLAST hit entries added/updated in database:\t$entry_cnt{'total'}\n";
 	print STDERR "...Number of those BLAST hits that hit a CRISPR array:\t\t$entry_cnt{'array'}\n";

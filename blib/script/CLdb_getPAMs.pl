@@ -100,6 +100,7 @@ AND (taxon_id == ?
 	
 	# getting sequence for each blast hit queried #
 	foreach my $hit (sort @$blast_hits_r){
+		
 		# start - end #
 		my $hit_start = $$hit[4];
 		my $hit_end = $$hit[5];
@@ -192,7 +193,6 @@ $join_sql";
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
-	
 	
 	# making hash (spacer_group => spacer_length) #
 	my %spacer_length;

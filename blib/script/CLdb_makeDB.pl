@@ -11,11 +11,12 @@ use File::Spec;
 ### args/flags
 #pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $replace);
-my @tables = ("leaderseqs", "genes");
+my ($verbose, $replace, $drop_all);
+my @tables = ("leaders", "genes");
 GetOptions(
 	   "replace" => \$replace,
 	   "tables=s{,}" => \@tables,
+	   "drop" => \$drop_all,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -36,8 +37,10 @@ sub make_db{
 	if(-e $db_name){
 		foreach my $table (@$tables_r){
 			if(exists $sql_r->{$table}){
-				print STDERR "...Not dropping table: \"$table\"\n";
-				delete $sql_r->{$table};
+				unless($drop_all){
+					print STDERR "...Not dropping table: \"$table\"\n";
+					delete $sql_r->{$table};
+					}
 				}
 			else{
 				print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
@@ -79,17 +82,18 @@ Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
 Operon_Start	INTEGER,
 Operon_End	INTEGER,
-CRISPR_Array_Start	INTEGER,
-CRISPR_Array_End	INTEGER,
+Array_Start	INTEGER,
+Array_End	INTEGER,
 Operon_Status	TEXT	NOT NULL,
-CRISPR_Array_Status	TEXT	NOT NULL,
-Genbank	TEXT	NOT NULL,
+Array_Status	TEXT	NOT NULL,
+Genbank_File	TEXT	NOT NULL,
+Fasta_File	TEXT,
 Array_File	TEXT,
 Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL,
 UNIQUE (Taxon_ID, Taxon_name, Scaffold, Locus_Start, Locus_End)
-ON CONFLICT IGNORE
+ON CONFLICT REPLACE
 );
 
 HERE
@@ -112,27 +116,27 @@ ON CONFLICT REPLACE
 HERE
 
 
-	$sql{"directrepeats"} = <<HERE;
-DROP TABLE IF EXISTS DirectRepeats;
+	$sql{"drs"} = <<HERE;
+DROP TABLE IF EXISTS DRs;
 
-CREATE TABLE DirectRepeats (
+CREATE TABLE DRs (
 Locus_ID	INTEGER	NOT NULL,
-Repeat_ID	INTEGER	NOT NULL,
-Repeat_Start	INTEGER	NOT NULL,
-Repeat_End	INTEGER	NOT NULL,
-Repeat_Sequence	TEXT	NOT NULL,
-Repeat_Group	INTEGER,
-UNIQUE (LOCUS_ID, Repeat_ID)
+DR_ID	INTEGER	NOT NULL,
+DR_Start	INTEGER	NOT NULL,
+DR_End	INTEGER	NOT NULL,
+DR_Sequence	TEXT	NOT NULL,
+DR_Group	INTEGER,
+UNIQUE (LOCUS_ID, DR_ID)
 ON CONFLICT REPLACE
 );
 
 HERE
 
 
-	$sql{"directrepeatconsensus"} = <<HERE;
-DROP TABLE IF EXISTS DirectRepeatConsensus;
+	$sql{"DR_consensus"} = <<HERE;
+DROP TABLE IF EXISTS DR_Consensus;
 
-CREATE TABLE DirectRepeatConsensus (
+CREATE TABLE DR_Consensus (
 Locus_ID	INTEGER	NOT NULL,
 Consensus_Sequence_IUPAC	TEXT	NOT NULL,
 Consensus_Sequence_Threshold	TEXT	NOT NULL,
@@ -143,10 +147,10 @@ ON CONFLICT REPLACE
 HERE
 
 
-	$sql{"leaderseqs"} = <<HERE;
-DROP TABLE IF EXISTS LeaderSeqs;
+	$sql{"leaders"} = <<HERE;
+DROP TABLE IF EXISTS Leaders;
 
-CREATE TABLE LeaderSeqs (
+CREATE TABLE Leaders (
 Locus_ID	INTEGER	NOT NULL,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
@@ -181,10 +185,12 @@ HERE
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
-Spacer_group	TEXT	NOT NULL,
-Taxon_ID	TEXT,
-Taxon_name	TEXT,
-Subject	TEXT	NOT NULL,
+spacer_DR	TEXT	NOT NULL,
+Group_ID	TEXT	NOT NULL,
+S_taxon_ID	TEXT,
+S_taxon_name	TEXT,
+S_accession	TEXT,
+S_GI	TEXT,
 pident	REAL	NOT NULL,
 length	INTEGER	NOT NULL,
 mismatch	INTEGER	NOT NULL,
@@ -195,9 +201,10 @@ sstart	INTEGER	NOT NULL,
 send	INTEGER	NOT NULL,
 evalue	TEXT	NOT NULL,
 bitscore	INTEGER	NOT NULL,
-CRISPR_array	TEXT,
+slen	INTEGER	NOT NULL,
+array_hit	TEXT,
 date	DATE,
-UNIQUE( Spacer_group, Taxon_ID, Taxon_name, Subject, sstart, send)
+UNIQUE( spacer_DR, Group_ID, S_taxon_ID, S_taxon_name, S_accession, sstart, send)
 ON CONFLICT REPLACE
 );
 
@@ -209,22 +216,26 @@ end;
 HERE
 
 
-	$sql{"blast_subject"} = <<HERE;
-DROP TABLE IF EXISTS blast_subject;
+	$sql{"spacer_blast_subject"} = <<HERE;
+DROP TABLE IF EXISTS spacer_blast_subject;
 
-CREATE TABLE blast_subject (
+CREATE TABLE spacer_blast_subject (
 Taxon_ID	TEXT,
 Taxon_name	TEXT,
+Accession	TEXT,
 Scaffold_name	TEXT	NOT NULL,
 Scaffold_sequence	TEXT	NOT NULL,
+Fragment_start	INTEGER	NOT NULL,
+Fragment_end	INTEGER	NOT NULL,
+Extension	INTEGER	NOT NULL,
 Date	DATE,
-UNIQUE (Taxon_ID, Taxon_name, Scaffold_name)
+UNIQUE (Taxon_ID, Taxon_name, Accession, Scaffold_name)
 ON CONFLICT REPLACE
 );
 
-CREATE TRIGGER blast_subject_update_trg AFTER INSERT ON blast_subject
+CREATE TRIGGER blast_subject_update_trg AFTER INSERT ON spacer_blast_subject
 begin
-  UPDATE blast_subject SET Date = DATETIME('NOW') where rowid = new.rowid;
+  UPDATE spacer_blast_subject SET Date = DATETIME('NOW') where rowid = new.rowid;
 end;
 
 HERE
@@ -245,15 +256,15 @@ ON CONFLICT REPLACE
 HERE
 
 
-	$sql{"directrepeat_hclust"} = <<HERE;
-DROP TABLE IF EXISTS directrepeat_hclust;
+	$sql{"DR_hclust"} = <<HERE;
+DROP TABLE IF EXISTS DR_hclust;
 
-CREATE TABLE directrepeat_hclust (
+CREATE TABLE DR_hclust (
 Locus_ID	TEXT	NOT NULL,
-DirectRepeat_ID	TEXT	NOT NULL,
+DR_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, DirectRepeat_ID, Cutoff)
+UNIQUE (Locus_ID, DR_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 
@@ -303,11 +314,21 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =over
 
-=item -r 	Replace existing database.
+=item -r  <bool>
 
-=item -t 	Table(s) to keep as is (if they exist). ["leaderseqs" "genes"]
+Replace existing database.
 
-=item -h	This help message
+=item -t  <char>
+
+Table(s) to keep as is (if they exist). ["leaderseqs" "genes"]
+
+=item -d  <bool>
+
+Drop all tables. [FALSE]
+
+=item -h  <bool>
+
+This help message
 
 =back
 

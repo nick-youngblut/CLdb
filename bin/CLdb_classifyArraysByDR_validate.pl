@@ -274,10 +274,10 @@ sub get_unclassified_arrays{
 	
 	# make query #
 	my $query = "SELECT 
-directrepeats.Repeat_sequence,
+DRs.DR_sequence,
 loci_temp.locus_id
-FROM directrepeats, loci_temp 
-WHERE directrepeats.locus_id = loci_temp.locus_id 
+FROM DRs, loci_temp 
+WHERE DRs.locus_id = loci_temp.locus_id 
 AND (loci_temp.subtype IS NULL
 OR loci_temp.subtype = '')
 ";
@@ -314,11 +314,11 @@ sub get_classified_arrays{
 	
 	# make query #
 	my $query = "SELECT 
-directrepeats.Repeat_sequence,
+DRs.DR_sequence,
 loci_temp.subtype,
 loci_temp.locus_id
-FROM directrepeats, loci_temp 
-WHERE directrepeats.locus_id = loci_temp.locus_id 
+FROM DRs, loci_temp 
+WHERE DRs.locus_id = loci_temp.locus_id 
 AND loci_temp.operon_status = 'intact'
 AND loci_temp.subtype IS NOT NULL
 ";
@@ -429,12 +429,13 @@ Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
 Operon_Start	INTEGER,
 Operon_End	INTEGER,
-CRISPR_Array_Start	INTEGER,
-CRISPR_Array_End	INTEGER,
+Array_Start	INTEGER,
+Array_End	INTEGER,
 Operon_Status	TEXT	NOT NULL,
-CRISPR_Array_Status	TEXT	NOT NULL,
-Genbank	TEXT	NOT NULL,
+Array_Status	TEXT	NOT NULL,
+Genbank_File	TEXT	NOT NULL,
 Array_File	TEXT,
+Fasta_File	TEXT,
 Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL
@@ -453,8 +454,8 @@ INSERT INTO Loci_temp
 SELECT * FROM Loci
 WHERE subtype IS NOT NULL
 AND operon_status = 'intact'
-AND (CRISPR_array_start IS NOT NULL
-OR CRISPR_array_start = '')
+AND (array_start IS NOT NULL
+OR array_start = '')
 ";
 	$q =~ s/\n|\r/ /g;
 	
@@ -569,6 +570,10 @@ perldoc CLdb_classifyArraysByDR_validate.pl
 
 Test accuracy of using direct repeats to 
 classify rogue arrays using a naive bayesian classifier.
+
+=head2 Output
+
+2 columns: average, standard_deviation
 
 =head1 EXAMPLES
 
