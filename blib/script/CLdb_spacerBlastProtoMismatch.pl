@@ -13,12 +13,12 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $by_group);
+my ($verbose, $database_file);
 my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";
 my $len_cutoff = 1;
-my $bin = 20; 								# 20 bins by default
+my $bin = 20; 								# 20 bins by defaul
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -32,7 +32,6 @@ GetOptions(
 	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
 	   "bin=i" => \$bin,					# number of bins to parse sequences
-	   "group" => \$by_group,				# just per spacer group
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -68,12 +67,7 @@ sub bin_mismatches{
 	my ($blast_hits_r, $bin) = @_;
 	
 	# header #
-	if($by_group){
-		print join("\t", qw/bin mismatch group_ID subtype s_taxon_id s_taxon_name s_accession/), "\n";
-		}
-	else{
-		print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype locus_id spacer_id s_taxon_id s_taxon_name s_accession/), "\n";
-		}
+	print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype spacer_group spacer_id s_taxon_id s_taxon_name s_accession/), "\n";
 	
 	# body #
 	foreach my $entry (@$blast_hits_r){
@@ -110,12 +104,7 @@ sub bin_mismatches{
 		
 		# writing mismatch table #
 		foreach my $mis_bin (sort{$a<=>$b} keys %$mismatch_r){
-			if($by_group){
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,21,5..7)]), "\n";
-				}		
-			else{
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,2,3,21,1,4..7)]), "\n";
-				}
+			print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,2,3,21,1,4..7)]), "\n";
 			}
 		}
 	}
@@ -202,7 +191,6 @@ $join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
 	$query = join(" ", $query, $extra_query);
-	$query .= " GROUP BY c.group_id, c.S_taxon_id, c.S_taxon_name, c.S_accession, c.sseqid, c.sstart, c.send, a.subtype" if $by_group;
 	
 	# status #
 	print STDERR "$query\n" if $verbose;

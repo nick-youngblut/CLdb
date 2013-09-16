@@ -118,7 +118,6 @@ sub get_spacer_info{
 					join("__", @$hit[0..1]),
 					join("__", @$hit[2..3]),
 					@$hit[4..$#$hit]), "\n";
-					
 			}
 		}
 	

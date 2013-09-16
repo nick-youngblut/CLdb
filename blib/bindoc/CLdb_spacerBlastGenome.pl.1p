@@ -123,62 +123,97 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_SUMMARY 1"
-.TH CLDB_SUMMARY 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_SPACERBLASTGENOME 1"
+.TH CLDB_SPACERBLASTGENOME 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_summary.pl \-\- summary stats on CLdb
+CLdb_spacerBlastGenome.pl \-\- BLASTn\-short of spacers and/or DRs against a genome in CLdb
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_summary.pl [flags] > summary.txt
+CLdb_spacerBlastGenome.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
+.IP "\-fasta  <char>" 4
+.IX Item "-fasta  <char>"
+A fasta of either spacer or \s-1DR\s0 group sequences (use: CLdb_array2fasta.pl \-g)
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
-Group summary by subtype?
-.IP "\-id" 4
-.IX Item "-id"
-Group summary by taxon_id?
-.IP "\-name" 4
-.IX Item "-name"
-Group summary by taxon_name?
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
+Extra sql to refine which sequences are returned.
+.IP "\-blast  <char>" 4
+.IX Item "-blast  <char>"
+BLASTn parameters (besides required flags). [\-evalue 0.00001]
+.IP "\-num_threads  <int>" 4
+.IX Item "-num_threads  <int>"
+Use for '\-num_threads' parameter in BLASTn. [1]
+.IP "\-x  <int>" 4
+.IX Item "-x  <int>"
+Retain blast hit subject sequence fragment + '\-x' bp on either side of fragment. [20]
+.IP "\-v  <bool>" 4
+.IX Item "-v  <bool>"
+Verbose output. [\s-1TRUE\s0]
+.IP "\-h  <bool>" 4
+.IX Item "-h  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_summary.pl
+perldoc CLdb_spacerBlastGenome.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get summary stats on CLdb.
+Run blastn-short against one or more genomes
+already in CLdb. Specific genomes can be
+selected by subtype ('\-subtype'), taxon_name
+('\-taxon_name'), taxon_id ('taxon_id'), or
+other sql refinements of the query ('\-query').
 .PP
-The output is a tab-delimited file for easy parsing.
+Genomes are obtained from the 'fasta_file'
+values in the loci table.
+Fasta files should be in the CLdb/fasta/ directory 
+(copied by CLdb_loadLoci.pl).
+If no fasta file is found, the genome sequence
+is extracted from the genbank file ('genbank_file'
+in loci table). The genome is skipped if still 
+no sequence can be found.
+.PP
+Spacer and \s-1DR\s0 groups can be blasted at the same time.
+.PP
+It may be best to blast all DRs at once for 
+subsequent spacer array screening (spacers that
+have adjacent \s-1DR\s0 hits are considered to be located
+in \s-1CRISPR\s0 arrays and are thus not protospacers).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Total summary"
-.IX Subsection "Total summary"
-CLdb_summary.pl \-d CLdb.sqlite
-.SS "Summarize by subtype"
-.IX Subsection "Summarize by subtype"
-CLdb_summary.pl \-d CLdb.sqlite \-s
-.SS "Summarize by subtype & taxon_name"
-.IX Subsection "Summarize by subtype & taxon_name"
-CLdb_summary.pl \-d CLdb.sqlite \-s \-n
+.SS "Blasting all spacers against all genomes in CLdb"
+.IX Subsection "Blasting all spacers against all genomes in CLdb"
+CLdb_array2fasta.pl \-g > all_spacer_groups.fna
+.PP
+CLdb_spacerBlastGenome.pl \-d CLdb.sqlite \-f all_spacer_groups.fna
+.SS "Blasting all DRs against all genomes in CLdb"
+.IX Subsection "Blasting all DRs against all genomes in CLdb"
+CLdb_array2fasta.pl \-r \-g > all_DR_groups.fna
+.PP
+CLdb_spacerBlastGenome.pl \-d CLdb.sqlite \-f all_DR_groups.fna
+.SS "Blasting all spacers against 1 genome"
+.IX Subsection "Blasting all spacers against 1 genome"
+CLdb_array2fasta.pl \-g > all_spacer_groups.fna
+.PP
+CLdb_spacerBlastGenome.pl \-d CLdb.sqlite \-f all_spacer_groups.fna \-taxon_name \*(L"e.coli\*(R"
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

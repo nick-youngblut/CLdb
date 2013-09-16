@@ -73,7 +73,7 @@ for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[
 	
 # updating db #
 add_entry($dbh, \%spacer_hclust, "spacer") if $spacer_bool;
-add_entry($dbh, \%DR_hclust, "directrepeat") if $dr_bool;
+add_entry($dbh, \%DR_hclust, "DR") if $dr_bool;
 
 # disconnect #
 $dbh->disconnect();

@@ -13,7 +13,7 @@ use DBI;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $spacer_bool, $by_group);
+my ($verbose, $database_file, $spacer_bool, $by_group, $leader_bool);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
@@ -23,6 +23,7 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "group" => \$by_group,
+	   "leader" => \$leader_bool,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -47,10 +48,18 @@ $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 # getting arrays of interest from database #
-my $arrays_r = get_arrays_join($dbh, $spacer_bool, $extra_query, $join_sql);
+my $arrays_r;
+if($leader_bool){
+		#$arrays_r = get_arrays_join_flip_test($dbh, $spacer_bool, $extra_query, $join_sql);
+	$arrays_r = get_arrays_join_flip($dbh, $spacer_bool, $extra_query, $join_sql);
+	}
+else{
+	$arrays_r = get_arrays_join($dbh, $spacer_bool, $extra_query, $join_sql);
+	}
 
 # writing fasta #
 write_arrays_fasta($arrays_r, $spacer_bool);
+
 
 # disconnect #
 $dbh->disconnect();
@@ -79,38 +88,81 @@ sub write_arrays_fasta{
 		}
 	}
 
-sub get_arrays{
-	my ($dbh, $spacer_bool, $extra_query) = @_;
+sub get_arrays_join_flip_test{
+	my ($dbh, $spacer_bool, $extra_query, $join_sql) = @_;
 	
-	# make query #
-	my $query;
-	if($spacer_bool){		# direct repeat
-		if($by_group){
-			$query = "SELECT Locus_ID, DR_group, DR_sequence FROM DRs GROUP BY DR_group";
-			}
-		else{
-			$query = "SELECT Locus_ID, DR_ID, DR_sequence FROM DRs";
-			}
-		}
-	else{					# spacer
-		if($by_group){
-			$query .= "SELECT Locus_ID, spacer_group, Spacer_sequence FROM spacers GROUP BY spacer_group";		
-			}
-		else{
-			$query = "SELECT Locus_ID, Spacer_ID, Spacer_sequence FROM spacers";
-			}
-		}
-	$query = join(" ", $query, $extra_query);
-	print STDERR $query, "\n" if $verbose;
+	my ($table, $label) = qw/spacers spacer/;
+	($table, $label) = qw/DRs DR/ if $spacer_bool;
+
+	my $query = "SELECT
+$table.Locus_ID, 
+$table.$label\_group, 
+$table.$label\_sequence,
+loci.array_end,
+leaders.leader_end
+FROM loci, leaders, $table
+WHERE loci.locus_id = $table.locus_id
+AND loci.locus_id = leaders.locus_id
+AND leaders.locus_id IS NOT NULL
+GROUP BY $table.$label\_group, $table.$label\_sequence
+ORDER BY $table.$label\_group
+";	
+
+	$query =~ s/\n/ /g;
+		#print Dumper $query;
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
 	
-	
+	# making fasta #
 	my %arrays;
 	foreach my $row (@$ret){
+		# rev-comp if leader end > array end #
+		$$row[2] = revcomp($$row[2]) if $$row[4] > $$row[3];
+		
+		#print join("\t", @$row), "\n";
+		}
+		exit;
+	#	print Dumper %arrays; exit;
+
+	}
+
+sub get_arrays_join_flip{
+	my ($dbh, $spacer_bool, $extra_query, $join_sql) = @_;
+	
+	my ($table, $label) = qw/spacers spacer/;
+	($table, $label) = qw/DRs DR/ if $spacer_bool;
+
+	my $query = "SELECT
+$table.Locus_ID, 
+$table.$label\_group, 
+$table.$label\_sequence,
+loci.array_end,
+leaders.leader_end
+FROM loci, leaders, $table
+WHERE loci.locus_id = $table.locus_id
+AND loci.locus_id = leaders.locus_id
+AND leaders.locus_id IS NOT NULL
+";	
+
+	$query .= "GROUP BY $table.$label\_group" if $by_group;
+	$query =~ s/\n/ /g;
+		#print Dumper $query;
+	
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	# making fasta #
+	my %arrays;
+	foreach my $row (@$ret){
+		# rev-comp if leader end > array end #
+		$$row[2] = revcomp($$row[2]) if $$row[4] > $$row[3];
+		
+		# loading fasta #
 		die " ERROR: not spacer/repeat group found!\n\tWas CLdb_groupArrayElements.pl run?\n"
 			unless $$row[1]; 
 		$arrays{$$row[0]}{$$row[1]} = $$row[2];
@@ -118,6 +170,15 @@ sub get_arrays{
 	
 	#	print Dumper %arrays; exit;
 	return \%arrays;
+	}
+	
+sub revcomp{
+	# reverse complements DNA #
+	my $seq = shift;
+	$seq = reverse($seq);
+	$seq =~ tr/[a-z]/[A-Z]/;
+	$seq =~ tr/ACGTNBVDHKMRYSW\.-/TGCANVBHDMKYRSW\.-/;
+	return $seq;
 	}
 	
 sub get_arrays_join{
@@ -173,6 +234,21 @@ sub join_query_opts{
 	}
 
 
+sub check_for_loci_table{
+	my ($table_list_r) = @_;
+	die " ERROR: loci table not found in database!\n"
+		unless grep(/^loci$/i, @$table_list_r);
+	if($leader_bool){
+		die " ERROR: leaders table not found in database!\n"
+			unless grep(/^leaders$/i, @$table_list_r);
+		}
+	}
+
+sub list_tables{
+	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
+	return [keys %$all];
+	}
+
 
 __END__
 
@@ -222,6 +298,11 @@ Get array elements de-replicated by group (ie. all unique sequences).
 
 Extra sql to refine which sequences are returned.
 
+=item -leader
+
+Orient sequence to leader (leader always on 5' end)? Only sequences 
+from loci with identified leaders will be written! [FALSE]
+
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -240,6 +321,9 @@ and write them to a fasta.
 By default, all spacers or direct repeats (if '-r') will be written.
 The '-q' flag can be used to refine the query to certain sequences (see examples).
 
+For spacer blasting, use '-leader' to avoid using sequence
+from the wrong strand (i.e. leader on 3' end instead of 5').
+
 =head1 EXAMPLES
 
 =head2 Write all spacers to a fasta:
@@ -253,6 +337,10 @@ CLdb_array2fasta.pl -d CLdb.sqlite -r
 =head2 Write all unique spacers
 
 CLdb_array2fasta.pl -d CLdb.sqlite -g
+
+=head2 Write all unique spacers oriented by the leader location
+
+CLdb_array2fasta.pl -d CLdb.sqlite -g -l
 
 =head2 Refine spacer sequence query:
 

@@ -123,62 +123,46 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_SUMMARY 1"
-.TH CLDB_SUMMARY 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_SPACERBLASTDRFILTER_RAW 1"
+.TH CLDB_SPACERBLASTDRFILTER_RAW 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_summary.pl \-\- summary stats on CLdb
+CLdb_spacerBlastDRFilter_raw.pl \-\- filter spacer blast table using direct\-repeat blast table
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_summary.pl [flags] > summary.txt
-.SS "Required flags"
-.IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
+CLdb_spacerBlastDRFilter_raw.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+.SS "options"
+.IX Subsection "options"
+.IP "\-r 	Range allowable between spacer & \s-1DR\s0 blast hit (bp). [30]" 4
+.IX Item "-r 	Range allowable between spacer & DR blast hit (bp). [30]"
 .PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
-Group summary by subtype?
-.IP "\-id" 4
-.IX Item "-id"
-Group summary by taxon_id?
-.IP "\-name" 4
-.IX Item "-name"
-Group summary by taxon_name?
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
+.IP "\-a 	Do not filter hit. Instead, add an In_Array column (yes|no). [\s-1FALSE\s0]" 4
+.IX Item "-a 	Do not filter hit. Instead, add an In_Array column (yes|no). [FALSE]"
+.IP "\-v	Verbose output" 4
+.IX Item "-v	Verbose output"
 .IP "\-h	This help message" 4
 .IX Item "-h	This help message"
 .PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_summary.pl
+perldoc CLdb_spacerBlastDRFilter_raw.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get summary stats on CLdb.
+Filter out spacer blast hits to \s-1CRISPR\s0 arrays by
+removing all spacer blast hits that hit adjacent
+to 2 direct repeat blast hits.
 .PP
-The output is a tab-delimited file for easy parsing.
+Use '\-a' if you want all hits including spacer
+hits to an array (last column will designate whether
+spacer hit falls in a \s-1CRISPR\s0 array).
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Total summary"
-.IX Subsection "Total summary"
-CLdb_summary.pl \-d CLdb.sqlite
-.SS "Summarize by subtype"
-.IX Subsection "Summarize by subtype"
-CLdb_summary.pl \-d CLdb.sqlite \-s
-.SS "Summarize by subtype & taxon_name"
-.IX Subsection "Summarize by subtype & taxon_name"
-CLdb_summary.pl \-d CLdb.sqlite \-s \-n
+.SS "Basic Usage:"
+.IX Subsection "Basic Usage:"
+CLdb_spacerBlastDRFilter_raw.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

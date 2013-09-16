@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SPACERBLAST2GFF 1"
-.TH CLDB_SPACERBLAST2GFF 1 "2013-08-28" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SPACERBLAST2GFF 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,28 +141,19 @@ CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 .SS "options"
 .IX Subsection "options"
 .PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
+.IP "\-staxon_id" 4
+.IX Item "-staxon_id"
 .PD
-Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
-Refine query to specific a taxon_name(s) (>1 argument allowed).
+Refine query to specific a subject taxon_id(s) (>1 argument allowed).
+.IP "\-staxon_name" 4
+.IX Item "-staxon_name"
+Refine query to specific a subject taxon_name(s) (>1 argument allowed).
 .IP "\-query" 4
 .IX Item "-query"
 Extra sql to refine the query.
-.IP "\-staxon_id" 4
-.IX Item "-staxon_id"
-\&\s-1BLAST\s0 subject taxon_id (>1 argument allowed)
-.IP "\-staxon_name" 4
-.IX Item "-staxon_name"
-\&\s-1BLAST\s0 subject taxon_name (>1 argument allowed)
 .IP "\-length" 4
 .IX Item "-length"
-Length cutoff for blast hit (>=; fraction of spacer length). [0.9]
+Length cutoff for blast hit (>=; fraction of spacer length). [1]
 .IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
 .IX Item "-v	Verbose output. [FALSE]"
 .PD 0

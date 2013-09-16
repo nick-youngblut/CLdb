@@ -13,12 +13,11 @@ use DBI;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $by_group);
+my ($verbose, $database_file);
 my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";
 my $len_cutoff = 1;
-my $bin = 20; 								# 20 bins by default
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -31,8 +30,6 @@ GetOptions(
 	   "sacc=s{,}" => \@sacc,
 	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
-	   "bin=i" => \$bin,					# number of bins to parse sequences
-	   "group" => \$by_group,				# just per spacer group
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -60,23 +57,15 @@ $join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name, \@sacc);
 my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 
 # binning mismatches #
-bin_mismatches($blast_hits_r, $bin);
+write_fasta($blast_hits_r);
 
 
 ### Subroutines
-sub bin_mismatches{
-	my ($blast_hits_r, $bin) = @_;
-	
-	# header #
-	if($by_group){
-		print join("\t", qw/bin mismatch group_ID subtype s_taxon_id s_taxon_name s_accession/), "\n";
-		}
-	else{
-		print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype locus_id spacer_id s_taxon_id s_taxon_name s_accession/), "\n";
-		}
-	
+sub write_fasta{
+	my ($blast_hits_r) = @_;
+		
 	# body #
-	foreach my $entry (@$blast_hits_r){
+	foreach my $entry (sort{$a->[0]<=>$b->[0]} @$blast_hits_r){
 		# applying len cutoff #
 		next if abs($$entry[15] - $$entry[14] + 1) / $$entry[16] < $len_cutoff;
 		
@@ -103,62 +92,18 @@ sub bin_mismatches{
 			$proto = substr($$entry[17], $sstart - $xstart, $send - $sstart + 1);
 			}
 		
-			#print Dumper$$entry[18], $proto;
+			#print Dumper$$entry[18], $proto;		# qseq, frag(trimmed)
 		
-		# binning mismatches #
-		my $mismatch_r = bin_align($$entry[18], $proto, $bin);
-		
-		# writing mismatch table #
-		foreach my $mis_bin (sort{$a<=>$b} keys %$mismatch_r){
-			if($by_group){
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,21,5..7)]), "\n";
-				}		
-			else{
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,2,3,21,1,4..7)]), "\n";
-				}
-			}
+		# writing fasta #
+		print join("\n",
+			join("__", ">spacer" ,@$entry[(0,2,3,21,1,4..7)] ),
+			$$entry[18]), "\n";
+		print join("\n", 
+			join("__",  ">proto", @$entry[(0,2,3,21,1,4..7)] ),
+			$proto), "\n";
 		}
 	}
 
-sub bin_align{
-# binning mismatches in align #
-	my ($query, $proto, $bin) = @_;
-
-	# upper case #
-	$query =~ tr/a-z/A-Z/;
-	$proto =~ tr/a-z/A-Z/;
-
-	# sanity check #
-	die " ERROR: query & protospacer seq are not the same length!\n"
-		unless length $query == length $proto;
-
-	
-	my @query = split //, $query;
-	my @proto = split //, $proto;
-	my $bin_size = length($query) / $bin;
-	
-	my @bins;
-	for (my $i=0; $i<=$#query; $i+=$bin_size){
-		push @bins, $i; #sprintf("%.0f", $i);
-		}
-	
-	my %mismatch;
-	#for (my $i=0;$i<= $#bins -1; $i+=2){
-	for my $i (0..($#bins - 1)){			# foreach bin #
-		my $bin_start = sprintf("%.0f", $bins[$i]);
-		my $bin_end = sprintf("%.0f", $bins[$i+1] - 0.001);
-		my $mismatch = 0;
-		for my $ii ($bin_start..$bin_end){
-			$mismatch++ if $query[$ii] ne $proto[$ii] &&
-				($query[$ii] ne "-" && $proto[$ii] ne "-");
-				#print "$query[$ii] <-> $proto[$ii] ; $mismatch\n";
-			}
-		$mismatch{sprintf("%.3f", $i * $bin_size / length($proto) * 100)} = $mismatch;
-		}
-	
-		#print Dumper %mismatch; exit;
-	return \%mismatch;
-	}
 
 sub flip_se{
 	my ($start, $end) = @_;
@@ -202,7 +147,6 @@ $join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
 	$query = join(" ", $query, $extra_query);
-	$query .= " GROUP BY c.group_id, c.S_taxon_id, c.S_taxon_name, c.S_accession, c.sseqid, c.sstart, c.send, a.subtype" if $by_group;
 	
 	# status #
 	print STDERR "$query\n" if $verbose;
