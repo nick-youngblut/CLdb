@@ -18,8 +18,7 @@ my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";
 my $len_cutoff = 1;
-my @seed = (1,15);							# SEED region of spacer 
-my $bin = 30; 								# 30 bins by defaul
+my $bin = 20; 								# 20 bins by defaul
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -32,7 +31,6 @@ GetOptions(
 	   "sacc=s{,}" => \@sacc,
 	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
-	   "seed=s{2,2}" => \@seed,
 	   "bin=i" => \$bin,					# number of bins to parse sequences
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -68,6 +66,10 @@ bin_mismatches($blast_hits_r, $bin);
 sub bin_mismatches{
 	my ($blast_hits_r, $bin) = @_;
 	
+	# header #
+	print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype spacer_group spacer_id s_taxon_name s_taxon_id s_accession/), "\n";
+	
+	# body #
 	foreach my $entry (@$blast_hits_r){
 		# applying len cutoff #
 		next if abs($$entry[15] - $$entry[14] + 1) / $$entry[16] < $len_cutoff;
@@ -126,15 +128,16 @@ sub bin_align{
 	
 	my @bins;
 	for (my $i=0; $i<=$#query; $i+=$bin_size){
-		push @bins, sprintf("%.0f", $i);
+		push @bins, $i; #sprintf("%.0f", $i);
 		}
 	
 	my %mismatch;
+	#for (my $i=0;$i<= $#bins -1; $i+=2){
 	for my $i (0..($#bins - 1)){			# foreach bin #
-		# $i = bin_start
-		# $i+1 = bin_end 
+		my $bin_start = sprintf("%.0f", $bins[$i]);
+		my $bin_end = sprintf("%.0f", $bins[$i+1] - 0.001);
 		my $mismatch = 0;
-		for my $ii ($bins[$i]..$bins[$i+1]){
+		for my $ii ($bin_start..$bin_end){
 			$mismatch++ if $query[$ii] ne $proto[$ii] &&
 				($query[$ii] ne "-" && $proto[$ii] ne "-");
 				#print "$query[$ii] <-> $proto[$ii] ; $mismatch\n";
@@ -248,17 +251,19 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlast2GFF.pl -- make GFF3 file from spacer blasts
+CLdb_spacerBlastProtoMismatch.pl -- Make table of spacer-protospacer mismatches 
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
+CLdb_spacerBlastProtoMismatch.pl [flags] > mismatch.txt
 
 =head2 Required flags
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -266,90 +271,86 @@ CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 
 =over
 
-=item -staxon_id
+=item -bin  <int>
+
+Number of bins for grouping mismatches along the spacer-protospacer alignment. [20]
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -staxon_id  <char>
 
 Refine query to specific a subject taxon_id(s) (>1 argument allowed).
 
-=item -staxon_name
+=item -staxon_name  <char>
 
 Refine query to specific a subject taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -saccession  <char>
+
+Refine query to specific a accession(s) (>1 argument allowed).
+
+=item -query  <char>
 
 Extra sql to refine the query.
 
-=item -length
+=item -length  <float>
 
 Length cutoff for blast hit (>=; fraction of spacer length). [1]
 
-=item -v	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlast2GFF.pl
+perldoc CLdb_spacerBlastProtoMismatch.pl
 
 =head1 DESCRIPTION
 
-Convert spacer blasts in CLdb (see CLdb_spacerBlast.pl)
-to GFF3 file format for viewing spacer blast hits
-on a subject genome. 
+Make a table of protospacer mismatches.
 
-=head2 Output columns
-
-=over
-
-=item seqid = scaffold (subject_genome)
-
-=item source = 'CLdb_spacer_blast'
-
-=item feature = 'region'
-
-=item start = 'hit start'
-
-=item end = 'hit end'
-
-=item score = e-value
-
-=item strand = strand
-
-=item phase = 0
-
-=back 
-
-=head3 'Attributes' column
-
-=over
-
-=item ID = taxon_ID (spacer)
-
-=item name = taxon_name (spacer)
-
-=item alias = locus_id (spacer)
-
-=item note = mismatches; percentID; spacer_group
-
-=back
+Spacers are not necessarily the same length,
+so mismatches are quantified by the number 
+of mismatches in a certain percentage of the alignment
+(e.g. 0%-5%, with 0% & 100% being the 5' & 3' of the alignment,
+respectively).
+The spacer-protospacer alignment is
+binned into percentages of the alignment length.
+Bins are rounded down, so a bin of 0%-5% may 
+technically be alignment positions 1-3.5, 
+but the program will use positions 1-3.
+Bins are not inclusive by percentage (e.g. 
+0%-4.99%, 5%-9.99%, 10%-15.99%, ...).
 
 =head2 WARNING!
 
-Spacer blasting must be done prior!
-
-'-staxon_name' or '-staxon_id' should be used
-to limit hits to just 1 subject genome.
+Spacer blasting and DR filtering must be done prior!
 
 =head1 EXAMPLES
 
-=head2 GFF3 of all spacers that hit E.coli
+=head2 Mismatch table of all protospacers
 
-CLdb_spacerBlast2GFF.pl -d CLdb.sqlite -staxon_name "E.coli" > ecoli_hits.gff
+CLdb_spacerBlastProtoMismatch.pl -d CLdb.sqlite  > all_proto_mismatch.txt
 
-=head2 GFF3 of all spacers that hit FIG 2209.27
+=head2 Mismatch table of all protospacers in subtype I-A
 
-CLdb_spacerBlast2GFF.pl -d CLdb.sqlite -staxon_id 2209.27 > 2209.27_hits.gff
+CLdb_spacerBlastProtoMismatch.pl -d CLdb.sqlite -sub I-A > I-A_proto_mismatch.txt
 
 =head1 AUTHOR
 
