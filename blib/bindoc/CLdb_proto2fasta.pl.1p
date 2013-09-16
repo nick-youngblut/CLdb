@@ -123,86 +123,87 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_ARRAY2FASTA 1"
-.TH CLDB_ARRAY2FASTA 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_PROTO2FASTA 1"
+.TH CLDB_PROTO2FASTA 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_array2fasta.pl \-\- write CRISPR array spacers or direct repeats to fasta
+CLdb_spacerBlastProtoMismatch.pl \-\- Make table of spacer\-protospacer mismatches
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_array2fasta.pl [flags] > array.fasta
+CLdb_spacerBlastProtoMismatch.pl [flags] > mismatch.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
-.SS "Optional flags"
-.IX Subsection "Optional flags"
-.PD 0
-.IP "\-repeat" 4
-.IX Item "-repeat"
-.PD
-Get direct repeats instead of spacers.
-.IP "\-subtype" 4
-.IX Item "-subtype"
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
+.SS "options"
+.IX Subsection "options"
+.IP "\-bin  <int>" 4
+.IX Item "-bin  <int>"
+Number of bins for grouping mismatches along the spacer-protospacer alignment. [20]
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-group" 4
-.IX Item "-group"
-Get array elements de-replicated by group (ie. all unique sequences).
-.IP "\-query" 4
-.IX Item "-query"
-Extra sql to refine which sequences are returned.
-.IP "\-leader" 4
-.IX Item "-leader"
-Orient sequence to leader (leader always on 5' end)? Only sequences 
-from loci with identified leaders will be written! [\s-1FALSE\s0]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-staxon_id  <char>" 4
+.IX Item "-staxon_id  <char>"
+Refine query to specific a subject taxon_id(s) (>1 argument allowed).
+.IP "\-staxon_name  <char>" 4
+.IX Item "-staxon_name  <char>"
+Refine query to specific a subject taxon_name(s) (>1 argument allowed).
+.IP "\-saccession  <char>" 4
+.IX Item "-saccession  <char>"
+Refine query to specific a accession(s) (>1 argument allowed).
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
+Extra sql to refine the query.
+.IP "\-length  <float>" 4
+.IX Item "-length  <float>"
+Length cutoff for blast hit (>=; fraction of spacer length). [1]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_array2fasta.pl
+perldoc CLdb_spacerBlastProtoMismatch.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get spacer or direct repeat sequences from the \s-1CRISPR\s0 database
-and write them to a fasta.
+Make a table of protospacer mismatches.
 .PP
-By default, all spacers or direct repeats (if '\-r') will be written.
-The '\-q' flag can be used to refine the query to certain sequences (see examples).
-.PP
-For spacer blasting, use '\-leader' to avoid using sequence
-from the wrong strand (i.e. leader on 3' end instead of 5').
+Spacers are not necessarily the same length,
+so mismatches are quantified by the number 
+of mismatches in a certain percentage of the alignment
+(e.g. 0%\-5%, with 0% & 100% being the 5' & 3' of the alignment,
+respectively).
+The spacer-protospacer alignment is
+binned into percentages of the alignment length.
+Bins are rounded down, so a bin of 0%\-5% may 
+technically be alignment positions 1\-3.5, 
+but the program will use positions 1\-3.
+Bins are not inclusive by percentage (e.g. 
+0%\-4.99%, 5%\-9.99%, 10%\-15.99%, ...).
+.SS "\s-1WARNING\s0!"
+.IX Subsection "WARNING!"
+Spacer blasting and \s-1DR\s0 filtering must be done prior!
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Write all spacers to a fasta:"
-.IX Subsection "Write all spacers to a fasta:"
-CLdb_array2fasta.pl \-d CLdb.sqlite
-.SS "Write all direct repeats to a fasta:"
-.IX Subsection "Write all direct repeats to a fasta:"
-CLdb_array2fasta.pl \-d CLdb.sqlite \-r
-.SS "Write all unique spacers"
-.IX Subsection "Write all unique spacers"
-CLdb_array2fasta.pl \-d CLdb.sqlite \-g
-.SS "Write all unique spacers oriented by the leader location"
-.IX Subsection "Write all unique spacers oriented by the leader location"
-CLdb_array2fasta.pl \-d CLdb.sqlite \-g \-l
-.SS "Refine spacer sequence query:"
-.IX Subsection "Refine spacer sequence query:"
-CLdb_array2fasta.pl \-d CLdb.sqlite \-q \*(L"\s-1AND\s0 loci.Locus_ID=1\*(R"
-.SS "Refine spacer query to a specific subtype & 2 taxon_id's"
-.IX Subsection "Refine spacer query to a specific subtype & 2 taxon_id's"
-CLdb_array2fasta.pl \-d CLdb.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
+.SS "Mismatch table of all protospacers"
+.IX Subsection "Mismatch table of all protospacers"
+CLdb_spacerBlastProtoMismatch.pl \-d CLdb.sqlite  > all_proto_mismatch.txt
+.SS "Mismatch table of all protospacers in subtype I\-A"
+.IX Subsection "Mismatch table of all protospacers in subtype I-A"
+CLdb_spacerBlastProtoMismatch.pl \-d CLdb.sqlite \-sub I\-A > I\-A_proto_mismatch.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

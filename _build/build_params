@@ -121,6 +121,7 @@ do{ my $x = [
                              './bin/CLdb_addScaffoldCount.pl',
                              './bin/CLdb_array2fasta.pl',
                              './bin/CLdb_dna_segs_orderByTree.pl',
+                             './bin/CLdb_proto2fasta.pl',
                              './bin/CLdb_spacerPairwiseBlast.pl',
                              './bin/CLdb_arrayGroup2Info.pl',
                              './bin/CLdb_spacerBlast2GFF.pl',
