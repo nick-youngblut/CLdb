@@ -139,8 +139,8 @@ sub pam_caps{
 
 	## substr of frag ##	
 	my $fiveP = substr($frag, $substr_start, $sstart - $xstart);
-	my $proto = substr($frag, $sstart - $xstart + 1, $send - $sstart);
-	my $threeP = substr($frag, $send - $xstart + 1, $xend - $send);
+	my $proto = substr($frag, $substr_start + $sstart - $xstart, $send - $sstart);
+	my $threeP = substr($frag, $substr_start + $sstart - $xstart + $send - $sstart, $xend - $send);
 
 	# extensions to lower case; proto to upper #
 	$fiveP =~ tr/A-Z/a-z/;

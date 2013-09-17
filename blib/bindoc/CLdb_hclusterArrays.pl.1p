@@ -169,6 +169,9 @@ the spacer_hclust & directrepeat_hclust tables in CLdb.
 .PP
 Temporary spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
+.PP
+Sequences must be the same length to be in the same group
+(cd-hit-est \-s 1).
 .SS "Requires:"
 .IX Subsection "Requires:"
 cd-hit-est, CLdb_array2fasta.pl

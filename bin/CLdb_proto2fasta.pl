@@ -27,7 +27,6 @@ GetOptions(
 	   "staxon_id=s{,}" => \@staxon_id,
 	   "staxon_name=s{,}" => \@staxon_name,
 	   "saccession=s{,}" => \@sacc,
-	   "sacc=s{,}" => \@sacc,
 	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
 	   "verbose" => \$verbose,
@@ -207,11 +206,11 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlastProtoMismatch.pl -- Make table of spacer-protospacer mismatches 
+CLdb_proto2fasta.pl -- Make fasta of protospacers
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlastProtoMismatch.pl [flags] > mismatch.txt
+CLdb_proto2fasta.pl [flags] > protospacers.fasta
 
 =head2 Required flags
 
@@ -226,10 +225,6 @@ CLdb database.
 =head2 options
 
 =over
-
-=item -bin  <int>
-
-Number of bins for grouping mismatches along the spacer-protospacer alignment. [20]
 
 =item -subtype  <char>
 
@@ -275,24 +270,35 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlastProtoMismatch.pl
+perldoc CLdb_proto2fasta.pl
 
 =head1 DESCRIPTION
 
-Make a table of protospacer mismatches.
+Make a fasta of all protospacers.
 
-Spacers are not necessarily the same length,
-so mismatches are quantified by the number 
-of mismatches in a certain percentage of the alignment
-(e.g. 0%-5%, with 0% & 100% being the 5' & 3' of the alignment,
-respectively).
-The spacer-protospacer alignment is
-binned into percentages of the alignment length.
-Bins are rounded down, so a bin of 0%-5% may 
-technically be alignment positions 1-3.5, 
-but the program will use positions 1-3.
-Bins are not inclusive by percentage (e.g. 
-0%-4.99%, 5%-9.99%, 10%-15.99%, ...).
+=head2 Sequence naming (separated by "__"):
+
+=over
+
+=item group_id
+
+=item taxon_name
+
+=item taxon_id
+
+=item subtype
+
+=item locus_id
+
+=item spacer_id
+
+=item subject_taxon_id
+
+=item subject_taxon_name
+
+=item subject_accession
+
+=back
 
 =head2 WARNING!
 
@@ -300,13 +306,13 @@ Spacer blasting and DR filtering must be done prior!
 
 =head1 EXAMPLES
 
-=head2 Mismatch table of all protospacers
+=head2 Fasta of all protospacers
 
-CLdb_spacerBlastProtoMismatch.pl -d CLdb.sqlite  > all_proto_mismatch.txt
+CLdb_proto2fasta.pl -d CLdb.sqlite  > all_proto_mismatch.txt
 
-=head2 Mismatch table of all protospacers in subtype I-A
+=head2 Fasta of all protospacers in subtype I-A
 
-CLdb_spacerBlastProtoMismatch.pl -d CLdb.sqlite -sub I-A > I-A_proto_mismatch.txt
+CLdb_proto2fasta.pl -d CLdb.sqlite -sub I-A > I-A_proto_mismatch.txt
 
 =head1 AUTHOR
 

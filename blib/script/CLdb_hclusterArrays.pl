@@ -156,7 +156,7 @@ sub call_cdhit{
 	my ($fasta, $cluster) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8";
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1";
 	if($verbose){ system("$cmd"); }
 	else{ `$cmd`; }
 
@@ -247,6 +247,9 @@ the spacer_hclust & directrepeat_hclust tables in CLdb.
 
 Temporary spacer and DR fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
+
+Sequences must be the same length to be in the same group
+(cd-hit-est -s 1).
 
 =head2 Requires:
 

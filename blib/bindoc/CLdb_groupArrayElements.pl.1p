@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GROUPARRAYELEMENTS 1"
-.TH CLDB_GROUPARRAYELEMENTS 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GROUPARRAYELEMENTS 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -165,6 +165,9 @@ each spacer/DR to the \s-1CRISPR\s0 database.
 .PP
 Spacer and \s-1DR\s0 fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
+.PP
+Sequences must be the same length to be in the same group
+(cd-hit-est \-s 1).
 .SS "Requires:"
 .IX Subsection "Requires:"
 cd-hit-est, CLdb_array2fasta.pl

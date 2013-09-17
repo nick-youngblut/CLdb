@@ -139,7 +139,7 @@ sub call_cdhit{
 	my ($fasta, $cluster) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8";
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1";
 	if($verbose){ system("$cmd"); }
 	else{ `$cmd`; }
 
@@ -222,10 +222,13 @@ perldoc CLdb_groupArrayElements.pl
 
 Group the spacers and/or direct repeats in the CRISPR
 database using CD-HIT-EST and add the group ID of
-each spacer/DR to the CRISPR database.
+each spacer/DR to the CRISPR database. 
 
 Spacer and DR fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
+
+Sequences must be the same length to be in the same group
+(cd-hit-est -s 1).
 
 =head2 Requires:
 
