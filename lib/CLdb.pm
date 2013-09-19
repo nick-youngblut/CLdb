@@ -1,4 +1,4 @@
-package CRISPR_db;
+package CLdb;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings FATAL => 'all';
 
 =head1 NAME
 
-CRISPR_db - The great new CRISPR_db!
+CLdb - The great new CLdb!
 
 =head1 VERSION
 

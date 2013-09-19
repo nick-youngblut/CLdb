@@ -10,10 +10,10 @@ my @binscripts = grep(/.pl$/, @binfiles);
 @binscripts = map{$_ = "./bin/" . $_} @binscripts;
 
 my $builder = Module::Build->new(
-    module_name         => 'CRISPR_db',
+    module_name         => 'CLdb',
     license             => 'perl',
     dist_author         => q{Nick Youngblut <nyoungb2@illinois.edu>},
-    dist_version_from   => 'lib/CRISPR_db.pm',
+    dist_version_from   => 'lib/CLdb.pm',
     release_status      => 'stable',
     configure_requires => {
         'Module::Build' => 0,
@@ -25,7 +25,7 @@ my $builder = Module::Build->new(
         #'ABC'              => 1.6,
         #'Foo::Bar::Module' => 5.0401,
     },
-    add_to_cleanup     => [ 'CRISPR_db-*' ],
+    add_to_cleanup     => [ 'CLdb-*' ],
     create_makefile_pl => 'traditional',
     script_files => \@binscripts
 );
