@@ -118,13 +118,21 @@ CLdb_spacerBlastDRFilter_raw.pl [options] spacer_blast.txt DR_blast.txt > spacer
 
 =over
 
-=item -r 	Range allowable between spacer & DR blast hit (bp). [30]
+=item -range  <int>
 
-=item -a 	Do not filter hit. Instead, add an In_Array column (yes|no). [FALSE]
+Range allowable between spacer & DR blast hit (bp). [30]
 
-=item -v	Verbose output
+=item -array  <bool>
 
-=item -h	This help message
+Do not filter hit. Instead, add an In_Array column (yes|no). [FALSE]
+
+=item -verbose  <booL>
+
+Verbose output.
+
+=item -help  <bool>
+
+This help message.
 
 =back
 

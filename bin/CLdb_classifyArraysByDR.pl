@@ -355,7 +355,9 @@ CLdb_classifyArraysByDR.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -363,37 +365,41 @@ CLdb_classifyArraysByDR.pl [flags]
 
 =over
 
-=item -kmer
+=item -kmer  <int>
 
 Kmer length using for naive bayes classifier. [8]
 
-=item -cutoff
+=item -cutoff  <float>
 
 Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
 
-=item -rogue
+=item -rogue  <bool>
 
 Just classify 'rogue' arrays (no associated operon)? [TRUE]
 
-=item -locus_id
+=item -locus_id  <char>
 
 Refine query arrays to specific a locus_id(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query arrays to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query arrays to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine the query array selection
 
-=item -v 	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

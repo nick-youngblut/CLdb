@@ -524,7 +524,9 @@ CLdb_classifyArraysByDR_validate.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <bool>
+
+CLdb database.
 
 =back
 
@@ -532,33 +534,37 @@ CLdb_classifyArraysByDR_validate.pl [flags]
 
 =over
 
-=item -iterations
+=item -iterations  <int>
 
 Number of test iterations to perform. [100]
 
-=item -fraction
+=item -fraction  <float>
 
 Fraction of dataset to test. [0.1]
 
-=item -kmer
+=item -kmer  <int>
 
 Kmer length using for naive bayes classifier. [8]
 
-=item -score
+=item -score  <float>
 
 Bayes score cutoff (0-1) for accepting classification (>=). [0.99]
 
-=item -bootstrap
+=item -bootstrap  <int>
 
-Number of bootstraps to perform the classification of each array
+Number of bootstraps to perform the classification of each array. [100]
 
-=item -cutoff 
+=item -cutoff  <int>
 
 Bootstrap score cutoff (>=). [95]
 
-=item -v 	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

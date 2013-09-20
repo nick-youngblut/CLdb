@@ -239,7 +239,9 @@ CLdb_getSpacerPairwiseBlast.pl [flags] > spacer-spacer_blasts.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -247,33 +249,37 @@ CLdb_getSpacerPairwiseBlast.pl [flags] > spacer-spacer_blasts.txt
 
 =over
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine the query.
 
-=item -overlap
+=item -overlap  <float>
 
 Check for spacer overlap. See DESCRIPTION. [0 1]
 
-=item -percentID
+=item -percentID  <fload>
 
 PercentID cutoff for blast hits (>=). [90]
 
-=item -v	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

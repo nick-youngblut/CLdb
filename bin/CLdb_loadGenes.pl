@@ -134,7 +134,9 @@ Cldb_loadGenes.pl [flags] < gene_table.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back 
 
@@ -142,9 +144,13 @@ Cldb_loadGenes.pl [flags] < gene_table.txt
 
 =over
 
-=item -v	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

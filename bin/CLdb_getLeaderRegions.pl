@@ -438,7 +438,9 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -446,41 +448,45 @@ CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 
 =over
 
-=item -length
-
-Maximum length of leader region (bp). [1000]
-
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -overlap
+=item -length  <int>
+
+Max length of the potential leader region (bp). [1000]
+
+=item -overlap  <bool>
 
 Check for overlapping genes (& trim region if overlap)? [TRUE]
 
-=item -cutoff
+=item -cutoff  <int>
 
-Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
+Gene length cutoff for counting gene as real in overlap assessment (bp). [150]
 
-=item -both
+=item -both  <bool>
 
 Get sequence on both sides of the array regardless of degeneracies? [FALSE]
 
-=item -v	Verbose output
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output
+
+=item -help  <bool>
+
+This help message
 
 =back
 

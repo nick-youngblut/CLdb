@@ -347,7 +347,7 @@ sub count_gaps_old{
 	elsif($se eq "end"){
 		$seq = substr($seq, $trim_length - 1);
 		}
-	print Dumper $seq;	
+	#print Dumper $seq;	
 		
 	my $ngap = 0;
 	$ngap++ while $seq =~ /-/g;
@@ -559,7 +559,9 @@ CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -567,13 +569,21 @@ CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =over
 
-=item -t 	Number of bp (& gaps) to trim of end of alignment. [0]
+=item -trim  <int>
 
-=item -g 	Leave gaps in leader sequence entered into the DB? [TRUE] 
+Number of bp (& gaps) to trim of end of alignment. [0]
 
-=item -v	Verbose output. [FALSE]
+=item -gap  <bool>
 
-=item -h	This help message
+Leave gaps in leader sequence entered into the DB? [TRUE] 
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 
