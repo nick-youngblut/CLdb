@@ -119,7 +119,9 @@ CLdb_addScaffoldCount.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -127,9 +129,13 @@ CLdb_addScaffoldCount.pl [flags]
 
 =over
 
-=item -v	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

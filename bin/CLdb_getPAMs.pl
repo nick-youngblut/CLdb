@@ -379,9 +379,13 @@ Length cutoff for blast hit (>=; fraction of spacer length). [1]
 
 Extension beyond spacer blast to check for PAMs (bp). [10]
 
-=item -v	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>	
+
+This help message
 
 =back
 

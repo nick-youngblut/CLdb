@@ -268,7 +268,9 @@ CLdb_delete.pl [options]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -276,29 +278,33 @@ CLdb_delete.pl [options]
 
 =over
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine query.
 
-=item -kill
+=item -kill  <bool>
 
-Will override the script's attempts to prevent the deletion of all loci.
+Will override the script's attempts to prevent the deletion of all loci. [FALSE]
 
-=item -v 	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

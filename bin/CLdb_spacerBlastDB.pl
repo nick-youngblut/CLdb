@@ -17,7 +17,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $query_file, $blast_db);
 my $extra_query = "";
-my $blast_params = "-evalue 0.00001";		# 1e-5
+my $blast_params = "-evalue 0.001";		# 1e-3
 my $num_threads = 1;		
 my $extend = 20;						# number of bp extended beyond hit
 GetOptions(
@@ -227,7 +227,7 @@ BLAST database. [nt]
 
 =item -blast  <char>
 
-BLASTn parameters (besides required flags). [-evalue 0.00001]
+BLASTn parameters (besides required flags). [-evalue 0.001]
 
 =item -num_threads  <int>
 
@@ -253,7 +253,8 @@ perldoc CLdb_spacerBlastGenome.pl
 
 =head1 DESCRIPTION
 
-Run blastn-short against a BLAST database.
+Run blastn-short against a BLAST database
+(word_size=7, reward=1, DUST=off).
 
 Accension numbers from BLAST hits are used
 to fetch sequences from GenBank.

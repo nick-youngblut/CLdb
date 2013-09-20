@@ -18,7 +18,7 @@ my ($verbose, $database_file, $query_file);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
 my $extra_query = "";
-my $blast_params = "-evalue 0.00001";		# 1e-5
+my $blast_params = "-evalue 0.001";		# 1e-3
 my $num_threads = 1;
 my $extend = 20;
 GetOptions(
@@ -471,7 +471,7 @@ Extra sql to refine which sequences are returned.
 
 =item -blast  <char>
 
-BLASTn parameters (besides required flags). [-evalue 0.00001]
+BLASTn parameters (besides required flags). [-evalue 0.001]
 
 =item -num_threads  <int>
 
@@ -498,7 +498,8 @@ perldoc CLdb_spacerBlastGenome.pl
 =head1 DESCRIPTION
 
 Run blastn-short against one or more genomes
-already in CLdb. Specific genomes can be
+already in CLdb (word_size=7, reward=1, DUST=off). 
+Specific genomes can be
 selected by subtype ('-subtype'), taxon_name
 ('-taxon_name'), taxon_id ('taxon_id'), or
 other sql refinements of the query ('-query').

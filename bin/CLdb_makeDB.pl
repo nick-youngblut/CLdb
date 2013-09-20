@@ -310,19 +310,19 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =over
 
-=item -r  <bool>
+=item -replace  <bool>
 
 Replace existing database.
 
-=item -t  <char>
+=item -table  <char>
 
 Table(s) to keep as is (if they exist). ["leaders" "genes"]
 
-=item -d  <bool>
+=item -drop  <bool>
 
 Drop all tables. [FALSE]
 
-=item -h  <bool>
+=item -help  <bool>
 
 This help message
 
