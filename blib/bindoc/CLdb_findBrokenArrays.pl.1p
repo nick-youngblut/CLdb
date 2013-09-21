@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_COMPARISON_MAKE 1"
-.TH CLDB_COMPARISON_MAKE 1 "2013-09-21" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_FINDBROKENARRAYS 1"
+.TH CLDB_FINDBROKENARRAYS 1 "2013-09-21" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_comparison_make.pl \-\- making comparisons table for plotting
+CLdb_findBrokenArrays.pl \-\- arrays broken by assembly errors
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
+CLdb_findBrokenArrays.pl [flags] > summary.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-database  <char>" 4
@@ -141,55 +141,60 @@ CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.IP "\-ITEP  <char>" 4
-.IX Item "-ITEP  <char>"
-\&\s-1ITEP\s0 database. Used to get BLASTp info.
-.IP "\-spacer  <char>" 4
-.IX Item "-spacer  <char>"
-Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['cluster']
-.IP "\-cutoff  <int>" 4
-.IX Item "-cutoff  <int>"
-If \-spacer 'cluster': Clustering cutoff. [1]
-.Sp
-If \-spacer 'blast': blast pident cutoff. [100]
-.IP "\-blastp  <int>" 4
-.IX Item "-blastp  <int>"
-BLASTp percent identity cutoff. [30]
-.IP "\-verbose  <bool>" 4
-.IX Item "-verbose  <bool>"
-Verbose output. [\s-1FALSE\s0]
-.IP "\-help  <bool>" 4
-.IX Item "-help  <bool>"
-This help message
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
+Refine query to specific a subtype(s) (>1 argument allowed).
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
+Extra sql to refine which sequences are returned.
+.IP "\-range  <int>" 4
+.IX Item "-range  <int>"
+How close a contig end must be to a \s-1CRISPR\s0 array end to call it broken. [150]
+.IP "\-gap  <int>" 4
+.IX Item "-gap  <int>"
+The size cutoff for using a gap. [50]
+.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
+.IX Item "-v 	Verbose output. [FALSE]"
+.PD 0
+.IP "\-h	This help message" 4
+.IX Item "-h	This help message"
+.PD
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_comparison_make.pl
+perldoc CLdb_findBrokenArrays.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Make a table of comparisons between genes & 
-spacers in the plot. A dna_segs table is used
-for determining which comparisons to add to
-the comparisons table.
+Determine which \s-1CRISPR\s0 loci appear to
+be broken due to breaks in the genome assembly.
 .PP
-Spacer comparisons can be based on clustering 
-of spacer sequences (CLdb_hclusterArrays.pl must
-be run prior), or by pairwise spacer blasts 
-(CLdb_spacerPairwiseBlast.pl must be run prior).
-.PP
-Gene comparisons are obtained from \s-1ITEP\s0.
+The output is tab-delimited table with some
+breakage summary columns appended to the beginning
+of some loci table columns.
+.SS "summary columns:"
+.IX Subsection "summary columns:"
+.IP "'status'" 4
+.IX Item "'status'"
+The array is either intact, broken (end of contig), or missing
+.IP "break_ID" 4
+.IX Item "break_ID"
+Is the array next to the end of the entire scaffold or next to a gap inside the scaffold?
+.IP "bp_from_break" 4
+.IX Item "bp_from_break"
+Distance from the scaffold end or gap
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Just comparisons among spacers (using BLASTn info)"
-.IX Subsection "Just comparisons among spacers (using BLASTn info)"
-CLdb_comparison_make.pl \-da CLdb.sqlite  < dna_segs.txt > compare.txt
-.SS "Just comparisons among spacers (using clustering info)"
-.IX Subsection "Just comparisons among spacers (using clustering info)"
-CLdb_comparison_make.pl \-da CLdb.sqlite \-s cluster < dna_segs.txt > compare.txt
-.SS "Comparisons among spacers and genes"
-.IX Subsection "Comparisons among spacers and genes"
-CLdb_comparison_make.pl \-da CLdb.sqlite \-I ITEP_database.sqlite < dna_segs.txt > compare.txt
-.SS ""
-.IX Subsection ""
+.SS "Find broken arrays among all loci"
+.IX Subsection "Find broken arrays among all loci"
+CLdb_findBrokenArrays.pl \-d CLdb.sqlite
+.SS "Find broken arrays in Subtype I\-A"
+.IX Subsection "Find broken arrays in Subtype I-A"
+CLdb_findBrokenArrays.pl \-d CLdb.sqlite \-sub I\-A
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

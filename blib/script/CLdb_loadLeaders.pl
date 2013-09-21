@@ -80,19 +80,19 @@ sub update_loci_table{
 
 	# preparing sql #	
 	my $cmd = "UPDATE Loci SET 
-locus_start=?, locus_end=?, operon_start=?, operon_end=?, array_start=?, array_end=? 
-where locus_id = ?";
+locus_start=?, locus_end=? where locus_id = ?";
 	$cmd =~ s/[\r\n]//g;
 	my $sql = $dbh->prepare($cmd);
 
 	# updating #
-	my $cnt;
+	my $cnt = 0;
 	foreach my $locus_id (keys %$fasta_aln_r){
 		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
-		for my $i (0..$#${$loci_tbl_r->{$locus_id}}){
-			$sql->bind_param( $i+1, ${$loci_tbl_r->{$locus_id}}[$i] );
-			}
-		$sql->bind_param($#${$loci_tbl_r->{$locus_id}} + 1, $locus_id_e);
+		
+		$sql->bind_param( 1, ${$loci_tbl_r->{$locus_id_e}}[0] );		# updating locus start
+		$sql->bind_param( 2, ${$loci_tbl_r->{$locus_id_e}}[1] );		# updating locus end
+
+		$sql->bind_param(3, $locus_id_e);
 		$sql->execute( );
 		
 		if($DBI::err){
@@ -101,7 +101,6 @@ where locus_id = ?";
 		else{ $cnt++; }
 		}
 
-	
 	print STDERR "...Number of entries updated in loci table: $cnt\n"
 		unless $verbose;
 	}
