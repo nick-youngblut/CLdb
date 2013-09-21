@@ -67,12 +67,13 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 # getting subtype #
 my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
-# getting spacer, DR, & gene info from CLdb #
+# getting spacer, DR, leader, & gene info from CLdb #
 my %dna_segs; 
 my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs, 
 							$join_sql, $extra_query, $spacer_cutoff);
 get_DR_info($dbh, \%dna_segs, $join_sql, $extra_query);
 get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
+get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
 
 # getting gene cluster info if ITEP provided #
 my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
@@ -173,8 +174,32 @@ sub write_dna_segs{
 					$subtypes_r->{$taxon_name}{$locus_id},
 					$dna_segs_id
 					), "\n";				
+				}
+			# leaders #
+			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"leader"}}){
+				my $row = $dna_segs->{$taxon_name}{$locus_id}{"leader"}{$id};
+				
+				# start-end, color #
+				my $start = $$row[0];
+				my $end = $$row[1];
+				my $dna_segs_id = $$row[$#$row];				
+
+				print join("\t",  
+					$id,			
+					$start,
+					$end,
+					1, 				# strand 
+					1,				# col
+					1, 0.1, 8, 1,	# plot formatting
+					"blocks", 		# end of required columns
+					$taxon_name,
+					$locus_id,
+					"leader", 		# feature
+					$id,
+					$subtypes_r->{$taxon_name}{$locus_id},
+					$dna_segs_id
+					), "\n";				
 				}			
-			
 			# genes #
 			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"gene"}}){
 				my $row = $dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id};
@@ -343,7 +368,44 @@ $extra_query
 		#print Dumper %$dna_segs_r; exit;
 	#return \%gene_ids;
 	}	
+
+sub get_leader_info{
+# getting leader info from CLdb (optional) #
+## just using locus-ID for leader_ID
+	my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
+
+	my $query = "
+SELECT 
+loci.taxon_name,
+loci.locus_id, 
+leaders.locus_id,
+leaders.leader_start, 
+leaders.leader_end
+FROM Loci, leaders
+WHERE Loci.locus_id = leaders.locus_id
+$join_sql
+$extra_query
+";
+	$query =~ s/\n|\r/ /g;
 	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+		
+	if($$ret[0]){
+		foreach my $row (@$ret){
+			$dna_segs_r->{$$row[0]}{$$row[1]}{"leader"}{$$row[2]} = [@$row[3..$#$row]];
+			}	
+		}
+	else{
+		print STDERR " WARNING: no matching entries in leaders table! Leaders not added to dna_segs table!\n";
+		}
+
+	#print Dumper %$dna_segs_r; exit;
+	}
+
 sub get_DR_info{
 # getting direct repeat info from CLdb #
 	my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
