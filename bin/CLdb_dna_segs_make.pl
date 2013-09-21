@@ -274,8 +274,6 @@ sub get_gene_cluster_info{
 # getting gene cluster info from ITEP #
 	my ($dbh_ITEP, $ITEP_file, $runID, $dna_segs_r) = @_;
 	
-
-	
 	my $query = "
 SELECT clusterid
 FROM clusters
@@ -333,17 +331,13 @@ $extra_query
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	die " ERROR: no matching entries for CAS gene query!\n"
 		unless $$ret[0];
 	
 	#my %gene_ids;
 	foreach my $row (@$ret){
 		$dna_segs_r->{$$row[0]}{$$row[1]}{"gene"}{$$row[2]} = [@$row[3..$#$row]];
 		
-		# collecting gene IDs for coloring #
-		#die " ERROR: duplicate gene IDs for $$row[2]!\n"
-		#	if exists $gene_ids{$$row[2]};
-		#$gene_ids{$$row[2]} = 1;
 		}
 	
 		#print Dumper %$dna_segs_r; exit;
@@ -373,7 +367,7 @@ $extra_query
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	die " ERROR: no matching entries for DR query!\n"
 		unless $$ret[0];
 	
 	foreach my $row (@$ret){
@@ -387,6 +381,13 @@ sub get_spacer_info{
 # getting spacer info from CLdb #
 	my ($dbh, $dna_segs_r, $join_sql, $extra_query, $spacer_cutoff) = @_;
 	
+	# checking for spacer_hclust #
+	my $q = "SELECT count(*) FROM spacer_hclust";
+	my $chk = $dbh->selectall_arrayref($q);
+	die " ERROR! no entries in spacer_hclust table!  Run CLdb_hclusterArrays.pl prior to this script!\n"
+		unless @$chk;
+	
+	# query of spacers #
 	my $query = "
 SELECT 
 loci.taxon_name,
@@ -410,7 +411,7 @@ $extra_query
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	die " ERROR: no matching entries for spacer query!\n"
 		unless $$ret[0];
 	
 	my %spacer_clusters; 
@@ -451,7 +452,7 @@ GROUP BY loci.locus_id
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	die " ERROR: no matching entries for subtype query!\n"
 		unless $$ret[0];
 	
 	my %subtypes; 

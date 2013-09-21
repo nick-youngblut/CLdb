@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SPACERBLASTDB 1"
-.TH CLDB_SPACERBLASTDB 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SPACERBLASTDB 1 "2013-09-21" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,7 +149,7 @@ A fasta of either spacer or \s-1DR\s0 group sequences (use: CLdb_array2fasta.pl 
 \&\s-1BLAST\s0 database. [nt]
 .IP "\-blast  <char>" 4
 .IX Item "-blast  <char>"
-BLASTn parameters (besides required flags). [\-evalue 0.00001]
+BLASTn parameters (besides required flags). [\-evalue 0.001]
 .IP "\-num_threads  <int>" 4
 .IX Item "-num_threads  <int>"
 Use for '\-num_threads' parameter in BLASTn. [1]
@@ -167,7 +167,8 @@ This help message
 perldoc CLdb_spacerBlastGenome.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Run blastn-short against a \s-1BLAST\s0 database.
+Run blastn-short against a \s-1BLAST\s0 database
+(word_size=7, reward=1, DUST=off).
 .PP
 Accension numbers from \s-1BLAST\s0 hits are used
 to fetch sequences from GenBank.
