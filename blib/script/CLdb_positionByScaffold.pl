@@ -544,7 +544,9 @@ CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -552,7 +554,9 @@ CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
 
 =over
 
-=item -h	This help message
+=item -help  <bool>	
+
+This help message
 
 =back
 

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETSPACERPAIRWISEBLAST 1"
-.TH CLDB_GETSPACERPAIRWISEBLAST 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETSPACERPAIRWISEBLAST 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,36 +136,35 @@ CLdb_getSpacerPairwiseBlast.pl \-\- getting pairwise spacer blast hits in CLdb
 CLdb_getSpacerPairwiseBlast.pl [flags] > spacer\-spacer_blasts.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "options"
 .IX Subsection "options"
-.PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
 Extra sql to refine the query.
-.IP "\-overlap" 4
-.IX Item "-overlap"
+.IP "\-overlap  <float>" 4
+.IX Item "-overlap  <float>"
 Check for spacer overlap. See \s-1DESCRIPTION\s0. [0 1]
-.IP "\-percentID" 4
-.IX Item "-percentID"
+.IP "\-percentID  <fload>" 4
+.IX Item "-percentID  <fload>"
 PercentID cutoff for blast hits (>=). [90]
-.IP "\-v	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_getSpacerPairwiseBlast.pl

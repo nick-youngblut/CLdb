@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GENBANK_GET_REGION 1"
-.TH GENBANK_GET_REGION 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH GENBANK_GET_REGION 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,16 +141,17 @@ region_file = comma-delimited; each line = (contig), region_start, region_stop
 Contig name is optional (needed if multi-locus genbank; ie. multiple '//').
 .SS "options"
 .IX Subsection "options"
-.IP "\-region" 4
-.IX Item "-region"
+.IP "\-region  <int>" 4
+.IX Item "-region  <int>"
 List of region start/stop values (use instead of region_file). 
 Example: '\-r 1 1000' for region {1\-1000}  
 Example: '\-r contig_1 1 1000' for region {contig_1: 1\-1000}
-.IP "\-tRNA" 4
-.IX Item "-tRNA"
+.IP "\-tRNA  <bool>" 4
+.IX Item "-tRNA  <bool>"
 Include rRNA features? [\s-1FALSE\s0]
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc genbank_get_region.pl

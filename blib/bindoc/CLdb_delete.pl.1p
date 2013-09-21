@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_DELETE 1"
-.TH CLDB_DELETE 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_DELETE 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,33 +136,32 @@ CLdb_delete.pl \-\- deleting loci\-associated entries throughout database
 CLdb_delete.pl [options]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
 Extra sql to refine query.
-.IP "\-kill" 4
-.IX Item "-kill"
-Will override the script's attempts to prevent the deletion of all loci.
-.IP "\-v 	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v 	Verbose output. [TRUE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-kill  <bool>" 4
+.IX Item "-kill  <bool>"
+Will override the script's attempts to prevent the deletion of all loci. [\s-1FALSE\s0]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1TRUE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_delete.pl

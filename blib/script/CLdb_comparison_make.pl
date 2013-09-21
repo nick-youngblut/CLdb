@@ -439,7 +439,9 @@ CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -447,27 +449,31 @@ CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 
 =over
 
-=item -ITEP
+=item -ITEP  <char>
 
 ITEP database. Used to get BLASTp info.
 
-=item -spacer
+=item -spacer  <char>
 
 Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['cluster']
 
-=item -cutoff
+=item -cutoff  <int>
 
 If -spacer 'cluster': Clustering cutoff. [1]
 
 If -spacer 'blast': blast pident cutoff. [100]
 
-=item -blastp
+=item -blastp  <int>
 
 BLASTp percent identity cutoff. [30]
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

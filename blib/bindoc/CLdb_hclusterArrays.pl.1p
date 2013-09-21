@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_HCLUSTERARRAYS 1"
-.TH CLDB_HCLUSTERARRAYS 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_HCLUSTERARRAYS 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,24 +136,29 @@ CLdb_hclustArrays.pl \-\- group spacers and DRs by 100% sequence ID; add to data
 CLdb_hclustArrays.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-s 	Cluster spacers" 4
-.IX Item "-s 	Cluster spacers"
-.IP "\-r 	Cluster direct repeats" 4
-.IX Item "-r 	Cluster direct repeats"
-.IP "\-c 	CD-HIT-EST cluster cutoff range. [0.8 1 0.01]" 4
-.IX Item "-c 	CD-HIT-EST cluster cutoff range. [0.8 1 0.01]"
-.IP "\-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]" 4
-.IX Item "-p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]"
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-spacer  <bool>" 4
+.IX Item "-spacer  <bool>"
+Cluster spacers. [\s-1FALSE\s0]
+.IP "\-repeat  <bool>" 4
+.IX Item "-repeat  <bool>"
+Cluster direct repeats. [\s-1FALSE\s0]
+.IP "\-cluster  <float>" 4
+.IX Item "-cluster  <float>"
+CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
+.IP "\-path  <char>" 4
+.IX Item "-path  <char>"
+Directory where intermediate files are written. [$CLdb_HOME/grouping/]
+.IP "\-verbose  <char>" 4
+.IX Item "-verbose  <char>"
+Verbose output. [\s-1TRUE\s0]
+.IP "\-help  <char>" 4
+.IX Item "-help  <char>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_hclustArrays.pl

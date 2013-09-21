@@ -506,37 +506,41 @@ CLdb_dna_segs_formatColor.pl [flags] < dna_segs_order.txt > dna_segs_order_color
 
 =over
 
-=item -tree
+=item -tree  <char>
 
 Tree file name (nexus or newick).
 
-=item -format
+=item -format  <char>
 
 Tree file format. [newick]
 
-=item -spacer
+=item -spacer  <int>
 
 Methods used to reduce colors needed for spacer clusters (see DESCRIPTION).
 
-=item -gene
+=item -gene  <int>
 
 Methods used to reduce colors needed for gene clusters (see DESCRIPTION).
 
-=item -branch
+=item -branch  <float>
 
 The branch length cutoff for not coloring features just in that clade.
 
-=item -stats
+=item -stats  <bool>
 
 Write branch length stats for the provided tree, then exit? [FALSE]
 
-=item -default
+=item -default  <char> 
 
 The default colors for when coloring isn't needed (needs 3 values: 'gene_color' 'spacer_color' 'DR_color').
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

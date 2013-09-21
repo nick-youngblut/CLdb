@@ -210,7 +210,9 @@ CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -218,25 +220,29 @@ CLdb_spacerBlast2GFF.pl [flags] > spacer_hits.gff
 
 =over
 
-=item -staxon_id
+=item -staxon_id  <char>
 
 Refine query to specific a subject taxon_id(s) (>1 argument allowed).
 
-=item -staxon_name
+=item -staxon_name  <char>
 
 Refine query to specific a subject taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine the query.
 
-=item -length
+=item -length  <float>
 
 Length cutoff for blast hit (>=; fraction of spacer length). [1]
 
-=item -v	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 
