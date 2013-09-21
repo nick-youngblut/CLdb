@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_CLASSIFYARRAYSBYDR_VALIDATE 1"
-.TH CLDB_CLASSIFYARRAYSBYDR_VALIDATE 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_CLASSIFYARRAYSBYDR_VALIDATE 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,36 +136,35 @@ CLdb_classifyArraysByDR_validate.pl \-\- validation of Bayes classifier for arra
 CLdb_classifyArraysByDR_validate.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <bool>" 4
+.IX Item "-database  <bool>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-iterations" 4
-.IX Item "-iterations"
-.PD
+.IP "\-iterations  <int>" 4
+.IX Item "-iterations  <int>"
 Number of test iterations to perform. [100]
-.IP "\-fraction" 4
-.IX Item "-fraction"
+.IP "\-fraction  <float>" 4
+.IX Item "-fraction  <float>"
 Fraction of dataset to test. [0.1]
-.IP "\-kmer" 4
-.IX Item "-kmer"
+.IP "\-kmer  <int>" 4
+.IX Item "-kmer  <int>"
 Kmer length using for naive bayes classifier. [8]
-.IP "\-score" 4
-.IX Item "-score"
+.IP "\-score  <float>" 4
+.IX Item "-score  <float>"
 Bayes score cutoff (0\-1) for accepting classification (>=). [0.99]
-.IP "\-bootstrap" 4
-.IX Item "-bootstrap"
-Number of bootstraps to perform the classification of each array
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
+.IP "\-bootstrap  <int>" 4
+.IX Item "-bootstrap  <int>"
+Number of bootstraps to perform the classification of each array. [100]
+.IP "\-cutoff  <int>" 4
+.IX Item "-cutoff  <int>"
 Bootstrap score cutoff (>=). [95]
-.IP "\-v 	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v 	Verbose output. [TRUE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1TRUE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_classifyArraysByDR_validate.pl

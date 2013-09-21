@@ -290,7 +290,9 @@ CLdb_summary.pl [flags] > summary.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -298,25 +300,29 @@ CLdb_summary.pl [flags] > summary.txt
 
 =over
 
-=item -subtype
+=item -subtype  <bool>
 
-Group summary by subtype?
+Group summary by subtype? [FALSE]
 
-=item -id
+=item -id  <bool> 
 
-Group summary by taxon_id?
+Group summary by taxon_id? [FALSE]
 
-=item -name
+=item -name  <bool>
 
-Group summary by taxon_name?
+Group summary by taxon_name? [FALSE]
 
-=item -cutoff
+=item -cutoff  <int>
 
 Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

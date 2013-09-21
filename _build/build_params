@@ -135,8 +135,6 @@ do{ my $x = [
                              './bin/CLdb_getGeneIDs.pl',
                              './bin/CLdb_checkLociOverlap.pl',
                              './bin/CLdb_classifyArraysByDR.pl',
-                             './bin/CLdb_loadBlastHits.pl',
-                             './bin/CLdb_loadSpacerBlast.pl',
                              './bin/CLdb_positionByScaffold.pl',
                              './bin/CLdb_getRegionSequence.pl',
                              './bin/CLdb_loadLoci.pl',

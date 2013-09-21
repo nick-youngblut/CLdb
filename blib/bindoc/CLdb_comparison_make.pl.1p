@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_COMPARISON_MAKE 1"
-.TH CLDB_COMPARISON_MAKE 1 "2013-09-04" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_COMPARISON_MAKE 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,32 +136,31 @@ CLdb_comparison_make.pl \-\- making comparisons table for plotting
 CLdb_comparison_make.pl [flags] < dna_segs.txt > compare.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-ITEP" 4
-.IX Item "-ITEP"
-.PD
+.IP "\-ITEP  <char>" 4
+.IX Item "-ITEP  <char>"
 \&\s-1ITEP\s0 database. Used to get BLASTp info.
-.IP "\-spacer" 4
-.IX Item "-spacer"
+.IP "\-spacer  <char>" 4
+.IX Item "-spacer  <char>"
 Use spacer sequence clustering ('cluster') or pairwise blast ('blast')? ['cluster']
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
+.IP "\-cutoff  <int>" 4
+.IX Item "-cutoff  <int>"
 If \-spacer 'cluster': Clustering cutoff. [1]
 .Sp
 If \-spacer 'blast': blast pident cutoff. [100]
-.IP "\-blastp" 4
-.IX Item "-blastp"
+.IP "\-blastp  <int>" 4
+.IX Item "-blastp  <int>"
 BLASTp percent identity cutoff. [30]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_comparison_make.pl

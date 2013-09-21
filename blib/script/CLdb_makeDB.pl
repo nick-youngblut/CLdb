@@ -93,7 +93,7 @@ Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL,
 UNIQUE (Taxon_ID, Taxon_name, Scaffold, Locus_Start, Locus_End)
-ON CONFLICT REPLACE
+ON CONFLICT IGNORE
 );
 
 HERE
@@ -185,33 +185,34 @@ HERE
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
-spacer_DR	TEXT	NOT NULL,
-Group_ID	TEXT	NOT NULL,
-S_taxon_ID	TEXT,
-S_taxon_name	TEXT,
-S_accession	TEXT,
-S_GI	TEXT,
-pident	REAL	NOT NULL,
-length	INTEGER	NOT NULL,
-mismatch	INTEGER	NOT NULL,
-gapopen	INTEGER	NOT NULL,
-qstart	INTEGER	NOT NULL,
-qend	INTEGER	NOT NULL,
-sstart	INTEGER	NOT NULL,
-send	INTEGER	NOT NULL,
-evalue	TEXT	NOT NULL,
-bitscore	INTEGER	NOT NULL,
-slen	INTEGER	NOT NULL,
-array_hit	TEXT,
-date	DATE,
-UNIQUE( spacer_DR, Group_ID, S_taxon_ID, S_taxon_name, S_accession, sstart, send)
+blast_id    TEXT    NOT NULL,
+spacer_DR    TEXT    NOT NULL,
+Group_ID    TEXT    NOT NULL,
+S_taxon_ID    TEXT,
+S_taxon_name    TEXT,
+S_accession    TEXT,
+S_GI    TEXT,
+sseqid    TEXT    NOT NULL,
+pident    REAL    NOT NULL,
+len    INTEGER    NOT NULL,
+mismatch    INTEGER    NOT NULL,
+gapopen    INTEGER    NOT NULL,
+qstart    INTEGER    NOT NULL,
+qend    INTEGER    NOT NULL,
+sstart    INTEGER    NOT NULL,
+send    INTEGER    NOT NULL,
+evalue    TEXT    NOT NULL,
+bitscore    INTEGER    NOT NULL,
+slen    INTEGER    NOT NULL,
+qlen	INTEGER	NOT NULL,
+qseq	TEXT,
+frag	TEXT,
+xstart	INTEGER,
+xend	INTEGER,
+array_hit    TEXT,
+UNIQUE( blast_id )
 ON CONFLICT REPLACE
 );
-
-CREATE TRIGGER blast_update_trg AFTER INSERT ON blast_hits
-begin
-  UPDATE blast_hits SET date = DATETIME('NOW') where rowid = new.rowid;
-end;
 
 HERE
 
@@ -220,6 +221,7 @@ HERE
 DROP TABLE IF EXISTS spacer_blast_subject;
 
 CREATE TABLE spacer_blast_subject (
+Blast_subject_ID	TEXT	NOT NULL,
 Taxon_ID	TEXT,
 Taxon_name	TEXT,
 Accession	TEXT,
@@ -228,15 +230,9 @@ Scaffold_sequence	TEXT	NOT NULL,
 Fragment_start	INTEGER	NOT NULL,
 Fragment_end	INTEGER	NOT NULL,
 Extension	INTEGER	NOT NULL,
-Date	DATE,
-UNIQUE (Taxon_ID, Taxon_name, Accession, Scaffold_name)
+UNIQUE (Blast_subject_ID)
 ON CONFLICT REPLACE
 );
-
-CREATE TRIGGER blast_subject_update_trg AFTER INSERT ON spacer_blast_subject
-begin
-  UPDATE spacer_blast_subject SET Date = DATETIME('NOW') where rowid = new.rowid;
-end;
 
 HERE
 
@@ -314,19 +310,19 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =over
 
-=item -r  <bool>
+=item -replace  <bool>
 
 Replace existing database.
 
-=item -t  <char>
+=item -table  <char>
 
-Table(s) to keep as is (if they exist). ["leaderseqs" "genes"]
+Table(s) to keep as is (if they exist). ["leaders" "genes"]
 
-=item -d  <bool>
+=item -drop  <bool>
 
 Drop all tables. [FALSE]
 
-=item -h  <bool>
+=item -help  <bool>
 
 This help message
 

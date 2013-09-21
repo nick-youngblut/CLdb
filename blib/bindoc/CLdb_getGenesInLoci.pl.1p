@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETGENESINLOCI 1"
-.TH CLDB_GETGENESINLOCI 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETGENESINLOCI 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,36 +136,35 @@ CLdb_getGenesInLoci.pl \-\- getting all genes in CRISPR Loci; output is a table 
 CLdb_getGenesInLoci.pl [flags]
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-exist" 4
-.IX Item "-exist"
-.PD
+.IP "\-exist  <bool>" 4
+.IX Item "-exist  <bool>"
 Do not write any genes already existing in the Genes table (unless '\-a' used). [\s-1TRUE\s0]
-.IP "\-all" 4
-.IX Item "-all"
+.IP "\-all  <bool>" 4
+.IX Item "-all  <bool>"
 All genes defined by the Loci table are written. 
 Any existing entries written in place of new entry.
 Not compatible with '\-c' [\s-1FALSE\s0]
-.IP "\-conflict" 4
-.IX Item "-conflict"
+.IP "\-conflict  <bool>" 4
+.IX Item "-conflict  <bool>"
 Just write out genes that are conflicting
 (new and old versions). Not compatible with '\-a' [\s-1FALSE\s0]
-.IP "\-sql" 4
-.IX Item "-sql"
+.IP "\-sql  <char>" 4
+.IX Item "-sql  <char>"
 sql to refine loci table query (see \s-1EXAMPLES\s0).
-.IP "\-quiet" 4
-.IX Item "-quiet"
-Turn off all warnings.
-.IP "\-v	Verbose output. [\s-1TRUE\s0]" 4
-.IX Item "-v	Verbose output. [TRUE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-quiet  <bool>" 4
+.IX Item "-quiet  <bool>"
+Turn off all warnings. [\s-1FALSE\s0]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1TRUE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message.
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_getGenesInLoci.pl

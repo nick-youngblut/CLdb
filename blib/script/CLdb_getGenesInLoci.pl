@@ -321,7 +321,9 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -329,32 +331,36 @@ CLdb_getGenesInLoci.pl [flags]
 
 =over
 
-=item -exist
+=item -exist  <bool>
 
 Do not write any genes already existing in the Genes table (unless '-a' used). [TRUE]
 
-=item -all
+=item -all  <bool>
 
 All genes defined by the Loci table are written. 
 Any existing entries written in place of new entry.
 Not compatible with '-c' [FALSE]
 
-=item -conflict
+=item -conflict  <bool>
 
 Just write out genes that are conflicting
 (new and old versions). Not compatible with '-a' [FALSE]
 
-=item -sql
+=item -sql  <char>
 
 sql to refine loci table query (see EXAMPLES). 
 
-=item -quiet
+=item -quiet  <bool>
 
-Turn off all warnings.
+Turn off all warnings. [FALSE]
 
-=item -v	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message.
 
 =back
 

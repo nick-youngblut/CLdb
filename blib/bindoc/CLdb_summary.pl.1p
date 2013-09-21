@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SUMMARY 1"
-.TH CLDB_SUMMARY 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SUMMARY 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,30 +136,29 @@ CLdb_summary.pl \-\- summary stats on CLdb
 CLdb_summary.pl [flags] > summary.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
-Group summary by subtype?
-.IP "\-id" 4
-.IX Item "-id"
-Group summary by taxon_id?
-.IP "\-name" 4
-.IX Item "-name"
-Group summary by taxon_name?
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
+.IP "\-subtype  <bool>" 4
+.IX Item "-subtype  <bool>"
+Group summary by subtype? [\s-1FALSE\s0]
+.IP "\-id  <bool>" 4
+.IX Item "-id  <bool>"
+Group summary by taxon_id? [\s-1FALSE\s0]
+.IP "\-name  <bool>" 4
+.IX Item "-name  <bool>"
+Group summary by taxon_name? [\s-1FALSE\s0]
+.IP "\-cutoff  <int>" 4
+.IX Item "-cutoff  <int>"
 Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_summary.pl

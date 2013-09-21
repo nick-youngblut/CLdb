@@ -266,7 +266,9 @@ CLdb_array2fasta.pl [flags] > array.fasta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -274,31 +276,31 @@ CLdb_array2fasta.pl [flags] > array.fasta
 
 =over
 
-=item -repeat
+=item -repeat  <bool>
 
-Get direct repeats instead of spacers.
+Get direct repeats instead of spacers. [FALSE]
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -group
+=item -group  <bool>
 
-Get array elements de-replicated by group (ie. all unique sequences).
+Get array elements de-replicated by group (ie. all unique sequences). [FALSE]
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -leader
+=item -leader  <bool>
 
 Orient sequence to leader (leader always on 5' end)? Only sequences 
 from loci with identified leaders will be written! [FALSE]
@@ -323,6 +325,7 @@ The '-q' flag can be used to refine the query to certain sequences (see examples
 
 For spacer blasting, use '-leader' to avoid using sequence
 from the wrong strand (i.e. leader on 3' end instead of 5').
+Important for downstream analysis of spacer blast hits!
 
 =head1 EXAMPLES
 
