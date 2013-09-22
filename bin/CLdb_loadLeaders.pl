@@ -333,7 +333,6 @@ sub trim_se{
 		$fasta_aln_r->{$locus}{"seq"} =~ s/-//g if $rm_gap;
 		}
 		
-		#print Dumper $fasta_aln_r->{"cli.85"}; exit;
 		#print Dumper %$fasta_aln_r; exit;
 	}
 
@@ -623,7 +622,7 @@ degeneracy.
 
 =head2 Triming off the 50bp of unconserved alignment 
 
-CLdb_loadLeaders.pl -d CLdb.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
+CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
 
 =head1 AUTHOR
 

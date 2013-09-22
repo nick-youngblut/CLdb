@@ -8,6 +8,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+use List::Util qw/min max/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -88,7 +89,7 @@ locus_start=?, locus_end=? where locus_id = ?";
 	my $cnt = 0;
 	foreach my $locus_id (keys %$fasta_aln_r){
 		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
-		
+				
 		$sql->bind_param( 1, ${$loci_tbl_r->{$locus_id_e}}[0] );		# updating locus start
 		$sql->bind_param( 2, ${$loci_tbl_r->{$locus_id_e}}[1] );		# updating locus end
 
@@ -161,7 +162,9 @@ sub adjust_locus_start_end{
 			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
 			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);	
 			}
-		}		
+		}	
+		
+		#print Dumper $loci_tbl_r; exit;	
 	}
 
 sub reset_locus_start_end{
@@ -171,47 +174,54 @@ sub reset_locus_start_end{
 	foreach my $locus_id (keys %$fasta_aln_r){			# each locus of interest
 		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
 
-		# checking for operon & array start-end #
-		next unless ${$loci_tbl_r->{$locus_id_e}}[2] && ${$loci_tbl_r->{$locus_id_e}}[4];
+		# checking for operon or array start-end #
+		die " ERROR: no array_start or operon_start found in loci table for cli.$locus_id_e!"
+			unless ${$loci_tbl_r->{$locus_id_e}}[2] || ${$loci_tbl_r->{$locus_id_e}}[4];
 		
 		# if just array or operon, give locus those values #
-		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){
-			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using operon start
-			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 		
-			}
-		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){
-			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using array end 		
-			}
-		
-		
-		# adjusting using operon & array #
-		if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
-			 ${$loci_tbl_r->{$locus_id_e}}[1]){
-			if( ${$loci_tbl_r->{$locus_id_e}}[2] < 		# operon start is smaller, using 
-				 ${$loci_tbl_r->{$locus_id_e}}[4]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 
-				 }
-			else{
-				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using array start
-				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using operon end
+		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){			# if no operon, using array
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+				}
+			else{											# locus start > end
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
 				}
 			}
-
-		else{											# locus start > end
-			if( ${$loci_tbl_r->{$locus_id_e}}[2] > 		# operon start is greater, using 
-				 ${$loci_tbl_r->{$locus_id_e}}[4]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end
-				 }
-			else{
-				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	
-				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	
+		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){			# if no array start'; using operon
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+				}
+			else{											# locus start > end
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
+				}
+			}
+		else{		 # both array and operon
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
+			
+			# adjusting using operon & array #
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;				
+				}
+			else{											# locus start > end
+				${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				${$loci_tbl_r->{$locus_id_e}}[1] = $min;
 				}
 			}	
 		}
-		#print Dumper $loci_tbl_r; exit;
+		#print Dumper "here", $loci_tbl_r; exit;
 	}
 
 sub flip_se{
