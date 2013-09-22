@@ -343,9 +343,9 @@ Group summary by taxon_id? [FALSE]
 
 Group summary by taxon_name? [FALSE]
 
-=item -cutoff  <int>
+=item -cutoff  <float>
 
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
+Spacer/DR clustering cutoffs to summarize (range:0.8-1; >=1 argument). [1]
 
 =item -verbose  <bool>
 
