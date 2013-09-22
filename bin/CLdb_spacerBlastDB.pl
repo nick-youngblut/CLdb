@@ -17,7 +17,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $query_file, $blast_db);
 my $extra_query = "";
-my $blast_params = "-evalue 0.001";		# 1e-3
+my $blast_params = "-evalue 0.00001";		# 1e-5
 my $num_threads = 1;		
 my $extend = 20;						# number of bp extended beyond hit
 GetOptions(
@@ -97,11 +97,17 @@ sub blastn_call_load{
 
 		# frag & extension #
 		## getting frag of sequence from genbank ##
-		push @line, get_frag($gb, $line[2], $line[5], $line[12], $line[13], $line[17]);	# gb-object, accession, start, end, slen
-		if($spacer_DR eq "DR"){	# DR -> no frag or qseq needed 
-			$line[18] = ""; 
-			$line[19] = "";
+		if($spacer_DR eq "Spacer"){
+			push @line, get_frag($gb, $line[2], $line[5], $line[12], $line[13], $line[17]);	# gb-object, accession, start, end, slen
 			}
+		else{
+			push @line, ("", $line[12], $line[13]);		# xstart - xend = sstart - send
+			$line[18] = "";			# qseq = ""
+			}
+#		if($spacer_DR eq "DR"){	# DR -> no frag or qseq needed 
+#			$line[18] = ""; 
+#			$line[19] = "";
+#			}
 
 		# quoting #
 		$line[0] = $dbh->quote($line[0]);		# blast_ID
@@ -137,7 +143,7 @@ sub blastn_call_load{
 	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
 	print STDERR "...Number of DR blast entries added to CLdb: $insert_cnt{'DR'}\n";
 	}
-	
+
 sub get_frag{
 	my ($gb, $acc, $sseqid, $start, $end, $slen) = @_;
 	
@@ -197,11 +203,11 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerBlastGenome.pl -- BLASTn-short of spacers and/or DRs against 'nt' or other BLAST DB
+CLdb_spacerBlastDB.pl -- BLASTn-short of spacers and/or DRs against 'nt' (or other BLAST DB)
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlastGenome.pl [flags]
+CLdb_spacerBlastDB.pl [flags]
 
 =head2 Required flags
 
@@ -227,7 +233,7 @@ BLAST database. [nt]
 
 =item -blast  <char>
 
-BLASTn parameters (besides required flags). [-evalue 0.001]
+BLASTn parameters (besides required flags). [-evalue 0.00001]
 
 =item -num_threads  <int>
 
@@ -249,7 +255,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlastGenome.pl
+perldoc CLdb_spacerBlastDB.pl
 
 =head1 DESCRIPTION
 
@@ -270,11 +276,11 @@ in CRISPR arrays and are thus not protospacers).
 
 =head2 Blasting all spacers against nt
 
-CLdb_spacerBlastGenome.pl -d CLdb.sqlite
+CLdb_spacerBlastDB.pl -d CLdb.sqlite
 
 =head2 Blasting all DRs against nt
 
-CLdb_spacerBlastGenome.pl -d CLdb.sqlite 
+CLdb_spacerBlastDB.pl -d CLdb.sqlite 
 
 =head1 AUTHOR
 
