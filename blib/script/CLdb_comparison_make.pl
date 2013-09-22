@@ -34,12 +34,13 @@ die " ERROR: provide a database file name!\n"
 die " ERROR: cannot find CLdb database file!\n"
 	unless -e $CLdb_sqlite;
 $spacer_cutoff = 100 if $spacer_opt =~ /blast/i;
+print STDERR "...WARNING: no ITEP db provided ('-i')! No blastp information will be included!\n"
+	unless $ITEP_sqlite;
 	
 # checking ITEP input #
-if($ITEP_sqlite){
-	die " ERROR: cannot find ITEP database file!\n"
-		unless -e $ITEP_sqlite;
-	}
+die " ERROR: cannot find ITEP database file!\n"
+	if $ITEP_sqlite && ! -e $ITEP_sqlite;
+
 
 ### MAIN
 # connect 2 CLdb #
@@ -220,7 +221,7 @@ AND pctid >= $blastp_cutoff
 			
 			print STDERR " WARNING: $feat_id not found in database!\n"
 				unless @$res;
-			next unless @$res;
+			next unless @$res;			# should warn if gene not found in db
 			
 			# loading hash #
 			foreach my $row (@$res){

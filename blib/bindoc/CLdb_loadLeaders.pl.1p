@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LOADLEADERS 1"
-.TH CLDB_LOADLEADERS 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LOADLEADERS 1 "2013-09-22" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -178,7 +178,7 @@ degeneracy.
 .IX Header "EXAMPLES"
 .SS "Triming off the 50bp of unconserved alignment"
 .IX Subsection "Triming off the 50bp of unconserved alignment"
-CLdb_loadLeaders.pl \-d CLdb.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna \-t 50
+CLdb_loadLeaders.pl \-d CLdb.sqlite \-t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
