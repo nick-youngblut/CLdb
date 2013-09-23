@@ -322,11 +322,11 @@ are associated with the selected loci.
 
 =head2 Delete all loci in a genome 
 
-CLdb_delete.pl -d CLdb_test.sqlite -taxon_id 6666666.403
+CLdb_delete.pl -d CLdb.sqlite -taxon_id 6666666.403
 
 =head2 Delete locus_ids 1 through 4 
 
-CLdb_delete.pl -d CLdb_test.sqlite -q "AND locus_id IN (1,2,3,4)
+CLdb_delete.pl -d CLdb.sqlite -q "AND locus_id IN (1,2,3,4)
 
 =head1 AUTHOR
 
