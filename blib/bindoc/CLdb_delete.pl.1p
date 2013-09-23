@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_DELETE 1"
-.TH CLDB_DELETE 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_DELETE 1 "2013-09-23" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -174,10 +174,10 @@ are associated with the selected loci.
 .IX Header "EXAMPLES"
 .SS "Delete all loci in a genome"
 .IX Subsection "Delete all loci in a genome"
-CLdb_delete.pl \-d CLdb_test.sqlite \-taxon_id 6666666.403
+CLdb_delete.pl \-d CLdb.sqlite \-taxon_id 6666666.403
 .SS "Delete locus_ids 1 through 4"
 .IX Subsection "Delete locus_ids 1 through 4"
-CLdb_delete.pl \-d CLdb_test.sqlite \-q "\s-1AND\s0 locus_id \s-1IN\s0 (1,2,3,4)
+CLdb_delete.pl \-d CLdb.sqlite \-q "\s-1AND\s0 locus_id \s-1IN\s0 (1,2,3,4)
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>
