@@ -123,17 +123,17 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "CLDB_SUMMARY 1"
-.TH CLDB_SUMMARY 1 "2013-09-22" "perl v5.14.2" "User Contributed Perl Documentation"
+.IX Title "CLDB_SPACERSHARED 1"
+.TH CLDB_SPACERSHARED 1 "2013-09-22" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-CLdb_summary.pl \-\- summary stats on CLdb
+CLdb_spacerShared.pl \-\- write a matrix of spacers shared among taxa and/or subtypes
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-CLdb_summary.pl [flags] > summary.txt
+CLdb_spacerShared.pl [flags] > shared.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
 .IP "\-database  <char>" 4
@@ -152,7 +152,10 @@ Group summary by taxon_id? [\s-1FALSE\s0]
 Group summary by taxon_name? [\s-1FALSE\s0]
 .IP "\-cutoff  <float>" 4
 .IX Item "-cutoff  <float>"
-Spacer/DR clustering cutoffs to summarize (range:0.8\-1; >=1 argument). [1]
+Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
+Extra sql to refine which sequences are returned.
 .IP "\-verbose  <bool>" 4
 .IX Item "-verbose  <bool>"
 Verbose output. [\s-1FALSE\s0]
@@ -161,47 +164,30 @@ Verbose output. [\s-1FALSE\s0]
 This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
-perldoc CLdb_summary.pl
+perldoc CLdb_spacerShared.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get summary stats on CLdb.
+How similar are CRISPRs in spacer content?
 .PP
-The output is a tab-delimited file for easy parsing and plotting.
-.SS "Output description"
-.IX Subsection "Output description"
-The 1st column is the CLdb table (e.g. loci, spacers, leaders).
+Get a table showing the number of a particular
+spacer (by default, exact same sequence, change with
+\&'\-cutoff') among subtypes, taxa, or both.
 .PP
-Grouping columns (e.g. subtype or taxon_name) are the subsequent
-columns.
+By default, total counts of each spacer cluster are written.
 .PP
-Spacer and \s-1DR\s0 groups (clusters) are defined as having exactly the 
-same sequence (reverse-complemented sequences are considered the 
-same, but sequence length must match).
-.PP
-Next comes table-specific categories ('\s-1NA\s0' means not applicable):
-.IP "Loci: operon_status array_status" 4
-.IX Item "Loci: operon_status array_status"
-.PD 0
-.IP "Spacers: either all spacers ('All) or by group ('num_groups' 'clustering cutoff')" 4
-.IX Item "Spacers: either all spacers ('All) or by group ('num_groups' 'clustering cutoff')"
-.IP "DRs: either all DRs ('All) or by group ('num_groups' 'clustering cutoff')" 4
-.IX Item "DRs: either all DRs ('All) or by group ('num_groups' 'clustering cutoff')"
-.IP "Genes: in operon? (ie. operon start-end defined in loci table)" 4
-.IX Item "Genes: in operon? (ie. operon start-end defined in loci table)"
-.IP "Leaders: none" 4
-.IX Item "Leaders: none"
-.PD
+\&\s-1WARNING:\s0 '\-cutoff' can only be used if CLdb_hclusterArrays.pl
+has been run first.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Total summary"
-.IX Subsection "Total summary"
-CLdb_summary.pl \-d CLdb.sqlite
-.SS "Summarize by subtype"
-.IX Subsection "Summarize by subtype"
-CLdb_summary.pl \-d CLdb.sqlite \-s
-.SS "Summarize by subtype & taxon_name"
-.IX Subsection "Summarize by subtype & taxon_name"
-CLdb_summary.pl \-d CLdb.sqlite \-s \-n
+.SS "Write table of spacers shared among subtypes"
+.IX Subsection "Write table of spacers shared among subtypes"
+CLdb_spacerShared.pl \-d CLdb.sqlite \-s > subtype_shared.txt
+.SS "Write table of spacers shared among taxa (by taxon_name)"
+.IX Subsection "Write table of spacers shared among taxa (by taxon_name)"
+CLdb_spacerShared.pl \-d CLdb.sqlite \-n > taxa_shared.txt
+.SS "Write table of spacers shared among subtypes/taxa"
+.IX Subsection "Write table of spacers shared among subtypes/taxa"
+CLdb_spacerShared.pl \-d CLdb.sqlite \-s \-n > subtype_taxa_shared.txt
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

@@ -124,6 +124,7 @@ do{ my $x = [
                              './bin/CLdb_proto2fasta.pl',
                              './bin/CLdb_spacerPairwiseBlast.pl',
                              './bin/CLdb_arrayGroup2Info.pl',
+                             './bin/CLdb_spacerShared.pl',
                              './bin/CLdb_spacerBlast2GFF.pl',
                              './bin/CLdb_getLeaderRegions.pl',
                              './bin/CLdb_spacerBlastDB.pl',
