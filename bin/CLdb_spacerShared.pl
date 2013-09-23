@@ -14,7 +14,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
 my ($verbose, $database_file, $spacer_bool, $by_group, $leader_bool);
-my ($subtype, $taxon_id, $taxon_name);
+my ($subtype, $taxon_id, $taxon_name, $locus_id);
 my $extra_query = "";
 my $cutoff = 1;				# cd-hit cutoff of 1
 GetOptions(
@@ -22,6 +22,7 @@ GetOptions(
 	   "subtype" => \$subtype,
 	   "id" => \$taxon_id,
 	   "name" => \$taxon_name,
+	   "locus" => \$locus_id,				# by locus_id
 	   "cutoff=f" => \$cutoff,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
@@ -44,10 +45,8 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr)
 my $table_list_r = list_tables($dbh);
 $table_list_r = entry_count($dbh, $table_list_r);
 
-
-
 # making group by sql
-my $group_by_r = make_group_by_sql($subtype, $taxon_id, $taxon_name);
+my $group_by_r = make_group_by_sql($subtype, $taxon_id, $taxon_name, $locus_id);
 
 
 # getting arrays of interest from database #
@@ -202,11 +201,12 @@ sub join_query_opts{
 	}
 
 sub make_group_by_sql{
-	my ($subtype, $taxon_id, $taxon_name) = @_;
+	my ($subtype, $taxon_id, $taxon_name, $locus_id) = @_;
 	my @group_by;
 	push @group_by, "a.subtype" if $subtype;
 	push @group_by, "a.taxon_id" if $taxon_id;
 	push @group_by,"a.taxon_name" if $taxon_name;
+	push @group_by, "a.locus_id" if $locus_id;
 	return \@group_by;
 	}
 	
@@ -236,7 +236,7 @@ __END__
 
 =head1 NAME
 
-CLdb_spacerShared.pl -- write a matrix of spacers shared among taxa and/or subtypes
+CLdb_spacerShared.pl -- write a matrix of spacers shared among taxa, subtypes, and/or loci
 
 =head1 SYNOPSIS
 
@@ -258,15 +258,19 @@ CLdb database.
 
 =item -subtype  <bool>
 
-Group summary by subtype? [FALSE]
+Group count data by subtype? [FALSE]
 
 =item -id  <bool> 
 
-Group summary by taxon_id? [FALSE]
+Group count data by taxon_id? [FALSE]
 
 =item -name  <bool>
 
-Group summary by taxon_name? [FALSE]
+Group count data by taxon_name? [FALSE]
+
+=item -locus  <bool>
+
+Group count data by locus_id? [FALSE] 
 
 =item -cutoff  <float>
 
@@ -298,7 +302,8 @@ Get a table showing the number of a particular
 spacer (by default, exact same sequence, change with
 '-cutoff') among subtypes, taxa, or both.
 
-By default, total counts of each spacer cluster are written.
+By default, total counts of each spacer cluster are written
+(no parsing by group).
 
 WARNING: '-cutoff' can only be used if CLdb_hclusterArrays.pl
 has been run first.
@@ -316,6 +321,10 @@ CLdb_spacerShared.pl -d CLdb.sqlite -n > taxa_shared.txt
 =head2 Write table of spacers shared among subtypes/taxa
 
 CLdb_spacerShared.pl -d CLdb.sqlite -s -n > subtype_taxa_shared.txt
+
+=head2 Write table of spacers shared among loci (names include taxon_name & subtype)
+
+CLdb_spacerShared.pl -d CLdb.sqlite -l -s -n > loci_subtype-taxa_shared.txt
 
 =head1 AUTHOR
 
