@@ -115,6 +115,7 @@ do{ my $x = [
                              './bin/CLdb_classifyArraysByDR_validate.pl',
                              './bin/CLdb_groupArrayElements.pl',
                              './bin/CLdb_spacerBlastDRFilter_raw.pl',
+                             './bin/CLdb_loci2GFF.pl',
                              './bin/CLdb_makeDB.pl',
                              './bin/CLdb_spacerBlastProtoMismatch.pl',
                              './bin/CLdb_xlims_make.pl',

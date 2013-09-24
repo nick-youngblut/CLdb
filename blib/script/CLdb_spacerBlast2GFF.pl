@@ -166,8 +166,8 @@ sub join_query_opts_or{
 	map{ s/"*(.+)"*/'$1'/ } @$sacc_r;	
 	
 	if(@$staxon_id_r && @$staxon_name_r){
-		return join("", " AND (blast_hits.taxon_id IN (", join(", ", @$staxon_id_r),
-						") OR blast_hits.taxon_name IN (", join(", ", @$staxon_name_r),
+		return join("", " AND (blast_hits.s_taxon_id IN (", join(", ", @$staxon_id_r),
+						") OR blast_hits.s_taxon_name IN (", join(", ", @$staxon_name_r),
 						"))");
 		}
 	elsif(@$staxon_id_r){
