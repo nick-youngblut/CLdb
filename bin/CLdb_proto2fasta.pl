@@ -310,7 +310,7 @@ Spacer blasting and DR filtering must be done prior!
 
 CLdb_proto2fasta.pl -d CLdb.sqlite  > all_proto_mismatch.txt
 
-=head2 Fasta of all protospacers in subtype I-A
+=head2 Fasta of all protospacers in subtype I-A 
 
 CLdb_proto2fasta.pl -d CLdb.sqlite -sub I-A > I-A_proto_mismatch.txt
 

@@ -246,19 +246,19 @@ Genbank files must be in $CLdb_HOME/genbank/
 
 =head2 Write all locus regions:
 
-CLdb_getRegionSequence.pl -d CRISPR.sqlite 
+CLdb_getRegionSequence.pl -d CLdb.sqlite 
 
 =head2 Write all CRISPR array regions:
 
-CLdb_getRegionSequence.pl -data CRISPR.sqlite -r crispr_array
+CLdb_getRegionSequence.pl -d CLdb.sqlite -r crispr_array
 
 =head2 Refine region sequence query:
 
-CLdb_getRegionSequence.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb_getRegionSequence.pl -d CLdb.sqlite -q "where LOCUS_ID=1" 
 
 =head2 Refine region query to a specific subtype & 2 taxon_id's
 
-CLdb_getRegionSequence.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb_getRegionSequence.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
