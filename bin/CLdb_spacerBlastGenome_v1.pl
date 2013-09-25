@@ -8,20 +8,19 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
-use Bio::SearchIO;
-use Bio::AlignIO;
+use Bio::SeqIO;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $query_file, $entire);
+my ($verbose, $database_file, $query_file);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
 my $extra_query = "";
 my $blast_params = "-evalue 0.001";		# 1e-3
 my $num_threads = 1;
-my $extend = 10;
+my $extend = 20;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "fasta=s" => \$query_file,
@@ -32,7 +31,6 @@ GetOptions(
 	   "blast=s" => \$blast_params,
 	   "num_threads=i" => \$num_threads,
 	   "xtend=i" => \$extend,
-	   "entire" => \$entire,			# protospacer entire length of spacer regardless of blast hit range? [TRUE]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -84,169 +82,10 @@ make_blast_db($subject_loci_r, $fasta_dir, $blast_dir);
 
 # blasting (foreach subject blast DB) #
 ## blastn & loading blastn output ##
-#blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
-blastn_xml_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
-
-print Dumper "NO commit!\n";
+blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
 
 
 ### Subroutines
-sub blastn_xml_call_load{
-# calling blastn (xml output format); parsing output #
-## needed to get blast alignment (find potential gaps) 
-	my ($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file) = @_;
-	
-	# columns to load into blast_hits DB
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name
-S_taxon_ID Group_ID sseqid pident 
-len mismatch gapopen qstart qend 
-sstart send evalue bitscore qlen 
-slen qseq frag xstart xend/;
-	
-	# blasting each subject genome #
-	foreach my $row (@$subject_loci_r){		# taxon_name, taxon_id, genbank, fasta
-		next unless $$row[3];			# skipping if no fasta & thus no blast db
-		
-		# loading fasta #
-		my $fasta_r = load_fasta("$blast_dir/$$row[3]");
-
-		# setting blast cmd #
-		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq";
-		my $cmd = "blastn -task 'blastn-short' -outfmt 5 -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
-		print STDERR "$cmd\n" unless $verbose;
-		
-		my $seqin = Bio::SearchIO->new( -file => $cmd, -format => "blastxml" );
-		
-		while( my $result = $seqin->next_result ) {		# result object
-				#print Dumper $result;
-			while( my $hit = $result->next_hit ) {		# hit object
-					#print Dumper $hit;
-				while( my $hsp = $hit->next_hsp ) {			# hsp object
-					# query sequence ID #
-					my $qseqid = $result->query_description;
-	
-					# spacer or DR? #
-					(my $spacer_DR = $qseqid) =~ s/_.+//;
-					$qseqid =~ s/.+\.//;
-
-					# blastID # spacer_DR qseqid S_taxon_name S_taxon_ID sseqid sstart send #
-					my $blast_id = join("_", $spacer_DR,	# query ID (spacer/DR group)(
-									$$row[0],				# S_taxon_name
-									$$row[1],				# S_taxon_ID
-									$hit->name, 			# sseqid
-									$hsp->start('hit'),		# sstart
-									$hsp->end('hit')		# send
-									);
-
-					# getting blast info #
-					#print Dumper $result->query_description; 	# qseqid
-					#print Dumper $hit->name;					# sseqid
-					#print Dumper $$row[0]; 					# S_taxon_name
-					#print Dumper $$row[1]; 					# S_taxon_id
-					#print Dumper $hit->query_length;			# qlen
-					#print Dumper $hit->hit_length;				# slen
-    				#print Dumper $hsp->percent_identity;		# pident
-    				#print Dumper $hsp->bits;					# bitscore
-    				#print Dumper $hsp->evalue;					# evalue
-    				#print Dumper $hsp->start('query');			# qstart
-    				#print Dumper $hsp->end('query');			# qend
-    				#print Dumper $hsp->start('hit');			# sstart
-    				#print Dumper $hsp->end('hit');				# send
-    				#print Dumper $hsp->strand; 				# strand
-    				
-					# getting alignment #
-					my $alnIO = $hsp->get_aln; 
-					my @seqs = $alnIO->each_seq;
-
-					# getting protospacer sequence (& start-end) #
-					die " ERROR: cannot find ", $hit->name, " in $$row[0], $$row[1]\n"
-						unless exists  $fasta_r->{$hit->name};
-					my ($proto, $xstart, $xend) = get_protospacer($hsp, $hit, \@seqs, $fasta_r->{$hit->name});
-					#print Dumper $seqs[0]->seq;
-					#print Dumper $proto;
-					#print Dumper $xstart;
-					#print Dumper $xend;
-					#print Dumper $hsp->strand('hit');
-					#print Dumper $hit->name;
-
-					# check real hit in genome #
-					# not full hit #
-					}
-				}
-			}
-		}
-	}
-	
-
-sub get_protospacer{
-# getting the protospacer sequence from genome genome fasta 
-# also extending protospacer to full lenght of query (unless -entire)
-# also adding adjacent sequence for finding PAMs
-	my ($hsp, $hit, $seqs_r, $scaf_seq) = @_;
-
-	# setting variables #
-	my $qstart = $hsp->start('query');	# qstart
-	my $qend = $hsp->end('query');		# qend
-	my $qlen = $hit->query_length;		# qlen
-	my $sstart = $hsp->start('hit');	# sstart
-	my $send = $hsp->end('hit');		# send
-	my $slen = $hit->hit_length;		# slen
-	
-	# full-length protospacer #
-	unless($entire){	 				# extending protospacer to full length of spacer
-			#print Dumper "entire", $qstart, $qend, $qlen if $qstart != 1 || $qlen != $qend;
-			$sstart -= $qstart - 1;		# missing 5' end hit
-			$send += $qlen - $qend;		# missing 3' end hit
-			}
-		
-	# extend #
-	$sstart -= $extend;					# 5' extension beyond proto
-	$sstart = 0 if $sstart < 0;			# floor of 0
-	$send += $extend;					# 3' extension beyond proto
-	$send = $slen if $send > $slen; 	# ceiling of scaffold length
-
-	
-	# making protospacer seq 
-	## substr from scaff seq for 5' & 3' extensions 
-	## revcomp if - strand; proto revcomp already  by bioperl
-	my $fivep = substr($scaf_seq, $sstart -1, $hsp->start('hit') - $sstart);	# 5' extension; amost forgot 0-indexing!
-	$fivep = revcomp($fivep) if $hsp->strand('hit') ==  -1;
-	my $threep = substr($scaf_seq, $hsp->end('hit') ,  $send - $hsp->end('hit')); # 3' extension
-	$threep = revcomp($threep) if $hsp->strand('hit') == -1;	
-
-	# returning sequence; 
-	## 5' & 3' switch if - strand ##
-	if($hsp->strand('hit') == 1){
-		return join("", $fivep, $$seqs_r[1]->seq, $threep), 
-			$sstart - 1, $send;		# -1 for 0-indexing
-		}
-	elsif($hsp->strand('hit') == -1){			 # flip 5' <-> 3'
-		return join("", $threep, $$seqs_r[1]->seq, $fivep), 
-			$sstart - 1, $send;		# -1 for 0-indexing
-		}
-	else{die " ERROR: cannot recognize strand: ", $hsp->strand('hit'), "\n"; }
-	}
-
-sub get_seq_frag{
-	my ($start, $end, $slen, $extend, $seq) = @_;
-	
-	#print Dumper $start, $end; exit;
-	if($start > $end){			# need rev-comp of string 
-		$start += $extend;
-		$start = $slen if $start > $slen;
-		$end -= $extend;
-		$end = 0 if $end < 0;
-		return revcomp(substr($seq, $end, $start - $end)), $start, $end;
-		}
-	else{
-		$start -= $extend;
-		$start = 0 if $start < 0;
-		$end += $extend;
-		$end = $slen if $end > $slen;
-		return substr($seq, $start, $end - $start), $start, $end;	
-		}
-	}
-
 sub blastn_call_load{
 # calling blastn, loading blast results directly into DB #
 # also loading blast subject hit #
@@ -342,6 +181,26 @@ sub blastn_call_load{
 	print STDERR "...Number of spacer blast entries added to CLdb: $insert_cnt{'Spacer'}\n";
 	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
 	print STDERR "...Number of DR blast entries added to CLdb: $insert_cnt{'DR'}\n";
+	}
+
+sub get_seq_frag{
+	my ($start, $end, $slen, $extend, $seq) = @_;
+	
+	#print Dumper $start, $end; exit;
+	if($start > $end){			# need rev-comp of string 
+		$start += $extend;
+		$start = $slen if $start > $slen;
+		$end -= $extend;
+		$end = 0 if $end < 0;
+		return revcomp(substr($seq, $end, $start - $end)), $start, $end;
+		}
+	else{
+		$start -= $extend;
+		$start = 0 if $start < 0;
+		$end += $extend;
+		$end = $slen if $end > $slen;
+		return substr($seq, $start, $end - $start), $start, $end;	
+		}
 	}
 
 sub revcomp{
