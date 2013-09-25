@@ -10,12 +10,13 @@ use File::Spec;
 use DBI;
 use Bio::SearchIO;
 use Bio::AlignIO;
+use Set::IntervalTree;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $query_file, $entire);
+my ($verbose, $database_file, $query_file, $entire, $filter_overlap_hits);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
 my $extra_query = "";
@@ -32,7 +33,8 @@ GetOptions(
 	   "blast=s" => \$blast_params,
 	   "num_threads=i" => \$num_threads,
 	   "xtend=i" => \$extend,
-	   "entire" => \$entire,			# protospacer entire length of spacer regardless of blast hit range? [TRUE]
+	   "entire" => \$entire,					# protospacer entire length of spacer regardless of blast hit range? [TRUE]
+	   "overlap" => \$filter_overlap_hits, 		# filter out overlapping hits? [TRUE]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -104,6 +106,7 @@ sstart send evalue bitscore qlen
 slen qseq frag xstart xend/;
 	
 	# blasting each subject genome #
+	my %insert_cnt; 		# summing number of entries added/updated in CLdb
 	foreach my $row (@$subject_loci_r){		# taxon_name, taxon_id, genbank, fasta
 		next unless $$row[3];			# skipping if no fasta & thus no blast db
 		
@@ -115,15 +118,44 @@ slen qseq frag xstart xend/;
 		my $cmd = "blastn -task 'blastn-short' -outfmt 5 -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
 		print STDERR "$cmd\n" unless $verbose;
 		
+		# parsing xml output w/ bioperl #
 		my $seqin = Bio::SearchIO->new( -file => $cmd, -format => "blastxml" );
 		
-		while( my $result = $seqin->next_result ) {		# result object
-				#print Dumper $result;
+		
+		# extracting info to load into table & loading #
+		while( my $result = $seqin->next_result ) {		# result object 
+			
+			# getting all start-end for each hit to find overlapping hits #
+			#my $hit_se_r = get_hit_se($result) unless $filter_overlap_hits;		# hit_se_r=>spacer/DR_group=>scaffold=>[sstart, send]
+			my $hit_itree_r = get_hit_itrees($result) unless $filter_overlap_hits;
+			$result->rewind;		# reset iterator
+			
 			while( my $hit = $result->next_hit ) {		# hit object
-					#print Dumper $hit;
-				while( my $hsp = $hit->next_hsp ) {			# hsp object
+				$hit->rewind; 							# reset iterator
+				
+				while( my $hsp = $hit->next_hsp ) {		# hsp object					
 					# query sequence ID #
 					my $qseqid = $result->query_description;
+					
+					# filtering overlapping hits #
+					## hit must be in $res & have > range (for totally overlapping hits)
+					unless($filter_overlap_hits){
+						die " ERROR: cannot find ", $hit->name, " in interval tree!\n"
+							unless exists $hit_itree_r->{$hit->name}{$qseqid};
+						my $res = $hit_itree_r->{$hit->name}{$qseqid}->fetch($hsp->start('hit'), $hsp->end('hit'));
+						die " ERROR: no hits for found in interval tree!\n" unless @$res;
+						
+						my $next_bool;
+						foreach (@$res){		# skipping if another hit from same spacer/DR group hits larger range
+							next if scalar @$res == 1;
+						
+							$next_bool = 1 if 
+										($$_[1] <= $hsp->start('hit') && $$_[2] >= $hsp->end('hit')) &&	# same range or greater 
+										($$_[1] != $hsp->start('hit') && $$_[2] != $hsp->end('hit')) &&	# not skipping if same range
+										($$_[1] < $hsp->start('hit') || $$_[2] > $hsp->end('hit'));		# skipping if another range spans larger region 
+							}
+						next if $next_bool;
+						}
 	
 					# spacer or DR? #
 					(my $spacer_DR = $qseqid) =~ s/_.+//;
@@ -161,22 +193,126 @@ slen qseq frag xstart xend/;
 					# getting protospacer sequence (& start-end) #
 					die " ERROR: cannot find ", $hit->name, " in $$row[0], $$row[1]\n"
 						unless exists  $fasta_r->{$hit->name};
-					my ($proto, $xstart, $xend) = get_protospacer($hsp, $hit, \@seqs, $fasta_r->{$hit->name});
-					#print Dumper $seqs[0]->seq;
-					#print Dumper $proto;
-					#print Dumper $xstart;
-					#print Dumper $xend;
-					#print Dumper $hsp->strand('hit');
-					#print Dumper $hit->name;
+					my ($proto, $xstart, $xend);
+					if($spacer_DR eq "DR"){
+						($proto, $xstart, $xend) = ("", $hsp->start('hit'), $hsp->end('hit'));
+						}
+					elsif($spacer_DR eq "Spacer"){
+						($proto, $xstart, $xend) = get_protospacer($hsp, $hit, \@seqs, $fasta_r->{$hit->name});
+						}
+					else{ die " LOGIC ERROR: $!\n"; }
+						#print Dumper $seqs[0]->seq;
+						#print Dumper $proto;
+						#print Dumper $xstart;
+						#print Dumper $xend;
+						#print Dumper $hsp->strand('hit');
+						#print Dumper $hit->name;
 
-					# check real hit in genome #
-					# not full hit #
+					my @hit_matches = $hsp->matches('hit');
+
+					## making blast_hit sql ##
+					my @vals = (
+						$dbh->quote($blast_id),		# blastID
+						$dbh->quote($spacer_DR),	# Spacer|DR
+						$dbh->quote($$row[0]),		# taxon_name
+						$dbh->quote($$row[1]),		# taxon_id
+						$qseqid,					# groupID
+						$dbh->quote($hit->name), 	# sseqid
+						$hsp->percent_identity,
+						$hit->hit_length,
+						$hsp->length('total') - $hit_matches[0] - $hsp->gaps, 		# mismatches (length - matches - gaps)
+						$hsp->gaps,
+						$hsp->start('query'),
+						$hsp->end('query'),
+						$hsp->start('hit'),
+						$hsp->end('hit'),
+						$hsp->evalue,
+						$hsp->bits,
+						$hit->query_length,
+						$hit->hit_length,
+						$dbh->quote($seqs[0]->seq), 				# query sequence
+						$dbh->quote($proto),
+						$xstart,
+						$xend
+						);
+					
+					#print join("\t", @vals), "\n";
+					# making sql #
+					my $sql = join(" ", "INSERT INTO Blast_hits( ",
+						join(",", @blast_hits_col),
+						") VALUES( ",
+						join(",", @vals), 
+						")" );
+						
+					# loading blast hit into CLdb #
+					$dbh->do( $sql );
+					if($DBI::err){
+						print STDERR "ERROR: $DBI::errstr in: ", join("\t", @vals), "\n";
+						}
+					else{ $insert_cnt{$spacer_DR}++; }
 					}
 				}
 			}
 		}
+	
+	$insert_cnt{"Spacer"} = 0 unless exists $insert_cnt{"Spacer"};
+	print STDERR "...Number of spacer blast entries added to CLdb: $insert_cnt{'Spacer'}\n";
+	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
+	print STDERR "...Number of DR blast entries added to CLdb: $insert_cnt{'DR'}\n";
 	}
 	
+sub get_hit_itrees{
+# putting hits in interval trees parsed by scaffold
+# used to find hits inclusive of others
+	my ($result) = @_;
+	
+	my %itrees;
+	while( my $hit = $result->next_hit ) {		# hit object
+		while( my $hsp = $hit->next_hsp ) {
+			#$hit->name;					# scaffold ID
+			#$hsp->start('hit');			# sstart
+  			#$send = $hsp->end('hit');	# send
+  			my $qseqid = $result->query_description;
+  			
+  			$itrees{$hit->name}{$qseqid} = Set::IntervalTree->new 
+  				unless exists $itrees{$hit->name}{$qseqid};
+  			
+  			$itrees{$hit->name}{$qseqid}->insert(
+  								[1, $hsp->start('hit'), $hsp->end('hit')],
+  								$hsp->start('hit') - 1,
+  								$hsp->end('hit') + 1
+  								);
+  			}
+  		}
+	  	#print Dumper %itrees; exit;
+  	return \%itrees;
+	}
+
+sub get_hit_se{
+# getting all start-end for each hit to find overlapping hits #
+	my $result = shift;
+	my %hit_se;
+
+	while( my $hit = $result->next_hit ) {		# hit object
+		while( my $hsp = $hit->next_hsp ) {
+			# spacer/DR group => subject_scaffold => (start,end)
+			my $qseqid = $result->query_description;
+			my $sstart = $hsp->start('hit');			# sstart
+  				my $send = $hsp->end('hit');				# send
+				if( exists $hit_se{$qseqid}{$hit->name} ){		# hit exists, check for inclusion
+					$hit_se{$qseqid}{$hit->name} = [$sstart, $send]
+						if $sstart <= ${$hit_se{$qseqid}{$hit->name}}[0] &&		# range must span previous range and be = or larger
+						$send >= ${$hit_se{$qseqid}{$hit->name}}[1];
+				}
+			else{			# no hit, loading into hash
+				$hit_se{$qseqid}{$hit->name} = [$sstart, $send];		
+				}
+			}
+		}
+		
+		#print Dumper %hit_se; 
+	return \%hit_se;
+	}
 
 sub get_protospacer{
 # getting the protospacer sequence from genome genome fasta 
@@ -617,6 +753,14 @@ BLASTn parameters (besides required flags). [-evalue 0.001]
 =item -num_threads  <int>
 
 Use for '-num_threads' parameter in BLASTn. [1]
+
+=item -entire  <bool>
+
+Protospacer sequence as the entire length of the spacer, regardless of blast hit length? [TRUE]
+
+=item -overlap  <bool>
+
+Filter out hits falling within a large blast hit (same query-subject? [TRUE]
 
 =item -x  <int>
 
