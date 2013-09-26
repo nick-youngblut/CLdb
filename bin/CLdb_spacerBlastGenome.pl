@@ -91,6 +91,7 @@ blastn_xml_call_load($dbh, $subject_loci_r, $blast_dir,
 
 # commit & exit #
 $dbh->commit;
+#print Dumper "NO commit!\n";
 exit;
 
 
@@ -102,11 +103,41 @@ sub blastn_xml_call_load{
 		$num_threads, $query_file, $query_r) = @_;
 	
 	# columns to load into blast_hits DB
-	my @blast_hits_col = qw/blast_id spacer_DR S_taxon_name
-S_taxon_ID Group_ID sseqid pident 
-len mismatch gapopen qstart qend 
-sstart send evalue bitscore qlen 
-slen qseq frag xstart xend strand/;
+	my @blast_hits_col = qw/
+blast_id 
+spacer_DR 
+Group_ID 
+S_taxon_ID 
+S_taxon_name 
+sseqid 
+pident 
+mismatch 
+gaps 
+evalue 
+bitscore
+strand 
+len 
+qlen 
+slen 
+qseq 
+qstart 
+qend 
+sstart 
+send 
+qseq_full 
+sseq_full 
+qseq_full_start 
+qseq_full_end 
+sseq_full_start 
+sseq_full_end 
+proto3px 
+proto3px_start 
+proto3px_end 
+proto5px 
+proto5px_start 
+proto5px_end 
+sseq 
+/;
 	
 	# blasting each subject genome #
 	my %insert_cnt; 		# summing number of entries added/updated in CLdb
@@ -140,30 +171,11 @@ slen qseq frag xstart xend strand/;
 					# query sequence ID #
 					my $qseqid = $result->query_description;
 					
-					# filtering overlapping hits #
-					## hit must be in $res & have > range (for totally overlapping hits)
-					unless($filter_overlap_hits){
-						die " ERROR: cannot find ", $hit->name, " in interval tree!\n"
-							unless exists $hit_itree_r->{$hit->name}{$qseqid};
-						my $res = $hit_itree_r->{$hit->name}{$qseqid}->fetch($hsp->start('hit'), $hsp->end('hit'));
-						die " ERROR: no hits for found in interval tree!\n" unless @$res;
-						
-						my $next_bool;
-						foreach (@$res){		# skipping if another hit from same spacer/DR group hits larger range
-							next if scalar @$res == 1;
-						
-							$next_bool = 1 if 
-										($$_[1] <= $hsp->start('hit') && $$_[2] >= $hsp->end('hit')) &&	# same range or greater 
-										($$_[1] != $hsp->start('hit') && $$_[2] != $hsp->end('hit')) &&	# not skipping if same range
-										($$_[1] < $hsp->start('hit') || $$_[2] > $hsp->end('hit'));		# skipping if another range spans larger region 
-							}
-						next if $next_bool;
-						}
-	
 					# spacer or DR? #
 					(my $spacer_DR = $qseqid) =~ s/_.+//;
 					$qseqid =~ s/.+\.//;
-
+					
+					
 					# blastID # spacer_DR qseqid S_taxon_name S_taxon_ID sseqid sstart send #
 					my $blast_id = join("_", $spacer_DR,	# query ID (spacer/DR group)(
 									$$row[0],				# S_taxon_name
@@ -172,84 +184,119 @@ slen qseq frag xstart xend strand/;
 									$hsp->start('hit'),		# sstart
 									$hsp->end('hit')		# send
 									);
-
-					# getting blast info #
-					#print Dumper $result->query_description; 	# qseqid
-					#print Dumper $hit->name;					# sseqid
-					#print Dumper $$row[0]; 					# S_taxon_name
-					#print Dumper $$row[1]; 					# S_taxon_id
-					#print Dumper $hit->query_length;			# qlen
-					#print Dumper $hit->hit_length;				# slen
-    				#print Dumper $hsp->percent_identity;		# pident
-    				#print Dumper $hsp->bits;					# bitscore
-    				#print Dumper $hsp->evalue;					# evalue
-    				#print Dumper $hsp->start('query');			# qstart
-    				#print Dumper $hsp->end('query');			# qend
-    				#print Dumper $hsp->start('hit');			# sstart
-    				#print Dumper $hsp->end('hit');				# send
-    				#print Dumper $hsp->strand; 				# strand
-    				
+					
+					# filtering overlapping hits #
+					next if filter_overlapping_hits($result, $hit, $hsp, $hit_itree_r);
+						#print Dumper filter_overlapping_hits($hit, $hsp, $qseqid, $hit_itree_r);
+					
 					# getting alignment #
 					my $alnIO = $hsp->get_aln; 
 					my @seqs = $alnIO->each_seq;
-
-					# getting protospacer sequence (& start-end) #
-					die " ERROR: cannot find ", $hit->name, " in $$row[0], $$row[1]\n"
-						unless exists  $fasta_r->{$hit->name};
-					my ($proto, $xstart, $xend);
-					if($spacer_DR eq "DR"){
-						($proto, $xstart, $xend) = ("", $hsp->start('hit'), $hsp->end('hit'));
+					
+					# getting full length & proto extension sequence info if Spacer #
+					my ($qseq_full, $sseq_full) = ("", "");
+					my ($qseq_full_start, $qseq_full_end);
+					my ($sseq_full_start, $sseq_full_end);
+					my ($proto3px, $proto3px_start, $proto3px_end);
+					my ($proto5px, $proto5px_start, $proto5px_end);
+					if($spacer_DR eq "Spacer"){
+						# getting full length spacer (qseq); keeping any gaps in blast alignment #
+						($qseq_full, $qseq_full_start, $qseq_full_end) = 
+							get_full_qseq($result, $hit, $hsp, \@seqs);
+							#print Dumper ($qseq_full, $qseq_full_start, $qseq_full_end);
+						
+						# getting full length protospacer sequence; keeping any gaps in blast alignment #
+						($sseq_full, $sseq_full_start, $sseq_full_end) = 
+							get_full_sseq($result, $hit, $hsp, \@seqs, $fasta_r->{$hit->name});
+							#print Dumper ($sseq_full, $sseq_full_start, $sseq_full_end);
+						
+						# getting protospacer 3' & 5' extension #
+						## if spacer hits + strand; proto on - strand; proto 3' is on left on + strand
+						## here, calling proto3x & proto5x by + strand hit 
+						## need flip for - strand hits (proto 5' actually on left because proto on + strand)
+						($proto3px, $proto3px_start, $proto3px_end) = 
+							get_proto_threep($hsp, \@seqs, $fasta_r->{$hit->name}, 
+									 		$sseq_full_start, $extend);
+							
+						($proto5px, $proto5px_start, $proto5px_end) = 
+							get_proto_fivep($hit, $hsp, \@seqs, $fasta_r->{$hit->name}, 
+									 		$sseq_full_end, $extend);
+							
+						
+							#print Dumper $hsp->strand('hit');
+						
+						## flipping 5' & 3' proto extension if blast hit to - strand (proto then on + strand)
+						($proto5px, $proto5px_start, $proto5px_end, $proto3px, $proto3px_start, $proto3px_end) =
+						 	(revcomp($proto3px), $proto3px_start, $proto3px_end,
+						 	 revcomp($proto5px), $proto5px_start, $proto5px_end) if $hsp->strand('hit') == -1;
 						}
-					elsif($spacer_DR eq "Spacer"){
-						($proto, $xstart, $xend) = get_protospacer($hsp, $hit, \@seqs, $fasta_r->{$hit->name}, $query_r, $result);
-						}
-					else{ die " LOGIC ERROR: $!\n"; }
-
-					my @hit_matches = $hsp->matches('hit');
-
+					
+						#print Dumper ($proto3px, $proto3px_start, $proto3px_end);
+						#print Dumper ($proto5px, $proto5px_start, $proto5px_end);
+						
+					# loading CLdb #
 					## making blast_hit sql ##
 					## start - end encode bioperl-style!!
+					my @hit_matches = $hsp->matches('hit');
 					my @vals = (
 						$dbh->quote($blast_id),		# blastID
 						$dbh->quote($spacer_DR),	# Spacer|DR
-						$dbh->quote($$row[0]),		# taxon_name
 						$dbh->quote($$row[1]),		# taxon_id
+						$dbh->quote($$row[0]),		# taxon_name
 						$qseqid,					# groupID
 						$dbh->quote($hit->name), 	# sseqid
 						$hsp->percent_identity,
-						$hsp->length('total'),		# length (alignment length)
 						$hsp->length('total') - $hit_matches[0] - $hsp->gaps, 		# mismatches (length - matches - gaps)
-						$hsp->gaps,
+						$hsp->gaps,					# number of gaps
+						$hsp->evalue,
+						$hsp->bits,
+						$hsp->strand('hit'), 				# strand (encoded like bioperl)
+						$hsp->length('total'),		# length (alignment length)
+						$hit->query_length,			# qlen
+						$hit->hit_length,			# slen
+						$dbh->quote($seqs[0]->seq),				# qseq
 						$hsp->start('query'),		# qstart
 						$hsp->end('query'),			# qend
 						$hsp->start('hit'),			# sstart		(>send if strand is '-')
 						$hsp->end('hit'),			# send 
-						$hsp->evalue,
-						$hsp->bits,
-						$hit->query_length,
-						$hit->hit_length,
-						$dbh->quote($seqs[0]->seq), 	# query sequence
-						$dbh->quote($proto),
-						$xstart,
-						$xend,
-						$hsp->strand('hit') 				# strand (encoded like bioperl)
+						$dbh->quote($qseq_full),	# query sequence (full length)   #$dbh->quote($seqs[0]->seq)
+						$dbh->quote($sseq_full),		
+						$qseq_full_start,
+						$qseq_full_end,
+						$sseq_full_start,
+						$sseq_full_end,
+						$dbh->quote($proto3px),
+						$proto3px_start,
+						$proto3px_end,
+						$dbh->quote($proto5px),
+						$proto5px_start,
+						$proto5px_end,
+						$dbh->quote($seqs[1]->seq),		# sseq
 						);
-					
-					
-						#print join("\t", @vals), "\n";
-					# making sql #
-					my $sql = join(" ", "INSERT INTO Blast_hits( ",
-						join(",", @blast_hits_col),
-						") VALUES( ",
-						join(",", @vals), 
-						")" );
 						
+					# making sql #
+					my $sql;
+					if($spacer_DR eq "DR"){		# DR: no need for 
+						$sql = join(" ", "INSERT INTO Blast_hits( ",
+							join(",", @blast_hits_col[0..21]),
+							") VALUES( ",
+							join(",", @vals[0..21]), ")" );
+						}
+					elsif($spacer_DR eq "Spacer"){
+						$sql = join(" ", "INSERT INTO Blast_hits( ",
+							join(",", @blast_hits_col),
+							") VALUES( ",
+							join(",", @vals), ")" );
+						}
+					else{ die " LOGIC ERROR $!\n"; }
+					
 					# loading blast hit into CLdb #
 					$dbh->do( $sql );
 					if($DBI::err){
 						print STDERR "ERROR: $DBI::errstr in: ", join("\t", @vals), "\n";
 						}
-					else{ $insert_cnt{$spacer_DR}++; }
+					else{ $insert_cnt{$spacer_DR}++; }						
+					
 					}
 				}
 			}
@@ -260,7 +307,136 @@ slen qseq frag xstart xend strand/;
 	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
 	print STDERR "...Number of DR blast entries added/updated to CLdb: $insert_cnt{'DR'}\n";
 	}
+
+sub get_proto_fivep{
+# 5' of protospacer orientation (if spacer hit to + strand) #
+	my ($hit, $hsp, $seqs_r, $scaf_seq, $sseq_full_end, $extend) = @_;
 	
+	my $slen = $hit->hit_length;
+	
+	# extension beyond protospacer (adding to protospacer sequence)  #
+	my $xend  = $sseq_full_end + $extend;			# 3' extension beyond proto
+	$xend = $slen if $xend > $slen; 				# ceiling of scaffold length
+
+	# getting sequence 
+	my $fivep = substr($scaf_seq, $sseq_full_end,  $xend - $sseq_full_end); # 5' extension
+	
+	return $fivep, $sseq_full_end + 1, $xend + 1;
+	}
+	
+sub get_proto_threep{
+# 3' of protospacer orientation (if spacer hit to + strand) #
+	my ($hsp, $seqs_r, $scaf_seq, $sseq_full_start, $extend) = @_;
+	
+	# extension beyond protospacer (adding to protospacer sequence)  #
+	my $xstart = $sseq_full_start - $extend;	# 5' extension beyond proto
+	$xstart = 1 if $xstart < 1;					# floor of 1
+	
+	# getting sequence 
+	my $threep = substr($scaf_seq, $xstart -1, $sseq_full_start - $xstart);	 # 3' extension; amost forgot 0-indexing!
+	
+	return $threep, $xstart, $sseq_full_start;
+	}
+
+sub get_full_sseq{
+# getting full length of protospacer (sseq ne sseq_full only if partial blast hit) #
+	my ($result, $hit, $hsp, $seqs_r, $scaf_seq) = @_;
+	
+	# start - end #
+	my $sstart = $hsp->start('hit');
+	my $send = $hsp->end('hit');	
+	if($hsp->strand('hit') == 1){
+		$sstart -= $hsp->start('query') -1;					# missing 5' end hit
+		$send += $hit->query_length - $hsp->end('query');	# missing 3' end hit		# query_length = full lenght of query seq
+		}
+	else{		# if - strand; need to append to other side (since rev-comp) 
+		$send += $hsp->start('query') -1;					# missing 5' end hit
+		$sstart -= $hit->query_length - $hsp->end('query');	# missing 3' end hit		# query_length = full lenght of query seq	
+		}
+
+	# sequence from scaffold #
+	my $sseq_full = substr($scaf_seq, $sstart - 1, $send - $sstart + 1);
+
+	# revcomp seq if strand='-' #
+	$sseq_full = revcomp($sseq_full) if $hsp->strand('hit') == -1;
+
+	# check #
+	#print Dumper "XXX";
+	#print Dumper $hsp->start('query');
+	#print Dumper $hsp->end('query');
+	#print Dumper $hsp->start('hit');
+	#print Dumper $hsp->end('hit');	
+	#print Dumper $sstart;
+	#print Dumper $send;
+	#print Dumper "XXX";	
+
+	return $sseq_full, $sstart, $send;	# sseq_full, $sseq_full_start, sseq_full_end
+	}
+
+sub get_full_qseq{
+	my ($result, $hit, $hsp, $seqs_r) = @_;
+
+	# setting variables #
+	#$hsp->start('query');	# qstart
+	#$hsp->end('query');	# qend
+	#$hit->query_length;	# qlen
+	#$hsp->start('hit');	# sstart
+	#$hsp->end('hit');		# send
+	#$hit->hit_length;		# slen
+	
+	my $qseq_aln =  $$seqs_r[0]->seq;
+	my $qseq_full = $query_r->{$result->query_description};
+	die " ERROR: no query sequence found for ", $result->query_description, "!\n"
+		unless $qseq_full;
+	
+	## extending spacer sequence ##
+	my ($sfivep, $sthreep) = ("", "");
+	$sfivep = substr($qseq_full, 0, $hsp->start('query') - 1) 
+		unless $hsp->start('query') - 1 == 0;
+	$sthreep = substr($qseq_full, $hsp->end('query'), $hit->query_length - $hsp->end('query')) 
+		unless $hit->query_length - $hsp->end('query') == 0;
+	
+	my $qseq_aln_full = join("", $sfivep, $$seqs_r[0]->seq, $sthreep);
+
+	#if($sfivep || $sthreep){
+		#print Dumper "5p: $sfivep";
+		#print Dumper "3p: $sthreep";
+		#print Dumper $qseq_aln_full;
+		#print Dumper $$seqs_r[0]->seq;
+		#print Dumper join(" ", "strand:", $hsp->strand('hit'));
+		#}
+	
+	return $qseq_aln_full, 1, $hit->query_length; 		# full length spacer (+ gaps), qseq_full_start, qseq_full_end;
+	}	
+
+sub filter_overlapping_hits{
+# skipping hit if another hit from same group hits longer region of hit #
+	my ($result, $hit, $hsp, $hit_itree_r) = @_;
+
+	my $qseqid = $result->query_description;
+
+		#print Dumper $hit_itree_r, $hit->name, $qseqid unless exists $hit_itree_r->{$hit->name}{$qseqid};
+	die " ERROR: cannot find ", $hit->name, " in interval tree!\n"
+		unless exists $hit_itree_r->{$hit->name}{$qseqid};
+	
+	my $res = $hit_itree_r->{$hit->name}{$qseqid}->fetch($hsp->start('hit'), $hsp->end('hit'));
+		die " ERROR: no hits for found in interval tree!\n" unless @$res;
+						
+	my $next_bool = 0;
+	foreach (@$res){		# skipping if another hit from same spacer/DR group hits larger range
+		next if scalar @$res == 1;		# only 1 hit to location, don't have to check 
+						
+		$next_bool = 1 if 
+			($$_[1] <= $hsp->start('hit') && $$_[2] >= $hsp->end('hit')) &&	# same range or greater 
+			($$_[1] != $hsp->start('hit') && $$_[2] != $hsp->end('hit')) &&	# not skipping if same range
+			($$_[1] < $hsp->start('hit') || $$_[2] > $hsp->end('hit'));		# skipping if another range spans larger region 
+		}
+	print STDERR "...skipping blast hit falling with large blast hit for same query-subject!\n" 
+		if $verbose && $next_bool;
+
+	return $next_bool;
+	}
+
 sub get_hit_itrees{
 # putting hits in interval trees parsed by scaffold
 # used to find hits inclusive of others
@@ -286,74 +462,6 @@ sub get_hit_itrees{
   		}
 	  	#print Dumper %itrees; exit;
   	return \%itrees;
-	}
-
-sub get_protospacer{
-# getting the protospacer sequence from genome genome fasta 
-# also extending protospacer to full lenght of query (unless -entire)
-# also adding adjacent sequence for finding PAMs
-	my ($hsp, $hit, $seqs_r, $scaf_seq, $query_r, $result) = @_;
-
-	# setting variables #
-	my $qstart = $hsp->start('query');	# qstart
-	my $qend = $hsp->end('query');		# qend
-	my $qlen = $hit->query_length;		# qlen
-	my $sstart = $hsp->start('hit');	# sstart
-	my $send = $hsp->end('hit');		# send
-	my $slen = $hit->hit_length;		# slen
-		
-		
-	# full-length protospacer & spacer sequence #
-	# adding onto alignment section of spacer to account for potential gaps in the alignemtn #
-	## extending protospacer start-end #
-	$sstart -= $qstart - 1;		# missing 5' end hit
-	$send += $qlen - $qend;		# missing 3' end hit
-	
-	## full & partial spacer sequence
-	my $qseq_aln =  $$seqs_r[0]->seq;
-	my $qseq_full = $query_r->{$result->query_description};
-	die " ERROR: no query sequence found for ", $result->query_description, "!\n"
-		unless $qseq_full;
-	
-	## extending spacer sequence ##
-	my ($sfivep, $sthreep) = ("", "");
-	$sfivep = substr($qseq_full, 0, $qstart - 1) unless $qstart - 1 == 0;
-	$sthreep = substr($qseq_full, $qend, $qlen - $qend) unless $qlen - $qend == 0;
-	my $qseq_aln_full = join("", $sfivep, $$seqs_r[0]->seq, $sthreep);
-	
-		#print Dumper $qstart, $qend, $qlen;
-		#print Dumper $sfivep, $sthreep;
-		#print Dumper $qseq_full;
-		#print Dumper $qseq_aln_full;	
-	
-		
-	# extension beyond protospacer (adding to protospacer sequence)  #
-	$sstart -= $extend;					# 5' extension beyond proto
-	$sstart = 0 if $sstart < 0;			# floor of 0
-	$send += $extend;					# 3' extension beyond proto
-	$send = $slen if $send > $slen; 	# ceiling of scaffold length
-
-	
-	# making protospacer seq 
-	## substr from scaff seq for 5' & 3' extensions 
-	## revcomp if - strand; proto revcomp already  by bioperl
-	my $fivep = substr($scaf_seq, $sstart -1, $hsp->start('hit') - $sstart);	# 5' extension; amost forgot 0-indexing!
-	$fivep = revcomp($fivep) if $hsp->strand('hit') ==  -1;
-	my $threep = substr($scaf_seq, $hsp->end('hit') ,  $send - $hsp->end('hit')); # 3' extension
-	$threep = revcomp($threep) if $hsp->strand('hit') == -1;	
-
-
-	# returning sequence; 
-	## 5' & 3' switch if - strand ##
-	if($hsp->strand('hit') == 1){
-		return join("", $fivep, $$seqs_r[1]->seq, $threep), 
-			$sstart - 1, $send;		# -1 for 0-indexing
-		}
-	elsif($hsp->strand('hit') == -1){			 # flip 5' <-> 3'
-		return join("", $threep, $$seqs_r[1]->seq, $fivep), 
-			$sstart - 1, $send;		# -1 for 0-indexing
-		}
-	else{die " ERROR: cannot recognize strand: ", $hsp->strand('hit'), "\n"; }
 	}
 
 sub get_seq_frag{
