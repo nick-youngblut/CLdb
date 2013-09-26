@@ -86,10 +86,11 @@ make_blast_db($subject_loci_r, $fasta_dir, $blast_dir);
 
 # blasting (foreach subject blast DB) #
 ## blastn & loading blastn output ##
-#blastn_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
 blastn_xml_call_load($dbh, $subject_loci_r, $blast_dir, $blast_params, $num_threads, $query_file);
 
-print Dumper "NO commit!\n";
+# commit & exit #
+$dbh->commit;
+exit;
 
 
 ### Subroutines
@@ -201,12 +202,6 @@ slen qseq frag xstart xend/;
 						($proto, $xstart, $xend) = get_protospacer($hsp, $hit, \@seqs, $fasta_r->{$hit->name});
 						}
 					else{ die " LOGIC ERROR: $!\n"; }
-						#print Dumper $seqs[0]->seq;
-						#print Dumper $proto;
-						#print Dumper $xstart;
-						#print Dumper $xend;
-						#print Dumper $hsp->strand('hit');
-						#print Dumper $hit->name;
 
 					my @hit_matches = $hsp->matches('hit');
 
@@ -236,7 +231,7 @@ slen qseq frag xstart xend/;
 						$xend
 						);
 					
-					#print join("\t", @vals), "\n";
+						#print join("\t", @vals), "\n";
 					# making sql #
 					my $sql = join(" ", "INSERT INTO Blast_hits( ",
 						join(",", @blast_hits_col),
@@ -256,9 +251,9 @@ slen qseq frag xstart xend/;
 		}
 	
 	$insert_cnt{"Spacer"} = 0 unless exists $insert_cnt{"Spacer"};
-	print STDERR "...Number of spacer blast entries added to CLdb: $insert_cnt{'Spacer'}\n";
+	print STDERR "...Number of spacer blast entries added/updated to CLdb: $insert_cnt{'Spacer'}\n";
 	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
-	print STDERR "...Number of DR blast entries added to CLdb: $insert_cnt{'DR'}\n";
+	print STDERR "...Number of DR blast entries added/updated to CLdb: $insert_cnt{'DR'}\n";
 	}
 	
 sub get_hit_itrees{
@@ -804,6 +799,8 @@ It may be best to blast all DRs at once for
 subsequent spacer array screening (spacers that
 have adjacent DR hits are considered to be located
 in CRISPR arrays and are thus not protospacers).
+
+Any gaps in the spacer-protospacer alignment are include.
 
 =head1 EXAMPLES
 
