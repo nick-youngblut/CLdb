@@ -74,21 +74,29 @@ exit;
 sub get_PAMs{
 # getting spacer blast hit sequence & adjacent regions #
 	my ($dbh, $blast_hits_r, $extend, $len_cutoff) = @_;
-	
-	# finding max proto length if aligning 5' & 3' #
+
+    # finding max proto length if aligning 5' & 3' #
 	my $max_len;
-	unless($align_pams){
-		my %proto_lens;
-		foreach my $entry (@$blast_hits_r){
-			$proto_lens{ abs($$entry[8] - $$entry[7]) } = 1;
-			}
-		$max_len = max keys %proto_lens;
-		}
-		
+    unless($align_pams){
+    	my %proto_lens;
+    	foreach my $entry (@$blast_hits_r){
+        	$proto_lens{ abs($$entry[8] - $$entry[7]) } = 1;
+            }
+        $max_len = max keys %proto_lens;
+        }
+
 	# writing PAMs #
 	foreach my $entry (@$blast_hits_r){
-		# skipping unless full length blast hit #
-		next unless (($$entry[5] - $$entry[4] + 1) / $$entry[6]) >= $len_cutoff;
+		# skipping unless protospacer is full length of spacer + extension #
+		# next unless length(proto_seq) == qlen + 5' ext + 3' ext
+		print Dumper $entry;
+		print Dumper length($$entry[16]), $$entry[6], abs($$entry[7] - $$entry[10]), 
+											+ abs($$entry[11] - $$entry[8]); exit;
+		next unless length($$entry[16]) == $$entry[6]
+											+ abs($$entry[7] - $$entry[10]) 
+											+ abs($$entry[11] - $$entry[8]);
+		
+		print Dumper $entry;
 		
 		# making blast hit all caps, extension = lower case #
 		my $frag = pam_caps($entry, $max_len);
@@ -123,13 +131,13 @@ sub pam_caps{
 	my $xstart = $$entry[10];
 	my $xend = $$entry[11];
 	
-	if($sstart > $send){		# flippig start & end
-		# sanity check #
-		die " ERROR: sstart > send but xstart < xend!\n"
-			if $xstart < $xend;
-		($sstart,$send) = flip_se($sstart,$send);
-		($xstart,$xend) = flip_se($xstart,$xend);
-		}
+	#if($sstart > $send){		# flippig start & end
+	#	# sanity check #
+	#	die " ERROR: sstart > send but xstart < xend!\n"
+	#		if $xstart < $xend;
+	#	($sstart,$send) = flip_se($sstart,$send);
+	#	($xstart,$xend) = flip_se($xstart,$xend);
+	#	}
 	
 	## applying -x ##
 	my $substr_start =  $sstart - $xstart - $extend;
@@ -192,24 +200,30 @@ sub spacer2lc{
 		}
 	}
 
-sub flip_se{
-	my ($start, $end) = @_;
-	return $end, $start;
-	}
-
 sub get_blast_hits{
 # just selecting by group
 	my ($dbh, $join_sql, $extra_query) = @_;
 	
 	# basic query #
 	my $query = "SELECT 
-c.Group_id, c.S_taxon_name, c.S_taxon_id, c.S_accession,
-c.qstart, c.qend, c.qlen,
-c.sstart, c.send, 
-c.frag, c.xstart, c.xend,
+c.Group_id, 
+c.S_taxon_name, 
+c.S_taxon_id, 
+c.S_accession,
+c.qstart, 
+c.qend, 
+c.qlen,
+c.sstart, 
+c.send, 
+c.frag, 
+c.xstart, 
+c.xend,
 b.spacer_id,
-a.taxon_name, a.taxon_id, a.subtype,
-c.sseqid
+a.taxon_name, 
+a.taxon_id, 
+a.subtype,
+c.sseqid,
+c.strand
 from Loci a, Spacers b, Blast_hits c
 WHERE a.locus_id == b.locus_id
 AND b.spacer_group == c.group_id
@@ -235,15 +249,24 @@ $join_sql";
 	return $ret;
 	}
 
-sub get_blast_hits_by_group{
+sub get_blast_hits_by_group_OLD{
 	my ($dbh, $join_sql, $extra_query) = @_;
 	
 	# basic query #
 	my $query = "SELECT 
-Group_ID,S_taxon_name,S_taxon_ID,S_accession,
-qstart, qend, qlen,
-sstart, send,
-frag, xstart, xend
+Group_ID,
+S_taxon_name,
+S_taxon_ID,
+S_accession,
+qstart, 
+qend, 
+qlen,
+sstart, 
+send,
+frag, 
+xstart, 
+xend,
+strand
 FROM loci a, Blast_hits c
 WHERE c.array_hit == 'no'
 AND c.spacer_DR == 'Spacer'

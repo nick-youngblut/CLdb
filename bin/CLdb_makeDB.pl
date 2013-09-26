@@ -210,6 +210,7 @@ frag	TEXT,
 xstart	INTEGER,
 xend	INTEGER,
 array_hit    TEXT,
+strand	INTEGER,
 UNIQUE( blast_id )
 ON CONFLICT REPLACE
 );
