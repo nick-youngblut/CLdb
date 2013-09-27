@@ -220,6 +220,7 @@ proto3px_end	INTEGER,
 proto5px	TEXT,
 proto5px_start	INTEGER,
 proto5px_end	INTEGER,
+array_hit    TEXT,
 UNIQUE( blast_id )
 ON CONFLICT REPLACE
 );

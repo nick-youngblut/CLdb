@@ -136,8 +136,7 @@ proto3px_end
 proto5px 
 proto5px_start 
 proto5px_end 
-sseq 
-/;
+sseq/;
 	
 	# blasting each subject genome #
 	my %insert_cnt; 		# summing number of entries added/updated in CLdb
@@ -241,9 +240,9 @@ sseq
 					my @vals = (
 						$dbh->quote($blast_id),		# blastID
 						$dbh->quote($spacer_DR),	# Spacer|DR
+						$qseqid,					# groupID
 						$dbh->quote($$row[1]),		# taxon_id
 						$dbh->quote($$row[0]),		# taxon_name
-						$qseqid,					# groupID
 						$dbh->quote($hit->name), 	# sseqid
 						$hsp->percent_identity,
 						$hsp->length('total') - $hit_matches[0] - $hsp->gaps, 		# mismatches (length - matches - gaps)
@@ -319,9 +318,9 @@ sub get_proto_fivep{
 	$xend = $slen if $xend > $slen; 				# ceiling of scaffold length
 
 	# getting sequence 
-	my $fivep = substr($scaf_seq, $sseq_full_end,  $xend - $sseq_full_end); # 5' extension
+	my $fivep = substr($scaf_seq, $sseq_full_end,  $xend - $sseq_full_end); 	# 5' extension
 	
-	return $fivep, $sseq_full_end + 1, $xend + 1;
+	return $fivep, $sseq_full_end + 1, $xend;
 	}
 	
 sub get_proto_threep{
@@ -335,7 +334,7 @@ sub get_proto_threep{
 	# getting sequence 
 	my $threep = substr($scaf_seq, $xstart -1, $sseq_full_start - $xstart);	 # 3' extension; amost forgot 0-indexing!
 	
-	return $threep, $xstart, $sseq_full_start;
+	return $threep, $xstart, $sseq_full_start - 1;
 	}
 
 sub get_full_sseq{
