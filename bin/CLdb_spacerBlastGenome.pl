@@ -146,6 +146,7 @@ sseq/;
 
 	my %insert_cnt; 		# summing number of entries added/updated in CLdb
 	foreach my $infile (@$blast_out_r){
+		print STDERR "...loading $infile\n";
 		die " ERROR: cannot find $infile!\n" unless -e $infile;
 		open IN, $infile or die $!;
 		while(<IN>){
@@ -170,7 +171,7 @@ sseq/;
 						") VALUES( ",
 							join(",", @line), ")" );
 						}
-			else{ die " LOGIC ERROR: neither 'DR' nor 'Spacer' found in spacer_DR column!\n"; }
+			else{ die " LOGIC ERROR: neither 'DR' nor 'Spacer' found in spacer_DR column in $infile!\n", join(",", @line), "\n"; }
 				
 			# loading blast hit into CLdb #
 			$dbh->do( $sql );
@@ -203,20 +204,29 @@ sub blastn_xml_call{
 	# forking #
 	my $pm = new Parallel::ForkManager($fork);
 	
-	# blasting each subject genome #
+	
+	# making blast output file list # needed to prevent forking errors #
 	my @blast_out_files;
-	foreach my $row (@$subject_loci_r){		# taxon_name, taxon_id, genbank, fasta
-		next unless $$row[3];			# skipping if no fasta & thus no blast db
-
-		# setting output file #
+	foreach my $row (@$subject_loci_r){
 		my $outfile = "$blast_dir/$$row[3].blast.txt";
 		push @blast_out_files, $outfile; 
-		
+		}
+	
+	# blasting each subject genome #
+	foreach my $row (@$subject_loci_r){		# taxon_name, taxon_id, genbank, fasta
 		# forking #
 		my $pid = $pm->start and next;
 		
+		# skipping if no fasta & thus no blast db #
+		unless ($$row[3]){
+			$pm->finish;
+			next;			
+			}
+		
 		# output file #
+		my $outfile = "$blast_dir/$$row[3].blast.txt";
 		open OUT, ">$outfile" or die $!;
+		print STDERR "...writing blast results to: $outfile\n";
 		
 		# loading fasta #
 		my $fasta_r = load_fasta("$blast_dir/$$row[3]");
@@ -408,7 +418,9 @@ sub get_proto_threep{
 	}
 
 sub get_full_sseq{
+# 'completing spacer' if only partial hit #
 # getting full length of protospacer (sseq ne sseq_full only if partial blast hit) #
+## spacer-protospacer alignment retained (ie. any gaps) ##
 	my ($result, $hit, $hsp, $seqs_r, $scaf_seq, 
 		$qseq_full_start, $qseq_full_end) = @_;
 
@@ -463,6 +475,8 @@ sub get_full_sseq{
 	}
 
 sub get_full_qseq{
+# 'completing spacer' if only partial hit #
+## spacer-protospacer alignment retained (ie. any gaps) ##
 	my ($result, $hit, $hsp, $seqs_r) = @_;
 
 	# setting variables #
@@ -766,7 +780,11 @@ sub get_loci_fasta_genbank{
 # querying CLdb for fasta & genbank files for each taxon #
 	my ($dbh, $join_sql) = @_;
 	
-	my $q = "SELECT taxon_name, taxon_id, genbank_file, fasta_file FROM loci WHERE locus_id=locus_id $join_sql GROUP BY taxon_name, taxon_id";
+	my $q = "SELECT taxon_name, taxon_id, genbank_file, fasta_file 
+FROM loci 
+WHERE locus_id=locus_id 
+$join_sql 
+GROUP BY taxon_name, taxon_id";
 	
 	my $res = $dbh->selectall_arrayref($q);
 	die " ERROR: no matches found to query!\n"

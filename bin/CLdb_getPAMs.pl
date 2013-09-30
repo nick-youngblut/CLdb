@@ -68,11 +68,10 @@ my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 
 # flipping proto & extension #
 ## protospacer stored as spacer match; need to revcomp ##
-#flip_proto($blast_hits_r);
+flip_proto($blast_hits_r);
 
 # writing out PAMs #
 get_PAMs($dbh, $blast_hits_r, $extend, $len_cutoff);
-#get_PAMs($dbh, $blast_hits_r, $extend, $len_cutoff);
 
 # disconnect #
 $dbh->disconnect();
@@ -188,9 +187,12 @@ sub flip_proto{
 
 	foreach my $entry (@$blast_hits_r){
 		$$entry[7] = revcomp($$entry[7]);		# sseq_full (full proto)
-		$$entry[12] = revcomp($$entry[12]);		# 3' end or proto
-		$$entry[15] = revcomp($$entry[15]);		# 5' end of proto
+		my $prime3 = revcomp($$entry[12]);
+		my $prime5 = revcomp($$entry[15]);
+		($$entry[12], $$entry[15]) = ($prime5, $prime3);
+		#$$entry[15] = revcomp($$entry[]);		# 5' end of proto
 		}
+	
 	}
 
 sub revcomp{
