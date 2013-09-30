@@ -417,37 +417,32 @@ sub get_full_sseq{
 	
 	
 	# actual start - end (indexing by 1) #
-	## 3' end of proto (assuming a + strand hit) ##
-		#print Dumper join(" ", "qstart: ", $hsp->start('query'), "qseq_full_start: ", $qseq_full_start);
-	my $act_start = $hsp->start('hit') - ($hsp->start('query') - $qseq_full_start);
-	my $threep = substr_se($scaf_seq, $act_start, $hsp->start('hit') -1);
-		#print Dumper join(" ", "act_start: ", $act_start);
+	my ($threep, $fivep) = ("", "");
+	my ($act_start, $act_end);
+	if( $hsp->strand('hit') == 1 ){		# + strand hit 
+		## 3' end of proto ##
+		$act_start = $hsp->start('hit') - ($hsp->start('query') - $qseq_full_start);
+		$threep = substr_se($scaf_seq, $act_start, $hsp->start('hit') -1);
 	
-	## 5' end of proto (assuming a + strand hit) ##
-	my $act_end = $hsp->end('hit') + $qseq_full_end - $hsp->end('query');
-	my $fivep = substr_se($scaf_seq, $hsp->end('hit') + 1, $act_end);
-	
-	## rev-comp 3' & 5' & switching if - strand ##
-	if($hsp->strand('hit') == -1){
-		$threep = revcomp($threep);
+		## 5' end of proto ##
+		$act_end = $hsp->end('hit') + $qseq_full_end - $hsp->end('query');
+		$fivep = substr_se($scaf_seq, $hsp->end('hit') + 1, $act_end);
+		}
+	elsif( $hsp->strand('hit') == -1 ){	 # - strand hit: extension reversed #
+		## 5' end of proto ##
+		$act_start = $hsp->start('hit') - ($qseq_full_end - $hsp->end('query'));
+		$fivep = substr_se($scaf_seq, $act_start, $hsp->start('hit') -1);
 		$fivep = revcomp($fivep);
-		($threep, $fivep) = ($fivep, $threep);
-		}
-
-
-	# sequence from scaffold #
-	my $sseq_aln_full;
-	if($hsp->strand('hit') == 1){
-		$sseq_aln_full = join("", $threep, $$seqs_r[1]->seq, $fivep);
-		}
-	elsif($hsp->strand('hit') == -1){
-		$sseq_aln_full = join("", $threep, revcomp($$seqs_r[1]->seq), $fivep);
+	
+		## 5' end of proto ##
+		$act_end = $hsp->end('hit') + ($hsp->start('query') - $qseq_full_start);
+		$threep = substr_se($scaf_seq, $hsp->end('hit') + 1, $act_end);
+		$threep = revcomp($threep);
 		}
 	else{ die " ERROR: logic $!\n"; }
 	
-
-	# revcomp seq if strand='-' #
-	#$sseq_full = revcomp($sseq_full) if $hsp->strand('hit') == -1;
+	# sequence from scaffold #
+	my $sseq_aln_full = join("", $threep, $$seqs_r[1]->seq, $fivep);
 
 	# check #
 	#print Dumper "XXX";
@@ -457,7 +452,7 @@ sub get_full_sseq{
 #	print Dumper $hsp->end('hit');	
 #	print Dumper $act_start;
 #	print Dumper $act_end;
-	#print Dumper $seqs_r;
+#	print Dumper $seqs_r;
 #	print Dumper $$seqs_r[1]->seq;
 #	print Dumper $sseq_aln_full;
 #	print Dumper join(" ", "strand:", $hsp->strand('hit'));
