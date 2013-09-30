@@ -280,7 +280,8 @@ sub blastn_xml_call{
 						
 						# getting full length protospacer sequence; keeping any gaps in blast alignment #
 						($sseq_full, $sseq_full_start, $sseq_full_end) = 
-							get_full_sseq($result, $hit, $hsp, \@seqs, $fasta_r->{$hit->name});
+							get_full_sseq($result, $hit, $hsp, \@seqs, $fasta_r->{$hit->name}, 
+								$qseq_full_start, $qseq_full_end);
 							#print Dumper ($sseq_full, $sseq_full_start, $sseq_full_end);
 						
 						# getting protospacer 3' & 5' extension #
@@ -296,7 +297,7 @@ sub blastn_xml_call{
 									 		$sseq_full_end, $extend);
 							
 						
-							#print Dumper $hsp->strand('hit');
+							#print Dumper join(" ", "strand: ", $hsp->strand('hit'));
 						
 						## flipping 5' & 3' proto extension if blast hit to - strand (proto then on + strand)
 						($proto5px, $proto5px_start, $proto5px_end, $proto3px, $proto3px_start, $proto3px_end) =
@@ -309,7 +310,7 @@ sub blastn_xml_call{
 						
 					# loading CLdb #
 					## taxon_name & taxon_id = "" if undef #
-					map{$_ = "" unless "" } (@$row[0..1]);
+					map{$_ = "" unless $_ } (@$row[0..1]);
 					
 					## making blast_hit sql ##
 					### start - end encode bioperl-style!!
@@ -381,6 +382,13 @@ sub get_proto_fivep{
 	# getting sequence #
 	my $fivep = substr($scaf_seq, $sseq_full_end,  $xend - $sseq_full_end); 	# 5' extension
 	
+	#unless($fivep){
+	#	print Dumper
+	#		$sseq_full_end, 
+	#		$xend,
+	#		$slen;
+	#	exit(1);
+	#	}
 	
 	return $fivep, $sseq_full_end + 1, $xend;
 	}
@@ -401,37 +409,62 @@ sub get_proto_threep{
 
 sub get_full_sseq{
 # getting full length of protospacer (sseq ne sseq_full only if partial blast hit) #
-	my ($result, $hit, $hsp, $seqs_r, $scaf_seq) = @_;
+	my ($result, $hit, $hsp, $seqs_r, $scaf_seq, 
+		$qseq_full_start, $qseq_full_end) = @_;
+
+	# max bp that start or end can actually be extended #	
+	my ($min_sstart, $max_send) = max_extend($hit, $hsp);
 	
-	# start - end #
-	my $sstart = $hsp->start('hit');
-	my $send = $hsp->end('hit');	
-	if($hsp->strand('hit') == 1){
-		$sstart -= $hsp->start('query') -1;					# missing 5' end hit
-		$send += $hit->query_length - $hsp->end('query');	# missing 3' end hit		# query_length = full lenght of query seq
+	
+	# actual start - end (indexing by 1) #
+	## 3' end of proto (assuming a + strand hit) ##
+		#print Dumper join(" ", "qstart: ", $hsp->start('query'), "qseq_full_start: ", $qseq_full_start);
+	my $act_start = $hsp->start('hit') - ($hsp->start('query') - $qseq_full_start);
+	my $threep = substr_se($scaf_seq, $act_start, $hsp->start('hit') -1);
+		#print Dumper join(" ", "act_start: ", $act_start);
+	
+	## 5' end of proto (assuming a + strand hit) ##
+	my $act_end = $hsp->end('hit') + $qseq_full_end - $hsp->end('query');
+	my $fivep = substr_se($scaf_seq, $hsp->end('hit') + 1, $act_end);
+	
+	## rev-comp 3' & 5' & switching if - strand ##
+	if($hsp->strand('hit') == -1){
+		$threep = revcomp($threep);
+		$fivep = revcomp($fivep);
+		($threep, $fivep) = ($fivep, $threep);
 		}
-	else{		# if - strand; need to append to other side (since rev-comp) 
-		$send += $hsp->start('query') -1;					# missing 5' end hit
-		$sstart -= $hit->query_length - $hsp->end('query');	# missing 3' end hit		# query_length = full lenght of query seq	
-		}
+
 
 	# sequence from scaffold #
-	my $sseq_full = substr($scaf_seq, $sstart - 1, $send - $sstart + 1);
+	my $sseq_aln_full;
+	if($hsp->strand('hit') == 1){
+		$sseq_aln_full = join("", $threep, $$seqs_r[1]->seq, $fivep);
+		}
+	elsif($hsp->strand('hit') == -1){
+		$sseq_aln_full = join("", $threep, revcomp($$seqs_r[1]->seq), $fivep);
+		}
+	else{ die " ERROR: logic $!\n"; }
+	
 
 	# revcomp seq if strand='-' #
-	$sseq_full = revcomp($sseq_full) if $hsp->strand('hit') == -1;
+	#$sseq_full = revcomp($sseq_full) if $hsp->strand('hit') == -1;
 
 	# check #
 	#print Dumper "XXX";
-	#print Dumper $hsp->start('query');
-	#print Dumper $hsp->end('query');
-	#print Dumper $hsp->start('hit');
-	#print Dumper $hsp->end('hit');	
-	#print Dumper $sstart;
-	#print Dumper $send;
-	#print Dumper "XXX";	
+#	print Dumper $hsp->start('query');
+#	print Dumper $hsp->end('query');
+#	print Dumper $hsp->start('hit');
+#	print Dumper $hsp->end('hit');	
+#	print Dumper $act_start;
+#	print Dumper $act_end;
+	#print Dumper $seqs_r;
+#	print Dumper $$seqs_r[1]->seq;
+#	print Dumper $sseq_aln_full;
+#	print Dumper join(" ", "strand:", $hsp->strand('hit'));
+#	print Dumper "XXX";	
+#	exit;
 
-	return $sseq_full, $sstart, $send;	# sseq_full, $sseq_full_start, sseq_full_end
+	return $sseq_aln_full, $act_start, $act_end;	# sseq_full, $sseq_full_start, sseq_full_end
 	}
 
 sub get_full_qseq{
@@ -450,14 +483,36 @@ sub get_full_qseq{
 	die " ERROR: no query sequence found for ", $result->query_description, "!\n"
 		unless $qseq_full;
 	
+	# max bp that start or end can actually be extended #	
+	my ($min_sstart, $max_send) = max_extend($hit, $hsp);
+	
+	## actual start - end (indexing by 1) ##
+	### start ###
+	my $act_start = 1;
+	$act_start = $hsp->start('query') - $min_sstart 
+		if $hsp->start('query') - $min_sstart > $act_start; 
+	### end ###
+	my $act_end = $hit->query_length;
+	$act_end = $hsp->end('query') + $max_send 
+		if $hsp->end('query') + $max_send < $act_end;
+		
+		#print Dumper $qseq_full;
+		#print Dumper $hit->query_length;
+		#print Dumper $hsp->start('query');
+		#print Dumper $hsp->end('query');
+		#print Dumper $max_send;
+		#print Dumper $$seqs_r[0]->seq;
+		#print Dumper $act_end;
+	
 	## extending spacer sequence ##
 	my ($sfivep, $sthreep) = ("", "");
-	$sfivep = substr($qseq_full, 0, $hsp->start('query') - 1) 
-		unless $hsp->start('query') - 1 == 0;
-	$sthreep = substr($qseq_full, $hsp->end('query'), $hit->query_length - $hsp->end('query')) 
-		unless $hit->query_length - $hsp->end('query') == 0;
+	$sfivep = substr_se($qseq_full, $act_start, $hsp->start('query') -1 );
+		#print Dumper join("__", $act_start, $hsp->start('query') -1, $sfivep); 
+	$sthreep = substr_se($qseq_full, $hsp->end('query') + 1, $act_end);
+		#print Dumper join("__", $hsp->end('query') + 1, $act_end, $sthreep); 
 	
 	my $qseq_aln_full = join("", $sfivep, $$seqs_r[0]->seq, $sthreep);
+		#print Dumper "$qseq_aln_full\nXXXX\n";
 
 	#if($sfivep || $sthreep){
 		#print Dumper "5p: $sfivep";
@@ -466,9 +521,48 @@ sub get_full_qseq{
 		#print Dumper $$seqs_r[0]->seq;
 		#print Dumper join(" ", "strand:", $hsp->strand('hit'));
 		#}
+		
+	# sanity check #
+	die " ERROR: full length qseq length not matching start-end: $qseq_aln_full == $act_end - $act_start + 1!\n" 
+		unless length $qseq_aln_full == $act_end - $act_start + 1;
 	
-	return $qseq_aln_full, 1, $hit->query_length; 		# full length spacer (+ gaps), qseq_full_start, qseq_full_end;
-	}	
+	return $qseq_aln_full, $act_start, $act_end; 		# full length spacer (+ gaps), qseq_full_start, qseq_full_end;
+	}
+	
+sub substr_se{
+# substr using start-end indexed by 1 (blast positioning) #
+## args: seq, start (index1), end (index1)
+## getting from start to end 
+	my ($seq, $start, $end) = @_;
+	my $sub = substr($seq, $start - 1, $end - $start + 1);
+	if($sub){ return $sub;}
+	else{ return ""; }
+	}
+
+sub max_extend{
+	my ($hit, $hsp) = @_;
+	
+	# determining max extend range; can't extend spacer-protospacer past scaffold #
+	my $min_sstart = $hsp->start('hit') - 1;			# max bp to extend backward
+	die " ERROR: max_extend_start is negative!\n" unless $min_sstart >= 0;
+	
+	my $slen = $hit->hit_length;
+	my $send = $hsp->end('hit');	
+	my $max_xend = 0;
+	$max_xend = $slen - $send - 1 if $slen - $send -1 > 0;					# max bp to extend forward
+	#die " ERROR: max_extend_end is negative: slen=$slen, send=$send!\n" unless $max_send >= 0;
+	
+		#print Dumper $hsp->start('hit'), $send, $slen, $min_sstart, $max_send;
+	
+	# strand of hit dictates start - end #
+	if($hsp->strand('hit') == 1){
+		return $min_sstart, $max_xend;
+		}
+	elsif($hsp->strand('hit') == -1){
+		return $max_xend, $min_sstart;
+		}
+	else{ die " LOGIC ERROR: $!\n"; }
+	}
 
 sub filter_overlapping_hits{
 # skipping hit if another hit from same group hits longer region of hit #
