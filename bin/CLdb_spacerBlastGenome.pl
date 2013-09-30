@@ -11,6 +11,7 @@ use DBI;
 use Bio::SearchIO;
 use Bio::AlignIO;
 use Set::IntervalTree;
+use Parallel::ForkManager; 
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -23,6 +24,7 @@ my $extra_query = "";
 my $blast_params = "-evalue 0.001";		# 1e-3
 my $num_threads = 1;
 my $extend = 10;
+my $fork = 0;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "fasta=s" => \$query_file,
@@ -31,9 +33,8 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "blast=s" => \$blast_params,
-	   "num_threads=i" => \$num_threads,
+	   "num_fork=i" => \$fork,
 	   "xtend=i" => \$extend,
-	   #"entire" => \$entire,					# protospacer entire length of spacer regardless of blast hit range? [TRUE]
 	   "overlap" => \$filter_overlap_hits, 		# filter out overlapping hits? [TRUE]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -86,8 +87,12 @@ make_blast_db($subject_loci_r, $fasta_dir, $blast_dir);
 
 # blasting (foreach subject blast DB) #
 ## blastn & loading blastn output ##
-blastn_xml_call_load($dbh, $subject_loci_r, $blast_dir, 
+my $blast_out_r = blastn_xml_call($dbh, $subject_loci_r, $blast_dir, 
 		$blast_params, $num_threads, $query_file, $query_r);
+		
+## loading blast output into db ##
+load_blast_output($dbh, $blast_out_r);
+
 
 # commit & exit #
 $dbh->commit;
@@ -96,19 +101,20 @@ exit;
 
 
 ### Subroutines
-sub blastn_xml_call_load{
-# calling blastn (xml output format); parsing output #
-## needed to get blast alignment (find potential gaps) 
-	my ($dbh, $subject_loci_r, $blast_dir, $blast_params, 
-		$num_threads, $query_file, $query_r) = @_;
-	
-	# columns to load into blast_hits DB
+sub load_blast_output{
+# loading blast output into CLdb #
+	my ($dbh, $blast_out_r) = @_;
+
+	# status #
+	print STDERR "...loading blast results into CLdb\n" unless $verbose;
+
+	# columns to load into blast_hits DB #
 	my @blast_hits_col = qw/
-blast_id 
 spacer_DR 
 Group_ID 
 S_taxon_ID 
-S_taxon_name 
+S_taxon_name
+S_accession
 sseqid 
 pident 
 mismatch 
@@ -137,17 +143,85 @@ proto5px
 proto5px_start 
 proto5px_end 
 sseq/;
+
+	my %insert_cnt; 		# summing number of entries added/updated in CLdb
+	foreach my $infile (@$blast_out_r){
+		die " ERROR: cannot find $infile!\n" unless -e $infile;
+		open IN, $infile or die $!;
+		while(<IN>){
+			chomp;
+			next if /^\s*$/;
+			
+			my @line = split /\t/;
+			(my $spacer_DR = $line[0]) =~ s/'//g;
+			map{$_ = "" if $_ eq "NULL"} @line;
+			
+			# making sql for entry #
+			my $sql;
+			if($spacer_DR eq "DR"){		# DR: no need for 
+				$sql = join(" ", "INSERT INTO Blast_hits( ",
+						join(",", @blast_hits_col[0..21]),
+						") VALUES( ",
+							join(",", @line[0..21]), ")" );
+						}
+			elsif($spacer_DR eq "Spacer"){
+				$sql = join(" ", "INSERT INTO Blast_hits( ",
+						join(",", @blast_hits_col),
+						") VALUES( ",
+							join(",", @line), ")" );
+						}
+			else{ die " LOGIC ERROR: neither 'DR' nor 'Spacer' found in spacer_DR column!\n"; }
+				
+			# loading blast hit into CLdb #
+			$dbh->do( $sql );
+			if($DBI::err){
+				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @line), "\n";
+				}
+			else{ $insert_cnt{$spacer_DR}++; }	
+			}
+		close IN;
+		unlink $infile or die $!;			# delete blast file
+		}
+	
+	# summary of CLdb upload #	
+	$insert_cnt{"Spacer"} = 0 unless exists $insert_cnt{"Spacer"};
+	print STDERR "...Number of spacer blast entries added/updated to CLdb: $insert_cnt{'Spacer'}\n";
+	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
+	print STDERR "...Number of DR blast entries added/updated to CLdb: $insert_cnt{'DR'}\n";
+	}
+
+sub blastn_xml_call{
+# calling blastn (xml output format); parsing output #
+## needed to get blast alignment (find potential gaps) ##
+## forking blast runs ##
+	my ($dbh, $subject_loci_r, $blast_dir, $blast_params, 
+		$num_threads, $query_file, $query_r) = @_;
+	
+	# status #
+	print STDERR "...blasting spacers & direct repeats\n" unless $verbose;
+	
+	# forking #
+	my $pm = new Parallel::ForkManager($fork);
 	
 	# blasting each subject genome #
-	my %insert_cnt; 		# summing number of entries added/updated in CLdb
+	my @blast_out_files;
 	foreach my $row (@$subject_loci_r){		# taxon_name, taxon_id, genbank, fasta
 		next unless $$row[3];			# skipping if no fasta & thus no blast db
+
+		# setting output file #
+		my $outfile = "$blast_dir/$$row[3].blast.txt";
+		push @blast_out_files, $outfile; 
+		
+		# forking #
+		my $pid = $pm->start and next;
+		
+		# output file #
+		open OUT, ">$outfile" or die $!;
 		
 		# loading fasta #
 		my $fasta_r = load_fasta("$blast_dir/$$row[3]");
 
 		# setting blast cmd #
-		#my $outfmt = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen qseq";
 		my $cmd = "blastn -task 'blastn-short' -outfmt 5 -db $blast_dir/$$row[3] -query $query_file -num_threads $num_threads $blast_params |";
 		print STDERR "$cmd\n" unless $verbose;
 		
@@ -176,13 +250,13 @@ sseq/;
 					
 					
 					# blastID # spacer_DR qseqid S_taxon_name S_taxon_ID sseqid sstart send #
-					my $blast_id = join("_", $spacer_DR,	# query ID (spacer/DR group)(
-									$$row[0],				# S_taxon_name
-									$$row[1],				# S_taxon_ID
-									$hit->name, 			# sseqid
-									$hsp->start('hit'),		# sstart
-									$hsp->end('hit')		# send
-									);
+					#my $blast_id = join("_", $spacer_DR,	# query ID (spacer/DR group)(
+					#				$$row[0],				# S_taxon_name
+					#				$$row[1],				# S_taxon_ID
+					#				$hit->name, 			# sseqid
+					#				$hsp->start('hit'),		# sstart
+					#				$hsp->end('hit')		# send
+					#				);
 					
 					# filtering overlapping hits #
 					next if filter_overlapping_hits($result, $hit, $hsp, $hit_itree_r);
@@ -234,15 +308,19 @@ sseq/;
 						#print Dumper ($proto5px, $proto5px_start, $proto5px_end);
 						
 					# loading CLdb #
+					## taxon_name & taxon_id = "" if undef #
+					map{$_ = "" unless "" } (@$row[0..1]);
+					
 					## making blast_hit sql ##
-					## start - end encode bioperl-style!!
+					### start - end encode bioperl-style!!
 					my @hit_matches = $hsp->matches('hit');
 					my @vals = (
-						$dbh->quote($blast_id),		# blastID
+						#$dbh->quote($blast_id),		# blastID
 						$dbh->quote($spacer_DR),	# Spacer|DR
 						$qseqid,					# groupID
 						$dbh->quote($$row[1]),		# taxon_id
 						$dbh->quote($$row[0]),		# taxon_name
+						$dbh->quote(""),			# S_accession (must be included as '' so not NULL)
 						$dbh->quote($hit->name), 	# sseqid
 						$hsp->percent_identity,
 						$hsp->length('total') - $hit_matches[0] - $hsp->gaps, 		# mismatches (length - matches - gaps)
@@ -273,40 +351,23 @@ sseq/;
 						$dbh->quote($seqs[1]->seq),		# sseq
 						);
 						
-					# making sql #
-					my $sql;
-					if($spacer_DR eq "DR"){		# DR: no need for 
-						$sql = join(" ", "INSERT INTO Blast_hits( ",
-							join(",", @blast_hits_col[0..21]),
-							") VALUES( ",
-							join(",", @vals[0..21]), ")" );
-						}
-					elsif($spacer_DR eq "Spacer"){
-						$sql = join(" ", "INSERT INTO Blast_hits( ",
-							join(",", @blast_hits_col),
-							") VALUES( ",
-							join(",", @vals), ")" );
-						}
-					else{ die " LOGIC ERROR $!\n"; }
-					
-					# loading blast hit into CLdb #
-					$dbh->do( $sql );
-					if($DBI::err){
-						print STDERR "ERROR: $DBI::errstr in: ", join("\t", @vals), "\n";
-						}
-					else{ $insert_cnt{$spacer_DR}++; }						
+					# writing out file #
+					map{$_ = "" if ! defined $_ } @vals;
+					print OUT join("\t", @vals), "\n";
 					
 					}
 				}
 			}
-		}
-	
-	$insert_cnt{"Spacer"} = 0 unless exists $insert_cnt{"Spacer"};
-	print STDERR "...Number of spacer blast entries added/updated to CLdb: $insert_cnt{'Spacer'}\n";
-	$insert_cnt{"DR"} = 0 unless exists $insert_cnt{"DR"};
-	print STDERR "...Number of DR blast entries added/updated to CLdb: $insert_cnt{'DR'}\n";
-	}
+		# closing output for blast #
+		close OUT;
 
+		$pm->finish;
+		}
+	$pm->wait_all_children;		# all forks must complete
+	
+	return \@blast_out_files;
+	}
+	
 sub get_proto_fivep{
 # 5' of protospacer orientation (if spacer hit to + strand) #
 	my ($hit, $hsp, $seqs_r, $scaf_seq, $sseq_full_end, $extend) = @_;
@@ -317,8 +378,9 @@ sub get_proto_fivep{
 	my $xend  = $sseq_full_end + $extend;			# 3' extension beyond proto
 	$xend = $slen if $xend > $slen; 				# ceiling of scaffold length
 
-	# getting sequence 
+	# getting sequence #
 	my $fivep = substr($scaf_seq, $sseq_full_end,  $xend - $sseq_full_end); 	# 5' extension
+	
 	
 	return $fivep, $sseq_full_end + 1, $xend;
 	}
@@ -755,9 +817,9 @@ Extra sql to refine which sequences are returned.
 
 BLASTn parameters (besides required flags). [-evalue 0.001]
 
-=item -num_threads  <int>
+=item -num_fork  <int>
 
-Use for '-num_threads' parameter in BLASTn. [1]
+Number of parallel blastn calls (one for each subject genome). [1]
 
 =item -overlap  <bool>
 

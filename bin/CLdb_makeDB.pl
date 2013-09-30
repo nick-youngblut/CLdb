@@ -185,7 +185,7 @@ HERE
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
-blast_id    TEXT    NOT NULL,
+blast_id	INTEGER	PRIMARY KEY,
 spacer_DR    TEXT    NOT NULL,
 Group_ID    TEXT    NOT NULL,
 S_taxon_ID    TEXT,
@@ -221,7 +221,7 @@ proto5px	TEXT,
 proto5px_start	INTEGER,
 proto5px_end	INTEGER,
 array_hit    TEXT,
-UNIQUE( blast_id )
+UNIQUE(Group_ID, S_taxon_ID, S_taxon_name, S_accession, sseqid, sstart, send)
 ON CONFLICT REPLACE
 );
 
