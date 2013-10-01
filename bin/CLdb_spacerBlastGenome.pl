@@ -704,7 +704,7 @@ sub update_loci{
 		my @parts = File::Spec->splitpath($$row[3]);
 
 		$sth->bind_param(1, $parts[2]);				# fasta_file (just file name)
-		$sth->bind_param(2, $$row[2]);				# array_file
+		$sth->bind_param(2, $$row[2]);				# genbank_file
 		$sth->execute( );
 		
 		if($DBI::err){
