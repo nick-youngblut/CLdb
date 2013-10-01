@@ -222,17 +222,19 @@ Contig name is optional (needed if multi-locus genbank; ie. multiple '//').
 
 =over
 
-=item -region
+=item -region  <int>
 
 List of region start/stop values (use instead of region_file). 
 Example: '-r 1 1000' for region {1-1000}  
 Example: '-r contig_1 1 1000' for region {contig_1: 1-1000}
 
-=item -tRNA
+=item -tRNA  <bool>
 
 Include rRNA features? [FALSE]
 
-=item -h	This help message
+=item -help  <bool>
+
+This help message
 
 =back
 

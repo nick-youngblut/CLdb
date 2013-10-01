@@ -150,7 +150,9 @@ CLdb_leader2fasta.pl [flags] > leaders.fasta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -158,27 +160,29 @@ CLdb_leader2fasta.pl [flags] > leaders.fasta
 
 =over
 
-=item -gap
+=item -gap  <bool>
 
 Remove gaps from the sequences? [FALSE]
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -h	This help message
+=item -help  <bool>
+
+This help message
 
 =back
 

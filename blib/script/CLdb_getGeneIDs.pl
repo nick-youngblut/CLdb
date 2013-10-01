@@ -107,7 +107,9 @@ CLdb_getGeneIDs.pl [flags] > Gene_IDs.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -115,25 +117,29 @@ CLdb_getGeneIDs.pl [flags] > Gene_IDs.txt
 
 =over
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -v	Verbose output
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output
+
+=item -help  <bool>
+
+This help message
 
 =back
 

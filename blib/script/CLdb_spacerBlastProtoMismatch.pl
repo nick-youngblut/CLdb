@@ -9,6 +9,7 @@ use Getopt::Long;
 use File::Spec;
 use Set::IntervalTree;
 use DBI;
+use List::Util qw/sum/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -18,7 +19,8 @@ my (@subtype, @taxon_id, @taxon_name);		# query refinement
 my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";
 my $len_cutoff = 1;
-my $bin = 20; 								# 20 bins by default
+my $proto_region = 3;	
+my ($pam_regex, @seed_region);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -31,8 +33,10 @@ GetOptions(
 	   "sacc=s{,}" => \@sacc,
 	   "length=f" => \$len_cutoff,			# blast hit must be full length of query
 	   "query=s" => \$extra_query,
-	   "bin=i" => \$bin,					# number of bins to parse sequences
 	   "group" => \$by_group,				# just per spacer group
+	   "pam=s" => \$pam_regex,				# pam regex for screening
+	   "region=s" => \$proto_region,		# proto region to look for pam; 3' by default
+	   "seed=i{2,2}" => \@seed_region, 		# seed region (eg. 1,8 or 8-1)
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -59,110 +63,169 @@ $join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name, \@sacc);
 # getting blast hits #
 my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 
-# binning mismatches #
-bin_mismatches($blast_hits_r, $bin);
+# flipping proto & extension #
+## protospacer stored as spacer match; need to revcomp ##
+flip_proto($blast_hits_r);
+
+# screen by user provided pam #
+#screen_by_pam($blast_hits_r, $pam_regex, $proto_region);
+
+# make mismatch table #
+make_mismatch_table($blast_hits_r);
 
 
 ### Subroutines
-sub bin_mismatches{
-	my ($blast_hits_r, $bin) = @_;
+sub make_mismatch_table{
+# making a mismatch table; determining number of mismatches between spacer & protospacer #
+## mismatches aligned by 5' end of protospacer ##
+## writing out 
+	my ($blast_hits_r) = @_;
 	
-	# header #
-	if($by_group){
-		print join("\t", qw/bin mismatch group_ID subtype s_taxon_id s_taxon_name s_accession/), "\n";
-		}
-	else{
-		print join("\t", qw/bin mismatch group_ID q_taxon_name q_taxon_id subtype locus_id spacer_id s_taxon_id s_taxon_name s_accession/), "\n";
-		}
-	
-	# body #
+	# getting max spacer-proto length #
+	my $max_len = 0;
 	foreach my $entry (@$blast_hits_r){
-		# applying len cutoff #
-		next if abs($$entry[15] - $$entry[14] + 1) / $$entry[16] < $len_cutoff;
-		
-		# checking for undefined values #
-		map{$_ = "" unless $_} @$entry[(2..3,5..7,21)];
-		
-		# trimming frag to just proto #
-		# frag = $$entry[17];
-		my $xstart = $$entry[19];
-		my $xend = $$entry[20];
-		my $sstart = $$entry[9];
-		my $send = $$entry[10];
-		
-		## flipping start-end if necessary ##
-		($xstart, $xend) = flip_se($xstart, $xend) if $xstart > $xend;
-		($sstart, $send) = flip_se($sstart, $send) if $sstart > $send;
-		
-		## getting substr (protospacer) ##
-		my $proto;
-		if($$entry[9] <= $$entry[10]){
-			$proto = substr($$entry[17], $sstart - $xstart - 1, $send - $sstart + 1);
-			}
-		else{
-			$proto = substr($$entry[17], $sstart - $xstart, $send - $sstart + 1);
-			}
-		
-			#print Dumper$$entry[18], $proto;
-		
-		# binning mismatches #
-		my $mismatch_r = bin_align($$entry[18], $proto, $bin);
-		
-		# writing mismatch table #
-		foreach my $mis_bin (sort{$a<=>$b} keys %$mismatch_r){
-			if($by_group){
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,21,5..7)]), "\n";
-				}		
-			else{
-				print join("\t",  $mis_bin, $mismatch_r->{$mis_bin}, @$entry[(0,2,3,21,1,4..7)]), "\n";
-				}
-			}
+		$max_len = length $$entry[14] if length $$entry[14] > $max_len;
 		}
+	
+	# counting number of mismatches #
+	my @mismatch_sum;
+	my $total_len = 0;
+	foreach my $entry (@$blast_hits_r){
+		calc_mismatches($$entry[14], $$entry[15], $$entry[0], $max_len, \@mismatch_sum);
+		$total_len += length $$entry[14];		# length of spacer-protospacer (full)
+		}
+	
+	# adding zeros if needed #
+	foreach (@mismatch_sum){ $_ = 0 unless $_; } 		# no mismatches = 0;
+	
+	# parsing by seed & non-seed #
+	#my %mm_region; 		# mismatch by region (seed, non-seed)
+	print STDERR "Total number of mismatches: ", sum(@mismatch_sum), "\n";
+	print STDERR "Total seed region mismatches: ", sum(@mismatch_sum[0..7]), "\n";
+	print STDERR "Total non-seed region mismatches: ", sum(@mismatch_sum[8..$#mismatch_sum]), "\n";	
+
+	print STDERR "PercentID total: ", 
+			(1 - sum(@mismatch_sum) / $total_len) * 100, "\n";
+	print STDERR "PercentID seed: ", 
+			(1 - sum(@mismatch_sum[0..7]) / (8 * scalar @$blast_hits_r)) * 100, "\n";
+	print STDERR "PercentID non-seed: ", 
+			(1 - sum(@mismatch_sum[8..$#mismatch_sum]) / ($total_len - (8 * scalar @$blast_hits_r))) * 100, "\n";	
+	
+	
+	#print Dumper @mismatch_sum; 
 	}
 
-sub bin_align{
-# binning mismatches in align #
-	my ($query, $proto, $bin) = @_;
-
+sub calc_mismatches{
+# calculating mismatches for spacer-protospacers #
+	my ($spacer_seq, $proto_seq, $blast_id, $max_len, $mismatch_sum_r) = @_;
+	
 	# upper case #
-	$query =~ tr/a-z/A-Z/;
-	$proto =~ tr/a-z/A-Z/;
+	$spacer_seq =~ tr/a-z/A-Z/;
+    $proto_seq =~ tr/a-z/A-Z/;
 
-	# sanity check #
-	die " ERROR: query & protospacer seq are not the same length!\n"
-		unless length $query == length $proto;
+    # sanity check #
+    die " ERROR: query & protospacer seq are not the same length!\n"
+        unless length $spacer_seq == length $proto_seq;
 
-	
-	my @query = split //, $query;
-	my @proto = split //, $proto;
-	my $bin_size = length($query) / $bin;
-	
-	my @bins;
-	for (my $i=0; $i<=$#query; $i+=$bin_size){
-		push @bins, $i; #sprintf("%.0f", $i);
-		}
-	
-	my %mismatch;
-	#for (my $i=0;$i<= $#bins -1; $i+=2){
-	for my $i (0..($#bins - 1)){			# foreach bin #
-		my $bin_start = sprintf("%.0f", $bins[$i]);
-		my $bin_end = sprintf("%.0f", $bins[$i+1] - 0.001);
-		my $mismatch = 0;
-		for my $ii ($bin_start..$bin_end){
-			$mismatch++ if $query[$ii] ne $proto[$ii] &&
-				($query[$ii] ne "-" && $proto[$ii] ne "-");
-				#print "$query[$ii] <-> $proto[$ii] ; $mismatch\n";
+	my @spacer_seq = split //, $spacer_seq;
+	my @proto_seq = split //, $proto_seq;
+
+	# mismatch count; summing by position #
+	my @mismatch;
+	for my $i (0..$#spacer_seq){
+		if ($spacer_seq[$i] ne $proto_seq[$i]){
+			$mismatch[$i]++;
+			$$mismatch_sum_r[$i]++;
 			}
-		$mismatch{sprintf("%.3f", $i * $bin_size / length($proto) * 100)} = $mismatch;
 		}
+	# adding zeros if neede #
+	for my $i (0..($max_len -1)){ $mismatch[$i] = 0 unless $mismatch[$i]; }
+		
+	# writing out basic mismatch table #
+	print join("\t", $blast_id, @mismatch), "\n";
 	
-		#print Dumper %mismatch; exit;
-	return \%mismatch;
 	}
 
-sub flip_se{
-	my ($start, $end) = @_;
-	return $end, $start;
+sub screen_by_pam{
+# screening by pam regex #
+	my ($blast_hits_r, $pam_regex, $proto_region);
+
+	# status #
+	print STDERR "...Number of protospacers selected: ", scalar @$blast_hits_r, "\n";
+	
+	# pam regex #
+	$pam_regex = make_pam_regex($pam_regex);
+
+	my @passed;
+	foreach my $entry (@$blast_hits_r){
+		# screening regions for pam #
+		my $hit;
+		if($proto_region != 5){			# screening 3' region
+			$hit++ if $$entry[16] =~ /$pam_regex/;
+			}
+		elsif($proto_region != 3){		# screen 5' region
+			my $proto5px_revcomp = revcomp($$entry[16]);
+			$hit++ if $proto5px_revcomp =~ /$pam_regex/;
+			}
+			
+		push(@passed, $entry) if $hit;
+		}
+	
+	print STDERR "...Number of entries with specified PAM: ", scalar @passed, "\n";
+	return \@passed;
+	}
+
+sub flip_proto{
+# flipping proto & extension #
+## protospacer stored as spacer match; need to revcomp ##
+## also revcomp qseq_full for finding mismatches ##
+	my ($blast_hits_r) = @_;
+
+	foreach my $entry (@$blast_hits_r){
+		# qseq_full, sseq_full, proto3px, proto5px
+		map{ $_ = revcomp($_) } @$entry[14..17];
+		}
+	}
+
+sub revcomp{
+	# reverse complements DNA #
+	my $seq = shift;
+	$seq = reverse($seq);
+	$seq =~ tr/[a-z]/[A-Z]/;
+	$seq =~ tr/ACGTNBVDHKMRYSW\.-/TGCANVBHDMKYRSW\.-/;
+	return $seq;
+	}
+
+sub make_pam_regex{
+	my ($pam_regex) = @_;
+
+	my %IUPAC = (
+		"A" => "A",
+		"C" => "C",
+		"G" => "G",
+		"T" => "T",
+		"U" => "T",
+		"R" => "AT",
+		"Y" => "CT",
+		"S" => "GC",
+		"W" => "AT",
+		"K" => "GT",
+		"M" => "AC",
+		"B" => "CGT",
+		"D" => "AGT",
+		"H" => "ACT",
+		"V" => "ACG",
+		"N" => "ATCG"
+		);
+	
+	$pam_regex =~ tr/[a-z]/[A-Z/; 					# all caps
+	my @pam_regex = split //, $pam_regex;
+	map{$_ = "\[$IUPAC{$_}\]" if exists $IUPAC{$_}} @pam_regex;
+	
+	$pam_regex = join("", @pam_regex);
+	$pam_regex =~ qr/$pam_regex/;
+	
+	return $pam_regex;
 	}
 
 sub get_blast_hits{
@@ -171,28 +234,24 @@ sub get_blast_hits{
 	
 	# basic query #
 	my $query = "SELECT 
+c.blast_id,
 c.group_id, 
 a.locus_id,
 a.taxon_name,
 a.taxon_id,
 b.spacer_id,
+a.subtype,
 c.S_Taxon_ID, 
 c.S_Taxon_name,
 c.S_accession,
 c.sseqid,
-c.sstart, 
-c.send, 
-c.evalue,
-c.mismatch,
-c.pident,
 c.qstart,
 c.qend,
 c.qlen,
-c.frag,
-c.qseq,
-c.xstart,
-c.xend,
-a.subtype
+c.qseq_full,
+c.sseq_full,
+c.proto3px,
+c.proto5px
 FROM Loci a, Spacers b, Blast_hits c
 WHERE a.locus_id == b.locus_id
 AND c.group_id == b.spacer_group
@@ -202,7 +261,7 @@ $join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
 	$query = join(" ", $query, $extra_query);
-	$query .= " GROUP BY c.group_id, c.S_taxon_id, c.S_taxon_name, c.S_accession, c.sseqid, c.sstart, c.send, a.subtype" if $by_group;
+	$query .= " GROUP BY c.blast_id" unless $by_group;
 	
 	# status #
 	print STDERR "$query\n" if $verbose;

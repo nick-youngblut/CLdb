@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETREGIONSEQUENCE 1"
-.TH CLDB_GETREGIONSEQUENCE 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETREGIONSEQUENCE 1 "2013-09-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,33 +136,32 @@ CLdb_getRegionSequence.pl \-\- get nucleotide sequence of CRISPR loci regions
 CLdb_getRegionSequence.pl [flags] > regions.fasta
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-region" 4
-.IX Item "-region"
-.PD
+.IP "\-region  <char>" 4
+.IX Item "-region  <char>"
 The \s-1CRISPR\s0 loci region of interest ('locus', 'operon', or 'CRISPR_array'). [locus]
-.IP "\-subtype" 4
-.IX Item "-subtype"
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
 Extra sql to refine which sequences are returned.
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message.
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_getRegionSequence.pl
@@ -177,16 +176,16 @@ Genbank files must be in \f(CW$CLdb_HOME\fR/genbank/
 .IX Header "EXAMPLES"
 .SS "Write all locus regions:"
 .IX Subsection "Write all locus regions:"
-CLdb_getRegionSequence.pl \-d \s-1CRISPR\s0.sqlite
+CLdb_getRegionSequence.pl \-d CLdb.sqlite
 .SS "Write all \s-1CRISPR\s0 array regions:"
 .IX Subsection "Write all CRISPR array regions:"
-CLdb_getRegionSequence.pl \-data \s-1CRISPR\s0.sqlite \-r crispr_array
+CLdb_getRegionSequence.pl \-d CLdb.sqlite \-r crispr_array
 .SS "Refine region sequence query:"
 .IX Subsection "Refine region sequence query:"
-CLdb_getRegionSequence.pl \-data \s-1CRISPR\s0.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
+CLdb_getRegionSequence.pl \-d CLdb.sqlite \-q \*(L"where LOCUS_ID=1\*(R"
 .SS "Refine region query to a specific subtype & 2 taxon_id's"
 .IX Subsection "Refine region query to a specific subtype & 2 taxon_id's"
-CLdb_getRegionSequence.pl \-da \s-1CRISPR\s0.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
+CLdb_getRegionSequence.pl \-d CLdb.sqlite \-sub I\-B \-taxon_id 6666666.4038 6666666.40489
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

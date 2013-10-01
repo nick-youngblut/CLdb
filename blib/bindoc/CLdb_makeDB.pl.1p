@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_MAKEDB 1"
-.TH CLDB_MAKEDB 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_MAKEDB 1 "2013-09-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,17 +136,17 @@ CLdb_makeDB.pl \-\- Initial DB construction
 CLdb_makeDB.pl [options] [DATABASE_name]
 .SS "options"
 .IX Subsection "options"
-.IP "\-r  <bool>" 4
-.IX Item "-r  <bool>"
+.IP "\-replace  <bool>" 4
+.IX Item "-replace  <bool>"
 Replace existing database.
-.IP "\-t  <char>" 4
-.IX Item "-t  <char>"
-Table(s) to keep as is (if they exist). [\*(L"leaderseqs\*(R" \*(L"genes\*(R"]
-.IP "\-d  <bool>" 4
-.IX Item "-d  <bool>"
+.IP "\-table  <char>" 4
+.IX Item "-table  <char>"
+Table(s) to keep as is (if they exist). [\*(L"leaders\*(R" \*(L"genes\*(R"]
+.IP "\-drop  <bool>" 4
+.IX Item "-drop  <bool>"
 Drop all tables. [\s-1FALSE\s0]
-.IP "\-h  <bool>" 4
-.IX Item "-h  <bool>"
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
 This help message
 .SS "For more information:"
 .IX Subsection "For more information:"

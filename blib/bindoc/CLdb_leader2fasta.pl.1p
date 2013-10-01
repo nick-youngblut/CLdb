@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_LEADER2FASTA 1"
-.TH CLDB_LEADER2FASTA 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_LEADER2FASTA 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,29 +136,29 @@ CLdb_leader2fasta.pl \-\- write CRISPR leader sequences in fasta format
 CLdb_leader2fasta.pl [flags] > leaders.fasta
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-gap" 4
-.IX Item "-gap"
-.PD
+.IP "\-gap  <bool>" 4
+.IX Item "-gap  <bool>"
 Remove gaps from the sequences? [\s-1FALSE\s0]
-.IP "\-subtype" 4
-.IX Item "-subtype"
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
 Extra sql to refine which sequences are returned.
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_leader2fasta.pl

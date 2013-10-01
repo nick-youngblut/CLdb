@@ -100,7 +100,7 @@ sub make_genbank_array_dirs{
 					unless -e $file_chk;
 				} 
 			# array file #
-			if( $$row[$header_r->{"array_file"}] ){
+			if( exists $header_r->{"array_file"} && $$row[$header_r->{"array_file"}] ){
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
 
 				# making genbank dir; copying file #
@@ -122,6 +122,29 @@ sub make_genbank_array_dirs{
 				die " ERROR: cannot find ", $file_chk, "\n"
 					unless -e $file_chk;
 				}
+			# fasta file #
+			if( exists $header_r->{"fasta_file"} && $$row[$header_r->{"fasta_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"fasta_file"}] );
+
+				# making genbank dir; copying file #
+				if(File::Spec->rel2abs($parts[1]) ne "$dir/fasta"){
+					mkdir "$dir/fasta" unless -d "$dir/fasta";
+					unless(-e "$dir/fasta/$parts[2]"){
+						die " ERROR: cannot find ", $$row[$header_r->{"fasta_file"}], "\n"
+							unless -e $$row[$header_r->{"fasta_file"}];
+							
+						copy($$row[$header_r->{"fasta_file"}], "$dir/fasta/$parts[2]") or die $!;
+						print STDERR "...Copied ", $$row[$header_r->{"fasta_file"}], 
+							" to $dir/fasta/$parts[2]\n" unless $quiet;
+						}
+					}
+				# stripping path from array value #
+				$$row[$header_r->{"fasta_file"}] = $parts[2];
+				# sanity check #
+				my $file_chk = join("/", $dir, "fasta", $$row[$header_r->{"fasta_file"}]);
+				die " ERROR: cannot find ", $file_chk, "\n"
+					unless -e $file_chk;
+				}				
 			}
 		}
 	}
@@ -141,6 +164,10 @@ sub remove_paths{
 				my @parts = File::Spec->splitpath( $$row[$header_r->{"array_file"}] );
 				$$row[$header_r->{"array_file"}] = $parts[2];			
 				}
+			if( $$row[$header_r->{"fasta_file"}] ){
+				my @parts = File::Spec->splitpath( $$row[$header_r->{"fasta_file"}] );
+				$$row[$header_r->{"fasta_file"}] = $parts[2];			
+				}				
 			}
 		}
 	}
@@ -179,7 +206,7 @@ sub update_db{
 	
 	$dbh->commit;	
 	
-	print STDERR "...Number of entries updated in loci table: ", (scalar keys %$loci_r) -1, "\n"
+	print STDERR "...Number of entries updated in loci table (locus_ID provided in loci table): ", (scalar keys %$loci_r) -1, "\n"
 		unless $verbose;
 	}
 
@@ -208,7 +235,7 @@ sub load_new_entries{
 		}
 	$dbh->commit;
 
-	print STDERR "...Number of entries added to loci table: ", scalar @$loci_new_r, "\n"
+	print STDERR "...Number of entries added in loci table (no locus_ID provided in loci table): ", scalar @$loci_new_r, "\n"
 		unless $verbose;
 	}
 
@@ -349,7 +376,9 @@ CLdb_loadLoci.pl [flags] < loci_table.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -357,9 +386,13 @@ CLdb_loadLoci.pl [flags] < loci_table.txt
 
 =over
 
-=item -v	Verbose output. [TRUE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

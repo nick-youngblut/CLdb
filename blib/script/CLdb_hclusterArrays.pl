@@ -209,7 +209,9 @@ CLdb_hclustArrays.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -217,17 +219,29 @@ CLdb_hclustArrays.pl [flags]
 
 =over
 
-=item -s 	Cluster spacers
+=item -spacer  <bool>
 
-=item -r 	Cluster direct repeats
+Cluster spacers. [FALSE]
 
-=item -c 	CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
+=item -repeat  <bool>
 
-=item -p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]
+Cluster direct repeats. [FALSE]
 
-=item -v	Verbose output. [TRUE]
+=item -cluster  <float>
 
-=item -h	This help message
+CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
+
+=item -path  <char>
+
+Directory where intermediate files are written. [$CLdb_HOME/grouping/]
+
+=item -verbose  <char>
+
+Verbose output. [TRUE]
+
+=item -help  <char>
+
+This help message
 
 =back
 

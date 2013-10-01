@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETLEADERREGIONS 1"
-.TH CLDB_GETLEADERREGIONS 1 "2013-09-11" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETLEADERREGIONS 1 "2013-09-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,42 +136,44 @@ CLdb_getLeaderRegion.pl \-\- getting leader region sequences
 CLdb_getLeaderRegion.pl [flags] > possible_leaders.fna
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "options"
 .IX Subsection "options"
-.PD 0
-.IP "\-length" 4
-.IX Item "-length"
-.PD
-Maximum length of leader region (bp). [1000]
-.IP "\-subtype" 4
-.IX Item "-subtype"
+.IP "\-location  <char>" 4
+.IX Item "-location  <char>"
+Location file specifying leader region start-end.
+.IP "\-subtype  <char>" 4
+.IX Item "-subtype  <char>"
 Refine query to specific a subtype(s) (>1 argument allowed).
-.IP "\-taxon_id" 4
-.IX Item "-taxon_id"
+.IP "\-taxon_id  <char>" 4
+.IX Item "-taxon_id  <char>"
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-.IP "\-taxon_name" 4
-.IX Item "-taxon_name"
+.IP "\-taxon_name  <char>" 4
+.IX Item "-taxon_name  <char>"
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-.IP "\-query" 4
-.IX Item "-query"
+.IP "\-query  <char>" 4
+.IX Item "-query  <char>"
 Extra sql to refine which sequences are returned.
-.IP "\-overlap" 4
-.IX Item "-overlap"
+.IP "\-length  <int>" 4
+.IX Item "-length  <int>"
+Max length of the potential leader region (bp). [1000]
+.IP "\-overlap  <bool>" 4
+.IX Item "-overlap  <bool>"
 Check for overlapping genes (& trim region if overlap)? [\s-1TRUE\s0]
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
-Gene length cutoff for counting gene as real in overlap assessment (bp). [90]
-.IP "\-both" 4
-.IX Item "-both"
-Get sequence on both sides of the array regardless of degeneracies? [\s-1FALSE\s0]
-.IP "\-v	Verbose output" 4
-.IX Item "-v	Verbose output"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-cutoff  <int>" 4
+.IX Item "-cutoff  <int>"
+Gene length cutoff for counting gene as real in overlap assessment (bp). [150]
+.IP "\-repeat  <bool>" 4
+.IX Item "-repeat  <bool>"
+Use repeat degeneracies to determine which side contains the leader region? [\s-1FALSE\s0]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_getLeaderRegions.pl
@@ -180,40 +182,75 @@ perldoc CLdb_getLeaderRegions.pl
 Get the suspected leader regions for \s-1CRISPR\s0 loci 
 in the \s-1CRISPR\s0 database.
 .PP
-Leader regions are determined by direct repeat (\s-1DR\s0) degeneracy,
+The leader region length will be truncated if any genes overlap in 
+that region (unless \-overlap used).
+.PP
+The default leader region length is 1000bp from the \s-1CRISPR\s0 array.
+.SS "Selecting leader regions"
+.IX Subsection "Selecting leader regions"
+Leader regions can be selected by providing a query such as 
+\&\*(L"\-sub I\-A\*(R" for all leader regions adjacent to the I\-A arrays.
+.PP
+Leader regions can also be specified using a location file ('\-location' flag).
+The file should have the following columns:
+.IP "taxon_name (need this or taxon_id)" 4
+.IX Item "taxon_name (need this or taxon_id)"
+.PD 0
+.IP "taxon_id (need this or taxon_name)" 4
+.IX Item "taxon_id (need this or taxon_name)"
+.IP "scaffold ('\s-1CLDB_ONE_CHROMOSOME\s0' if scaffold was not provided in loci.txt table)" 4
+.IX Item "scaffold ('CLDB_ONE_CHROMOSOME' if scaffold was not provided in loci.txt table)"
+.IP "region start (> region end if negative strand)" 4
+.IX Item "region start (> region end if negative strand)"
+.IP "region end" 4
+.IX Item "region end"
+.PD
+.SS "'\-repeat' flag"
+.IX Subsection "'-repeat' flag"
+Leader regions can determined by direct repeat (\s-1DR\s0) degeneracy,
 which should occur at the trailer end.
 For example: leader half has 1 cluster due to \s-1DR\s0 conservation,
 while the trailer half has 3 clusters due to \s-1DR\s0 degeneracy). 
 This is determined by the 'repeat_group' column in the 
 Directrepeats table in the \s-1CRISPR\s0 database. Therefore, 
 CLdb_groupArrayElements.pl has to be run on the database 
-before running this script!
-.PP
+before running this script! 
 Both end regions of a \s-1CRISPR\s0 array are written if a \s-1CRISPR\s0
 array has equal numbers of \s-1DR\s0 clusters on each half.
 .PP
-The default leader region length is 1000bp from the \s-1CRISPR\s0 array.
-.PP
-The leader region length will be truncated if any genes overlap in 
-that region.
-.PP
-Leader regions in the output fasta are named as: 
-\&\*(L"cli.ID\*(R" \*(L"start|end\*(R"_\|_\*(L"region_start\*(R"_\|_\*(L"region_end\*(R"
-.PP
-Leader region start & end are according to the + strand.
-.PP
 The number of repeat_groups on each side (5' & 3') of the
-\&\s-1CRISPR\s0 array will be printed to \s-1STDERR\s0 (unless '\-v'). 
+\&\s-1CRISPR\s0 array will be printed to \s-1STDERR\s0 (unless '\-v').
 The output values are: 'degeracies', locus_id', 
 \&'5\-prime_number_repeat_groups', '3\-prime_number_repeat_groups'
+.ie n .SS "Output Leader regions in the output fasta are named as: ""cli.ID""_\|_\|_""start|end""_\|_\|_""region_start""_\|_\|_""region_end""_\|_\|_""strand"""
+.el .SS "Output Leader regions in the output fasta are named as: ``cli.ID''_\|_\|_``start|end''_\|_\|_``region_start''_\|_\|_``region_end''_\|_\|_``strand''"
+.IX Subsection "Output Leader regions in the output fasta are named as: cli.ID___start|end___region_start___region_end___strand"
+Leader region start & end are according to the + strand.
+.SS "Next step after getting potential leader regions"
+.IX Subsection "Next step after getting potential leader regions"
+Align the leader regions (eg. mafft \-\-adjustdirection).
+.PP
+Remove any leaders that don't align or split the 
+alignment into >=2 files if multiple groups of sequences
+align together but not globally.
+.PP
+Make sure that each locus_ID only has 1 leader region in the alignment!
+.PP
+Determine where the leader region ends (number of bp to 
+trim off from the non-conserved end).
+.PP
+Load the leader region using CLdb_loadLeaders.pl
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Leader regions for all loci"
 .IX Subsection "Leader regions for all loci"
-CLdb_getLeaderRegion.pl \-d CLdb.sqlite > leaders.fna
+CLdb_getLeaderRegion.pl \-d CLdb.sqlite > psbl_leaders.fna
 .SS "Leader regions for just subtype I\-B"
 .IX Subsection "Leader regions for just subtype I-B"
-CLdb_getLeaderRegions.pl \-d CLdb.sqlite \-sub I\-B > leader_I\-B.fna
+CLdb_getLeaderRegions.pl \-d CLdb.sqlite \-sub I\-B > psbl_leaders_I\-B.fna
+.SS "Leader regions specified in location file"
+.IX Subsection "Leader regions specified in location file"
+CLdb_getLeaderRegions.pl \-d CLdb.sqlite \-loc locations.txt > psbl_leaders.fna
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

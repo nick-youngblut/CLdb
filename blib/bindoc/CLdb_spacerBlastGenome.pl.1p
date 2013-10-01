@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SPACERBLASTGENOME 1"
-.TH CLDB_SPACERBLASTGENOME 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SPACERBLASTGENOME 1 "2013-09-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -158,10 +158,13 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 Extra sql to refine which sequences are returned.
 .IP "\-blast  <char>" 4
 .IX Item "-blast  <char>"
-BLASTn parameters (besides required flags). [\-evalue 0.00001]
-.IP "\-num_threads  <int>" 4
-.IX Item "-num_threads  <int>"
-Use for '\-num_threads' parameter in BLASTn. [1]
+BLASTn parameters (besides required flags). [\-evalue 0.001]
+.IP "\-num_fork  <int>" 4
+.IX Item "-num_fork  <int>"
+Number of parallel blastn calls (one for each subject genome). [1]
+.IP "\-overlap  <bool>" 4
+.IX Item "-overlap  <bool>"
+Filter out hits falling within a large blast hit (same query-subject? [\s-1TRUE\s0]
 .IP "\-x  <int>" 4
 .IX Item "-x  <int>"
 Retain blast hit subject sequence fragment + '\-x' bp on either side of fragment. [20]
@@ -177,7 +180,8 @@ perldoc CLdb_spacerBlastGenome.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Run blastn-short against one or more genomes
-already in CLdb. Specific genomes can be
+already in CLdb (word_size=7, reward=1, DUST=off). 
+Specific genomes can be
 selected by subtype ('\-subtype'), taxon_name
 ('\-taxon_name'), taxon_id ('taxon_id'), or
 other sql refinements of the query ('\-query').
@@ -197,6 +201,8 @@ It may be best to blast all DRs at once for
 subsequent spacer array screening (spacers that
 have adjacent \s-1DR\s0 hits are considered to be located
 in \s-1CRISPR\s0 arrays and are thus not protospacers).
+.PP
+Any gaps in the spacer-protospacer alignment are include.
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Blasting all spacers against all genomes in CLdb"

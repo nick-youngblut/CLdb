@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_DNA_SEGS_ORDERBYTREE 1"
-.TH CLDB_DNA_SEGS_ORDERBYTREE 1 "2013-09-04" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_DNA_SEGS_ORDERBYTREE 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -141,26 +141,26 @@ CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
 CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-tree" 4
-.IX Item "-tree"
+.IP "\-tree  <char>" 4
+.IX Item "-tree  <char>"
 Tree file name (nexus or newick).
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.IP "\-format" 4
-.IX Item "-format"
+.IP "\-format  <char>" 4
+.IX Item "-format  <char>"
 Tree file format. [newick]
-.IP "\-name" 4
-.IX Item "-name"
+.IP "\-name  <char>" 4
+.IX Item "-name  <char>"
 Output file name for pruned tree. ['\-tree' + '_prn.nwk']
-.IP "\-xlims" 4
-.IX Item "-xlims"
-Ordering xlims table instead of dna_segs. An editted tree will not be written.
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-xlims  <bool>" 4
+.IX Item "-xlims  <bool>"
+Ordering xlims table instead of dna_segs. An editted tree will not be written. [\s-1FALSE\s0]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_dna_segs_orderByTree.pl

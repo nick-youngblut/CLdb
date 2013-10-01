@@ -190,7 +190,9 @@ CLdb_getRegionSequence.pl [flags] > regions.fasta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -198,29 +200,33 @@ CLdb_getRegionSequence.pl [flags] > regions.fasta
 
 =over
 
-=item -region
+=item -region  <char>
 
 The CRISPR loci region of interest ('locus', 'operon', or 'CRISPR_array'). [locus] 
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message.
 
 =back
 
@@ -240,19 +246,19 @@ Genbank files must be in $CLdb_HOME/genbank/
 
 =head2 Write all locus regions:
 
-CLdb_getRegionSequence.pl -d CRISPR.sqlite 
+CLdb_getRegionSequence.pl -d CLdb.sqlite 
 
 =head2 Write all CRISPR array regions:
 
-CLdb_getRegionSequence.pl -data CRISPR.sqlite -r crispr_array
+CLdb_getRegionSequence.pl -d CLdb.sqlite -r crispr_array
 
 =head2 Refine region sequence query:
 
-CLdb_getRegionSequence.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb_getRegionSequence.pl -d CLdb.sqlite -q "where LOCUS_ID=1" 
 
 =head2 Refine region query to a specific subtype & 2 taxon_id's
 
-CLdb_getRegionSequence.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb_getRegionSequence.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 

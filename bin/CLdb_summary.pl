@@ -76,10 +76,11 @@ if ( exists $table_list_r->{"loci"} ){
 	}	
 else{ print STDERR "...no loci table found, skipping loci summary!\n"; }
 
-
 ## spacers ##
 if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"spacers"} ){
-	if( exists $table_list_r->{"spacer_hclust"} && $table_list_r->{"spacer_hclust"} > 0){
+	sum_all_spacers_DR($dbh, "spacer", $group_by_r);
+
+	if( exists $table_list_r->{"spacer_hclust"} && $table_list_r->{"spacer_hclust"} > 0){		
 		sum_spacers_DR_hclust($dbh, "spacer", $group_by_r, \@cutoff);
 		}
 	else{
@@ -91,7 +92,9 @@ else{ print STDERR "...no loci and/or spacer tables found, skipping spacer summa
 
 ## DR ##
 if ( exists $table_list_r->{"loci"} && exists $table_list_r->{"drs"} ){ 
-	if( exists $table_list_r->{"dr_hclust"} && $table_list_r->{"dr_hclust"} > 0){
+	sum_all_spacers_DR($dbh, "DR", $group_by_r);
+	
+	if( exists $table_list_r->{"dr_hclust"} && $table_list_r->{"dr_hclust"} > 0){	
 		sum_spacers_DR_hclust($dbh, "DR", $group_by_r, \@cutoff);
 		}
 	else{
@@ -133,7 +136,7 @@ sub sum_leaders{
 
 	my $q = "SELECT $select,'NA',count(*) FROM Loci a, leaders b WHERE a.locus_id=b.locus_id GROUP BY $select";
 	foreach (@{$dbh->selectall_arrayref($q)}){
-		map{$_ = "NULL" unless $_} @$_;
+		map{$_ = "NA" unless $_} @$_;
 		print join("\t", "leaders", @$_), "\n";
 		}
 
@@ -145,7 +148,7 @@ sub sum_leaders{
 	else{ $q = "SELECT count(*) FROM Loci a, Genes b WHERE a.locus_id=b.locus_id"; }
 
 	foreach (@{$dbh->selectall_arrayref($q)}){
-		map{$_ = "NULL" unless $_} @$_;
+		map{$_ = "NA" unless $_} @$_;
 		print join("\t", "leaders", @$_[0..($#$_-1)], qw/Total NA/, $$_[$#$_]), "\n";
 		}	
 	}
@@ -180,14 +183,16 @@ sub sum_genes{
 
 sub sum_spacers_DR_hclust{
 	my ($dbh, $cat, $group_by_r, $cutoff_r) = @_;
-	
+
 	# group_by  #
 	my @select = qw/b.cutoff/;
 	my $select = join(",", @$group_by_r, @select);
+	my $col = join(",", @$group_by_r, @select[0..($#select-1)], "'num_groups'", $select[$#select]);
 	my $cutoff = join(" ", "IN (", join(",", @$cutoff_r), ")");
 	my $table = $cat . "s";
 
-	my $q = "SELECT $select,'NA',count(distinct(b.cluster_id)) 
+
+	my $q = "SELECT $col,count(distinct(b.cluster_id)) 
 	FROM Loci a, $cat\_hclust b 
 	WHERE a.locus_id=b.locus_id 
 	AND b.cutoff $cutoff
@@ -197,6 +202,32 @@ sub sum_spacers_DR_hclust{
 	foreach (@{$dbh->selectall_arrayref($q)}){
 		map{$_ = "NULL" unless $_} @$_;
 		print join("\t", $cat . "s", @$_), "\n";
+		}
+	}
+	
+sub sum_all_spacers_DR{
+# summing all spacers/DR whether in a group or not #
+	my ($dbh, $cat, $group_by_r) = @_;
+	
+	# group_by #
+	my $select = join(",", @$group_by_r);
+	my $table = $cat . "s";
+	$select = "'NA'" unless $select;
+	
+	my $colnames = "";
+	$colnames = join(",", 
+					join(",", ("'NA'") x scalar @$group_by_r ),
+					"")  if @$group_by_r;
+
+	my $q = "SELECT $select, 'All', $colnames count(*) FROM Loci a, $table b WHERE a.locus_id=b.locus_id";
+	
+	$q .= " GROUP BY $select" if $select ne "'NA'";
+	
+	#print Dumper $q; exit;
+	
+	foreach (@{$dbh->selectall_arrayref($q)}){
+		map{$_ = "NULL" unless $_} @$_;
+		print join("\t", "$cat", @$_), "\n";
 		}
 	}
 
@@ -290,7 +321,9 @@ CLdb_summary.pl [flags] > summary.txt
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -298,25 +331,29 @@ CLdb_summary.pl [flags] > summary.txt
 
 =over
 
-=item -subtype
+=item -subtype  <bool>
 
-Group summary by subtype?
+Group summary by subtype? [FALSE]
 
-=item -id
+=item -id  <bool> 
 
-Group summary by taxon_id?
+Group summary by taxon_id? [FALSE]
 
-=item -name
+=item -name  <bool>
 
-Group summary by taxon_name?
+Group summary by taxon_name? [FALSE]
 
-=item -cutoff
+=item -cutoff  <float>
 
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
+Spacer/DR clustering cutoffs to summarize (range:0.8-1; >=1 argument). [1]
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 
@@ -328,7 +365,34 @@ perldoc CLdb_summary.pl
 
 Get summary stats on CLdb. 
 
-The output is a tab-delimited file for easy parsing.
+The output is a tab-delimited file for easy parsing and plotting.
+
+=head2 Output description
+
+The 1st column is the CLdb table (e.g. loci, spacers, leaders).
+
+Grouping columns (e.g. subtype or taxon_name) are the subsequent
+columns.
+
+Spacer and DR groups (clusters) are defined as having exactly the 
+same sequence (reverse-complemented sequences are considered the 
+same, but sequence length must match).
+
+Next comes table-specific categories ('NA' means not applicable):
+
+=over 
+
+=item  Loci: operon_status array_status
+
+=item  Spacers: either all spacers ('All) or by group ('num_groups' 'clustering cutoff')
+
+=item  DRs: either all DRs ('All) or by group ('num_groups' 'clustering cutoff')
+
+=item  Genes: in operon? (ie. operon start-end defined in loci table)
+
+=item  Leaders: none
+
+=back
 
 =head1 EXAMPLES
 

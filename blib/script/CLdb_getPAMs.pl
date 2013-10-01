@@ -10,16 +10,19 @@ use File::Spec;
 use DBI;
 use Bio::SeqIO;
 use Set::IntervalTree;
+use List::Util qw/max/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $parse_proto);
+my ($verbose, $database_file, $align_pams, $by_group);
 my (@subtype, @taxon_id, @taxon_name);		# query refinement
-my (@staxon_id, @staxon_name); 				# blast subject query refinement
+my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";						# query refinement
-my $extend = 20;							# length to extend off of each side
-my $len_cutoff = 1;							# cutoff for length of blast hit relative to query length
+my $extend = 10;							# length to extend off of each side
+my $len_cutoff = 0.66;						# cutoff for length of blast hit relative to query length
+my $proto_region = 0;
+my $slen_cutoff = 50;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -28,9 +31,13 @@ GetOptions(
 	   "query=s" => \$extra_query, 
 	   "staxon_id=s{,}" => \@staxon_id,
 	   "staxon_name=s{,}" => \@staxon_name,
+	   "saccession=s{,}" => \@sacc,
+	   "group" => \$by_group,					# TRUE
 	   "x=i" => \$extend,
-	   "length=f" => \$len_cutoff,
-	   "parse=s" => \$parse_proto, 			# parsing proto spacer and 5'/3' regions
+	   "align" => \$align_pams, 				# TRUE
+	   "qlength=f" => \$len_cutoff,				# full-length blast hits?
+	   "slength=i" => \$slen_cutoff,			# spacer length must be <= 
+	   "region=i" => \$proto_region,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -54,156 +61,247 @@ my $join_sql = "";
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-$join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name);
+$join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name, \@sacc);
 
 # getting blast hits #
 my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
 
-# getting spacer group length #
-my $spacer_len_r = get_spacer_group_length($dbh, $join_sql, $extra_query);
+# flipping proto & extension #
+## protospacer stored as spacer match; need to revcomp ##
+flip_proto($blast_hits_r);
 
-# making output files if protospacer parsed #
-my $outfh_r = make_outfiles($parse_proto) if $parse_proto;
-
-# getting PAMs & spacer sequences #
-get_PAMs($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff, $outfh_r);
+# writing out PAMs #
+get_PAMs($dbh, $blast_hits_r, $extend, $len_cutoff);
 
 # disconnect #
 $dbh->disconnect();
 exit;
 
 
-### Subroutines
-sub make_outfiles{
-	my ($parse_proto) = @_;
-	
-	open FPFH, ">$parse_proto\_5prime.fna" or die $!;
-	open PFH, ">$parse_proto\_proto.fna" or die $!;
-	open TPFH, ">$parse_proto\_3prime.fna" or die $!;
-	
-	return [\*FPFH, \*PFH, \*TPFH];
-	}
-
+### Subroutines	
 sub get_PAMs{
-# getting spacer blast hit sequence & adjacent regions #
-	my ($dbh, $blast_hits_r, $extend, $spacer_len_r, $len_cutoff, $outfh_r) = @_;
+# writing out protospacers & extensions #
+	my ($dbh, $blast_hits_r, $extend, $len_cutoff) = @_;
+
+    # finding max proto length for aligning 5' & 3' #
+	my $max_len;
+	my $max_3px_len = 0;
+	my $max_5px_len = 0;
+	unless($align_pams){
+		my %proto_lens;
+    	foreach my $entry (@$blast_hits_r){
+        	$proto_lens{"proto"}{ abs($$entry[9] - $$entry[8] + 1) } = 1;		# qseq_full_end - qseq_full_start
+            if($$entry[12]){ $proto_lens{"3p"}{ length $$entry[12] } = 1; }
+            else{ $proto_lens{"3p"}{ 0 } = 1; }
+            if($$entry[15]){ $proto_lens{"5p"}{ length $$entry[15] } = 1; }
+            else{ $proto_lens{"5p"}{ 0 } = 1; }
+            }
+        $max_len = max keys %{$proto_lens{"proto"}};
+        $max_3px_len = max keys %{$proto_lens{"3p"}};
+       	$max_5px_len = max keys %{$proto_lens{"5p"}}; 
+        }
+    
+    
+    # writing PAMs #
+    foreach my $entry (@$blast_hits_r){
+    	# filling in partial proto3-5x #
+    	my ($proto3px, $proto5px) = fill_partial_protox(
+    					$$entry[12], $$entry[15], 
+    					$max_3px_len, $max_5px_len);
+    	
+    	# uncaps for 3' & 5' protospacer extensions #
+    	$proto3px =~ tr/[A-Z]/[a-z]/;
+    	$proto5px =~ tr/[A-Z]/[a-z]/;    	
+    	
+    	# trimming adjacent regions if specified #
+    	$proto3px = reverse(substr(reverse($proto3px), 0, $extend))
+    		if length $proto3px > $extend;
+    	$proto5px = substr($proto3px, 0, $extend)
+    		if length $proto5px > $extend;
+
+
+    	# adding gaps to sseq_full & capitalizating #
+    	my $proto_seq = $$entry[7];
+    	$proto_seq = add_gaps($proto_seq, $max_len) unless $align_pams; 		# adding gaps, unless not wanted
+    	$proto_seq =~ tr/[a-z]/[A-Z]/;  
+    	
+    	# full proto seq (& extensions); oriented by proto (5'-3') #
+    	my $full_seq;
+    	if($proto_region == 3){ $full_seq = $proto3px; }
+	    elsif($proto_region == 5){ $full_seq = $proto5px; }
+		else{ $full_seq = join("", $proto3px, $proto_seq, $proto5px); }
+    	
+    	# writing fasta of PAMs #
+		map{$_ = "NULL" unless $_} @$entry[0..3];
+
+		if($by_group){		# all loci hitting the pam
+			print join("\n",
+				  join("__", ">Group" . $$entry[0],
+				  		"cli.$$entry[22]", $$entry[18],
+					   @$entry[1..4], 
+					   $$entry[10], $$entry[11], $$entry[5]),
+				  $full_seq), "\n";		
+			}
+		else{				# just spacer groups
+			print join("\n",
+				  join("__", ">Group." . $$entry[0],
+					   @$entry[1..4], 
+					   $$entry[10], $$entry[11], $$entry[5]),
+				  $full_seq), "\n";
+			}
+    	}
+	}
 	
-	my $query = "SELECT substr(scaffold_sequence,?,?) FROM blast_subject
-WHERE scaffold_name = ?
-AND (taxon_id == ?
- OR taxon_name == ?)";
-  	$query =~ s/[\n\r]+/ /g; 
+sub fill_partial_protox{
+	my ($threep, $fivep, $max_3p, $max_5p) = @_;
 
-	print STDERR "$query\n" if $verbose;
-
-	my $sql = $dbh->prepare($query);
+	$threep = "" unless $threep;
+	$fivep = "" unless $fivep;	
+	my $ngap =  "-" x ($max_3p - length($threep));
+	$threep = $ngap . $threep if $ngap;
+	$ngap =  "-" x ($max_5p - length($fivep));
+	$fivep = $fivep . $ngap if $ngap;
 	
-	# getting sequence for each blast hit queried #
-	foreach my $hit (sort @$blast_hits_r){
-		
-		# start - end #
-		my $hit_start = $$hit[4];
-		my $hit_end = $$hit[5];
-
-		
-		## flipping to positive strand ##
-		if($hit_start > $hit_end){
-			($hit_start, $hit_end) = flip_se($hit_start, $hit_end);
-			}
-		my $hit_len = $hit_end - $hit_start;
-		
-		# length cutoff #
-		die " ERROR: $$hit[0] not found in spacer length index!\n"
-			unless exists $spacer_len_r->{$$hit[0]};
-		next unless ($hit_end - $hit_start + 1) /  $spacer_len_r->{$$hit[0]}
-			>= $len_cutoff;
-		
-		## adding -extend ##
-		$hit_start = $hit_start - $extend;
-		
-		## accounting for loss of extension on 5' side #
-		my $fiveP_loss = 0;
-		if($hit_start < 0){		 		#need to account for loss of extension
-			$fiveP_loss = abs $hit_start;	# amount negative
-			$hit_start = 0;
-			}
-		
-		# undef of taxon_id & taxon_name #
-		undef $$hit[1] if $$hit[1] eq "";
-		undef $$hit[2] if $$hit[2] eq "";
-		
-		# querying; getting substr of scaffold #
-		$sql->execute( ($hit_start, $hit_len + $extend * 2, $$hit[3], $$hit[1], $$hit[2]) );	
-		my $ret = $sql->fetchall_arrayref();
-		print STDERR " WARNING: a blast subject sequence could not be found for hit: ",
-				join(", ", @$hit), "\n" unless @$ret;
-		
-		# converting extended region to lower case #
-		## protospacer rev-comp if needed ##
-		foreach my $row (@$ret){
-			$$row[0] = spacer2lc($$row[0], $extend, $hit_len, $fiveP_loss, $$hit[4], $$hit[5]);
-			}
-		
-		# writing out protospacers #
-		foreach my $row (@$ret){
-			$$hit[1] = "NULL" unless $$hit[1];
-			$$hit[2] = "NULL" unless $$hit[2];		
-			
-			if($outfh_r){
-				# 5' 
-				print {$$outfh_r[0]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
-				print {$$outfh_r[0]} join("\t", $$row[0][0], @$row[1..$#$row] ), "\n";
-				
-				# proto
-				print {$$outfh_r[1]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
-				print {$$outfh_r[1]} join("\t", $$row[0][1], @$row[1..$#$row] ), "\n";
-
-				# 3' 
-				print {$$outfh_r[2]} join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
-				print {$$outfh_r[2]} join("\t", $$row[0][2], @$row[1..$#$row] ), "\n";							
-				
-				}
-			
-			else{	# write to stdout
-				$$row[0] = join("", @{$$row[0]});
-				print join("___", ">Group$$hit[0]", @$hit[1..5]), "\n";
-				print join("\t", @$row), "\n";
-				}
-			}
-		}  	
+	return ($threep, $fivep);
 	}
 
-sub get_spacer_group_length{
-# getting spacer group length for removing spacers that do not meet length cutoff #
-	my ($dbh, $join_sql, $extra_query) = @_;
+sub add_gaps{
+	my ($proto_seq, $max_len) = @_;
 	
-	# basic query #
-	my $query = "SELECT spacers.spacer_group, spacers.spacer_start, spacers.spacer_end
-from Loci, Spacers
-WHERE Loci.locus_id == Spacers.locus_id
-$join_sql";
-	$query =~ s/[\n\r]+/ /g;
-	
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
+	my $proto_len = length $proto_seq;
+	if($max_len && $proto_len < $max_len){
+		my @gaps = "-" x ($max_len - $proto_len + 1);
+		my $mid = sprintf("%.0f", $proto_len / 2);
+		my $proto1 = substr($proto_seq, 0, $mid);
+		my $proto2 = substr($proto_seq, $mid + 1, $proto_len - $mid + 1);
+		$proto_seq = join("", $proto1, @gaps, $proto2);
+		}
+		
+	return $proto_seq;
+	}
 
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	# making hash (spacer_group => spacer_length) #
-	my %spacer_length;
-	foreach my $row (@$ret){
-		$spacer_length{$$row[0]} = abs($$row[2] - $$row[1]);
+sub flip_proto{
+# flipping proto & extension #
+## protospacer stored as spacer match; need to revcomp ##
+	my ($blast_hits_r) = @_;
+
+	foreach my $entry (@$blast_hits_r){
+		$$entry[7] = revcomp($$entry[7]);		# sseq_full (full proto)
+		my $prime3 = revcomp($$entry[12]);
+		my $prime5 = revcomp($$entry[15]);
+		($$entry[12], $$entry[15]) = ($prime5, $prime3);
+		#$$entry[15] = revcomp($$entry[]);		# 5' end of proto
 		}
 	
-	return \%spacer_length;
 	}
 
-sub spacer2lc{
+sub revcomp{
+	# reverse complements DNA #
+	my $seq = shift;
+	$seq = reverse($seq);
+	$seq =~ tr/[a-z]/[A-Z]/;
+	$seq =~ tr/ACGTNBVDHKMRYSW\.-/TGCANVBHDMKYRSW\.-/;
+	return $seq;
+	}
+
+sub get_PAMs_OLD{
+# getting spacer blast hit sequence & adjacent regions #
+	my ($dbh, $blast_hits_r, $extend, $len_cutoff) = @_;
+
+    # finding max proto length if aligning 5' & 3' #
+	my $max_len;
+    unless($align_pams){
+    	my %proto_lens;
+    	foreach my $entry (@$blast_hits_r){
+        	$proto_lens{ abs($$entry[8] - $$entry[7]) } = 1;
+            }
+        $max_len = max keys %proto_lens;
+        }
+
+	# writing PAMs #
+	foreach my $entry (@$blast_hits_r){
+		# skipping unless protospacer is full length of spacer + extension #
+		# next unless length(proto_seq) == qlen + 5' ext + 3' ext
+		print Dumper $entry;
+		print Dumper length($$entry[16]), $$entry[6], abs($$entry[7] - $$entry[10]), 
+											+ abs($$entry[11] - $$entry[8]); exit;
+		next unless length($$entry[16]) == $$entry[6]
+											+ abs($$entry[7] - $$entry[10]) 
+											+ abs($$entry[11] - $$entry[8]);
+		
+		print Dumper $entry;
+		
+		# making blast hit all caps, extension = lower case #
+		my $frag = pam_caps($entry, $max_len);
+			#print $frag, "\n";
+		
+		# writing fasta of PAMs #
+		map{$_ = "NULL" unless $_} @$entry[0..3];
+		#if($by_group){
+		#	print join("\n",
+		#		  join("__", ">Group." . $$entry[0],
+		#			   @$entry[1..3], 
+		#			   $$entry[16], $$entry[7], $$entry[8]),
+		#		  $frag), "\n";
+		#	}
+		#else{
+		#	print join("\n",
+		#		  join("__", ">Group." . $$entry[0],
+		#		  		@$entry[12..14], @$entry[1..3],
+		#			   $$entry[16],$$entry[7], $$entry[8]),
+		#		  $frag), "\n";			
+		#	}
+		}
+	}
+	
+sub pam_caps_OLD{
+	my ($entry, $max_len) = @_;
+	
+	# getting substrings of 5', proto, & 3' #
+	my $sstart = $$entry[7];
+	my $send = $$entry[8];
+	my $frag = $$entry[9];
+	my $xstart = $$entry[10];
+	my $xend = $$entry[11];
+	
+	#if($sstart > $send){		# flippig start & end
+	#	# sanity check #
+	#	die " ERROR: sstart > send but xstart < xend!\n"
+	#		if $xstart < $xend;
+	#	($sstart,$send) = flip_se($sstart,$send);
+	#	($xstart,$xend) = flip_se($xstart,$xend);
+	#	}
+	
+	## applying -x ##
+	my $substr_start =  $sstart - $xstart - $extend;
+	$substr_start = 0 if $substr_start < 0;
+	$xstart = $sstart - $extend unless $sstart - $extend < $xstart;
+	$xend = $send + $extend unless $send + $extend > $xend;
+
+	## substr of frag ##	
+	my $fiveP = substr($frag, $substr_start, $sstart - $xstart);
+	my $proto = substr($frag, $substr_start + $sstart - $xstart, $send - $sstart);
+	my $threeP = substr($frag, $substr_start + $sstart - $xstart + $send - $sstart, $xend - $send);
+
+	# extensions to lower case; proto to upper #
+	$fiveP =~ tr/A-Z/a-z/;
+	$threeP =~ tr/A-Z/a-z/;
+	$proto =~ tr/a-z/A-Z/;
+	
+	# adding gaps in middle of proto if aligning 5' & 3' #
+	my $proto_len = length $proto;
+	if($max_len && $proto_len < $max_len){
+		my @gaps = "-" x ($max_len - $proto_len + 1);
+		my $mid = sprintf("%.0f", $proto_len / 2);
+		my $proto1 = substr($proto, 0, $mid);
+		my $proto2 = substr($proto, $mid + 1, $proto_len - $mid + 1);
+		$proto = join("", $proto1, @gaps, $proto2);
+		}
+	
+	return join("", $fiveP, $proto, $threeP);
+	}
+
+sub spacer2lc_OLD{
 # converting extension beyond spacer hit to lower case #
 	my ($seq, $extend, $hit_len, $fiveP_loss, $hit_s, $hit_e) = @_;
 
@@ -235,32 +333,90 @@ sub spacer2lc{
 		}
 	}
 
-sub revcomp{
-	# reverse complements DNA #
-	my $seq = shift;
-	
-	$seq = reverse $seq;
-	$seq =~ tr/ACGTNBVDHKMRYSWacgtnbvdhkmrysw\.-/TGCANVBHDMKYRSWtgcanvbhdmkyrsw\.-/;
-	return $seq;
-	}
-
-sub flip_se{
-	my ($start, $end) = @_;
-	return $end, $start;
-	}
-
 sub get_blast_hits{
-# 3 table join #
+# just selecting by group
 	my ($dbh, $join_sql, $extra_query) = @_;
 	
 	# basic query #
-	my $query = "SELECT blast_hits.Spacer_group, blast_hits.Taxon_ID, 
-blast_hits.Taxon_name, blast_hits.Subject, 
-blast_hits.sstart, blast_hits.send 
-from Loci, Spacers, Blast_hits
-WHERE Loci.locus_id == Spacers.locus_id
-AND blast_hits.spacer_group == spacers.spacer_group
-AND blast_hits.CRISPR_array == 'no'
+	my $query = "SELECT 
+c.Group_id, 
+c.S_taxon_name, 
+c.S_taxon_id, 
+c.S_accession,
+c.sseqid,
+c.strand,
+c.qseq_full,
+c.sseq_full,
+c.qseq_full_start, 
+c.qseq_full_end, 
+c.sseq_full_start, 
+c.sseq_full_end,
+c.proto3px,
+c.proto3px_start,
+c.proto3px_end,
+c.proto5px,
+c.proto5px_start,
+c.proto5px_end,
+b.spacer_id,
+a.subtype,
+a.taxon_name, 
+a.taxon_id,
+a.locus_id,
+c.blast_id
+from Loci a, Spacers b, Blast_hits c
+WHERE a.locus_id == b.locus_id
+AND b.spacer_group == c.group_id
+AND c.array_hit == 'no'
+AND c.spacer_DR == 'Spacer'
+$join_sql";
+	
+	$query =~ s/[\n\r]+/ /g;
+	$query .= " AND c.qlen <= $slen_cutoff" if $slen_cutoff;
+	$query = join(" ", $query, $extra_query);
+	$query .= " GROUP BY c.blast_id" unless $by_group;
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries. Did you filter the spacer hits using CLdb_spacerBlastDRFilter.pl?\n"
+		unless $$ret[0];
+	
+	# checking for subject sequence #
+	foreach my $entry (@$ret){
+		die " ERROR: no qseq_full found for $$entry[23]\n"
+			unless $$entry[6];
+		die " ERROR: no sseq_full found for $$entry[23]\n"
+			unless $$entry[7];
+		}
+
+	
+		#print Dumper  @$ret; exit;
+	return $ret;
+	}
+
+sub get_blast_hits_by_group_OLD{
+	my ($dbh, $join_sql, $extra_query) = @_;
+	
+	# basic query #
+	my $query = "SELECT 
+Group_ID,
+S_taxon_name,
+S_taxon_ID,
+S_accession,
+qstart, 
+qend, 
+qlen,
+sstart, 
+send,
+frag, 
+xstart, 
+xend,
+strand
+FROM loci a, Blast_hits c
+WHERE c.array_hit == 'no'
+AND c.spacer_DR == 'Spacer'
 $join_sql";
 	$query =~ s/[\n\r]+/ /g;
 	
@@ -268,34 +424,40 @@ $join_sql";
 	
 	# status #
 	print STDERR "$query\n" if $verbose;
+		#print Dumper $query; exit;
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
 	
+		#print Dumper @$ret; exit;
 	return $ret;
 	}
 
 sub join_query_opts_or{
-	my ($staxon_id_r, $staxon_name_r) = @_;
+	my ($staxon_id_r, $staxon_name_r, $sacc_r) = @_;
 	
-	return "" unless @$staxon_id_r || @$staxon_name_r;
+	return "" unless @$staxon_id_r || @$staxon_name_r || @$sacc_r;
 	
 	# adding quotes #
 	map{ s/"*(.+)"*/"$1"/ } @$staxon_id_r;
 	map{ s/"*(.+)"*/"$1"/ } @$staxon_name_r;	
+	map{ s/"*(.+)"*/"$1"/ } @$sacc_r;	
 	
 	if(@$staxon_id_r && @$staxon_name_r){
-		return join("", " AND (blast_hits.taxon_id IN (", join(", ", @$staxon_id_r),
-						") OR blast_hits.taxon_name IN (", join(", ", @$staxon_name_r),
+		return join("", " AND (c.S_taxon_id IN (", join(", ", @$staxon_id_r),
+						") OR c.S_taxon_name IN (", join(", ", @$staxon_name_r),
 						"))");
 		}
 	elsif(@$staxon_id_r){
-		return join("", " AND blast_hits.staxon_id IN (", join(", ", @$staxon_id_r), ")");
+		return join("", " AND c.S_taxon_id IN (", join(", ", @$staxon_id_r), ")");
 		}
 	elsif(@$staxon_name_r){
-		return join("", " AND blast_hits.staxon_name IN (", join(", ", @$staxon_name_r), ")");	
+		return join("", " AND c.S_taxon_name IN (", join(", ", @$staxon_name_r), ")");	
+		}
+	elsif(@$sacc_r){
+		return join("", " AND c.S_accession IN (", join(", ", @$sacc_r), ")");	
 		}
 	}
 
@@ -306,7 +468,7 @@ sub join_query_opts{
 	return "" unless @$vals_r;	
 	
 	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
+	return join("", " AND a.$cat IN (", join(", ", @$vals_r), ")");
 	}
 
 sub path_by_database{
@@ -332,7 +494,9 @@ CLdb_getPAMs.pl [flags] > PAM-spacer.fna
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -340,45 +504,66 @@ CLdb_getPAMs.pl [flags] > PAM-spacer.fna
 
 =over
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query
+=item -query  <char>
 
 Extra sql to refine the query.
 
-=item -staxon_id
+=item -staxon_id  <char>
 
 BLAST subject taxon_id (>1 argument allowed)
 
-=item -staxon_name
+=item -staxon_name  <char>
 
 BLAST subject taxon_name (>1 argument allowed)
 
-=item -length
+=item -saccession  <char>
 
-Length cutoff for blast hit (>=; fraction of spacer length). [1]
+BLAST accession number (>1 argument allowed)
 
-=item -x
+=item -align  <bool>
 
-Extension beyond spacer blast to check for PAMs (bp). [20]
+Align the 5' & 3' end of protospacers by adding gaps in
+the middle of the protospacer. [TRUE]
 
-=item -parse
+=item -group  <bool>
 
-Provide a file name prefix to parse proto spacer and 5'/3' extensions into differnt fasta files.
+Get protospacers by spacer group (ie. de-replicated spacers). [TRUE]
 
-=item -v	Verbose output. [FALSE]
+=item -region  <int>
 
-=item -h	This help message
+Write just the 3' (-r 3) or 5' (-r 5) region adjacent to protospacer. 
+
+=item -qlength  <int>
+
+Length cutoff for blast hit (>=; fraction of spacer length). [0.66]
+
+=item -slength  <int>
+
+Spacer max total length (<=; bp). [ ]
+
+=item -x  <int>
+
+Extension beyond spacer blast to check for PAMs (bp). [10]
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>	
+
+This help message
 
 =back
 
@@ -388,57 +573,73 @@ perldoc CLdb_getPAMs.pl
 
 =head1 DESCRIPTION
 
-Get sequences of spacer blast hits plus adjacent nucleotides
-to look for PAMs. Only spacer blast hits that were not found
-to fall into a CRISPR array are queried.
+Get sequences of protospacers (found via 
+blast hits) plus adjacent nucleotides
+to look for PAMs.
+
+Only spacer blast hits that were not found
+to fall into a CRISPR array are queried
+(must run CLdb_spacerBlastDRFilter.pl 1st!).
+
 
 =head2 Output
 
 The spacer blast hit sequence is capitalized, while the 
 extended region around the hit is lower case. 
 
-Spacer-PAM sequences are named as following:
-"Spacer_group"___"Subject_Taxon_ID"___"Subject_Taxon_name"___"Subject_scaffold_name"___"blast_hit_start"___"blast_hit_end"
+=head3 Default sequence naming (by spacer group)
+
+"Spacer_group"__"cli#"__"spacer_ID"__"Subject_Taxon_Name"__
+"Subject_Taxon_ID"__"Subject_scaffold_name"__"protospacer_start"__"protospacer_end"__"strand"
+
+=head3 Naming if '-g' flag (not by spacer group; by individual spacer)
+
+"Spacer_group"__"Subject_Taxon_Name"__"Subject_Taxon_ID"
+__"Subject_scaffold_name"__"protospacer_start"__"protospacer_end"__"strand"
 
 "Subject" = subject in the spacer blast.
 
-"NULL" will be used if "Subject_Taxon_ID" or "Subject_Taxon_name"
-is not present in CLdb.
-
-By default, only full-length spacer blast hits
-are used (change with '-l').
+"NULL" will be used if any values are NULL in CLdb.
 
 =head2 Requirements for analysis
 
+=head3 Orientation of the written sequences 
+
+The protospacer (& adjacent) regions as oriented so that 
+the 3' end is on the left. The sequence is actually the complement of
+the protospacer. 
+
 =over
 
-=item * Spacer blasting must be done prior
-
-=item * Subject sequences of spacer blast hits must be in CLdb
+=item * Spacer blasting with CLdb_spacerBlastGenome.pl or CLdb_spacerBlastDB.pl must be done prior
 
 =back
 
 =head1 EXAMPLES
 
-=head2 Spacer-PAMs for all hits
+=head2 Protospacers for all hits (by spacer group)
 
-CLdb_getPAMs.pl -d CLdb.sqlite
+CLdb_getPAMs.pl -d CLdb.sqlite > all_proto.fasta
 
-=head2 Spacer-PAMs for just subtype I-B 
+=head2 Protospacers for all hits (each identical spacer in each spacer group)
 
-CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" > spacer_PAM_I-B.fna
+CLdb_getPAMs.pl -d CLdb.sqlite -g > all_proto_each.fasta
 
-=head2 Spacer-PAMs for just subtype I-B, smaller extendion
+=head2 Protospacers for just spacers in subtype I-B 
 
-CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" -x 10 > spacer_PAM_I-B.fna
+CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" > I-B_proto.fasta
 
-=head2 Spacer-PAMs to just 2 subject taxon_names
+=head2 Protospacers for just subtype I-B smaller extention
 
-CLdb_getPAMs.pl -d CLdb.sqlite -staxon_name ecoli salmonela > spacer_PAM_E-S.fna
+CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" -x 5 > I-B_proto.fasta
 
-=head2 Spacer-PAMs to just 2 subject taxon_names
+=head2 Protospacers from just 2 subject taxon_names
 
-CLdb_getPAMs.pl -d CLdb.sqlite -sub I-A -parse I-A_output
+CLdb_getPAMs.pl -d CLdb.sqlite -staxon_name ecoli salmonela > proto_coli_sal.fasta
+
+=head2 Just the 3' region adjacent to the protospacer
+
+CLdb_getPAMs.pl -d CLdb.sqlite -subtype I-B" -r 3 > I-B_proto_3prime.fasta
 
 =head1 AUTHOR
 

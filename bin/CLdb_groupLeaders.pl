@@ -176,7 +176,9 @@ CLdb_groupLeaders.pl [flags]
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -184,15 +186,21 @@ CLdb_groupLeaders.pl [flags]
 
 =over
 
-=item -s 	Cluster spacers
+=item -cluster  <float>
 
-=item -c 	CD-HIT-EST cluster cutoff. [1]
+CD-HIT-EST cluster cutoff. [1]
 
-=item -p 	Directory where intermediate files are written. [$CLdb_HOME/grouping/]
+=item -path  <char>
 
-=item -v	Verbose output
+Directory where intermediate files are written. [$CLdb_HOME/grouping/]
 
-=item -h	This help message
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message.
 
 =back
 

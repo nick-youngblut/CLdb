@@ -185,7 +185,7 @@ HERE
 DROP TABLE IF EXISTS blast_hits;
 
 CREATE TABLE blast_hits (
-blast_id    TEXT    NOT NULL,
+blast_id	INTEGER	PRIMARY KEY,
 spacer_DR    TEXT    NOT NULL,
 Group_ID    TEXT    NOT NULL,
 S_taxon_ID    TEXT,
@@ -194,23 +194,34 @@ S_accession    TEXT,
 S_GI    TEXT,
 sseqid    TEXT    NOT NULL,
 pident    REAL    NOT NULL,
-len    INTEGER    NOT NULL,
 mismatch    INTEGER    NOT NULL,
-gapopen    INTEGER    NOT NULL,
+gaps    INTEGER    NOT NULL,
+evalue    TEXT    NOT NULL,
+bitscore    INTEGER    NOT NULL,
+strand	INTEGER	NOT NULL,
+len    INTEGER    NOT NULL,
+qlen	INTEGER	NOT NULL,
+slen    INTEGER    NOT NULL,
+qseq	TEXT,
+sseq	TEXT,
 qstart    INTEGER    NOT NULL,
 qend    INTEGER    NOT NULL,
 sstart    INTEGER    NOT NULL,
 send    INTEGER    NOT NULL,
-evalue    TEXT    NOT NULL,
-bitscore    INTEGER    NOT NULL,
-slen    INTEGER    NOT NULL,
-qlen	INTEGER	NOT NULL,
-qseq	TEXT,
-frag	TEXT,
-xstart	INTEGER,
-xend	INTEGER,
+qseq_full	TEXT,
+sseq_full	TEXT,
+qseq_full_start	INTEGER,
+qseq_full_end	INTEGER,
+sseq_full_start INTEGER,
+sseq_full_end 	INTEGER,
+proto3px	TEXT,
+proto3px_start	INTEGER,
+proto3px_end	INTEGER,
+proto5px	TEXT,
+proto5px_start	INTEGER,
+proto5px_end	INTEGER,
 array_hit    TEXT,
-UNIQUE( blast_id )
+UNIQUE(Group_ID, S_taxon_ID, S_taxon_name, S_accession, sseqid, sstart, send)
 ON CONFLICT REPLACE
 );
 
@@ -310,19 +321,19 @@ CLdb_makeDB.pl [options] [DATABASE_name]
 
 =over
 
-=item -r  <bool>
+=item -replace  <bool>
 
 Replace existing database.
 
-=item -t  <char>
+=item -table  <char>
 
 Table(s) to keep as is (if they exist). ["leaders" "genes"]
 
-=item -d  <bool>
+=item -drop  <bool>
 
 Drop all tables. [FALSE]
 
-=item -h  <bool>
+=item -help  <bool>
 
 This help message
 

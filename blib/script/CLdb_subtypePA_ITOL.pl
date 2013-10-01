@@ -195,7 +195,9 @@ CLdb_subtypePA_ITOL.pl [flags] > subtype_PA.meta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -203,37 +205,41 @@ CLdb_subtypePA_ITOL.pl [flags] > subtype_PA.meta
 
 =over
 
-=item -colors
+=item -colors  <char>
 
 For providing user-defined hexidecimal colors (>= 1 argument).
 
-=item -abundance
+=item -abundance  <bool>
 
 Provide counts of subtypes per taxon instead of binary pres-abs? [FALSE]
 
-=item -subtype
+=item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
 
-=item -taxon_id
+=item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
 
-=item -taxon_name
+=item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -group
-
-Get array elements de-replicated by group (ie. all uniqe sequences).
-
-=item -query
+=item -query  <char>
 
 Extra sql to refine which sequences are returned.
 
-=item -v 	Verbose output. [FALSE]
+=item -group  <bool>
 
-=item -h	This help message
+Get array elements de-replicated by group (ie. all uniqe sequences). [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

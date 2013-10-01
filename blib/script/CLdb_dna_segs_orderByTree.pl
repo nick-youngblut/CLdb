@@ -314,7 +314,7 @@ CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
 
 =over
 
-=item -tree
+=item -tree  <char>
 
 Tree file name (nexus or newick).
 
@@ -324,21 +324,25 @@ Tree file name (nexus or newick).
 
 =over
 
-=item -format
+=item -format  <char>
 
 Tree file format. [newick]
 
-=item -name
+=item -name  <char>
 
 Output file name for pruned tree. ['-tree' + '_prn.nwk']
 
-=item -xlims
+=item -xlims  <bool>
 
-Ordering xlims table instead of dna_segs. An editted tree will not be written.
+Ordering xlims table instead of dna_segs. An editted tree will not be written. [FALSE]
 
-=item -v 	Verbose output. [FALSE]
+=item -verbose  <bool>
 
-=item -h	This help message
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 

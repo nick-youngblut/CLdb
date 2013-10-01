@@ -94,7 +94,7 @@ df2list.compare <- function(compare, dna_segs.tbl, color_scheme="grey"){
 		compare.l[[i]] <- compare[compare$dna_segs_id1==ii, ]
 		
 		if(nrow(compare.l[[i]]) == 0){
-			compare.l[[i]][1,] <- c(rep(0, 4), 1, rep(NA, 4)) 
+			compare.l[[i]][1,] <- c(rep(0, 4), 1, rep(NA, 5)) 
 			}
 	
 		compare.l[[i]]$col <- apply_color_scheme(compare.l[[i]]$col, color_scheme=color_scheme)

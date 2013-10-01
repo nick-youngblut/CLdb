@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_SUMMARY 1"
-.TH CLDB_SUMMARY 1 "2013-09-16" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_SUMMARY 1 "2013-09-22" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,30 +136,29 @@ CLdb_summary.pl \-\- summary stats on CLdb
 CLdb_summary.pl [flags] > summary.txt
 .SS "Required flags"
 .IX Subsection "Required flags"
-.IP "\-d 	CLdb database." 4
-.IX Item "-d 	CLdb database."
+.IP "\-database  <char>" 4
+.IX Item "-database  <char>"
+CLdb database.
 .SS "Optional flags"
 .IX Subsection "Optional flags"
-.PD 0
-.IP "\-subtype" 4
-.IX Item "-subtype"
-.PD
-Group summary by subtype?
-.IP "\-id" 4
-.IX Item "-id"
-Group summary by taxon_id?
-.IP "\-name" 4
-.IX Item "-name"
-Group summary by taxon_name?
-.IP "\-cutoff" 4
-.IX Item "-cutoff"
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
-.IP "\-v 	Verbose output. [\s-1FALSE\s0]" 4
-.IX Item "-v 	Verbose output. [FALSE]"
-.PD 0
-.IP "\-h	This help message" 4
-.IX Item "-h	This help message"
-.PD
+.IP "\-subtype  <bool>" 4
+.IX Item "-subtype  <bool>"
+Group summary by subtype? [\s-1FALSE\s0]
+.IP "\-id  <bool>" 4
+.IX Item "-id  <bool>"
+Group summary by taxon_id? [\s-1FALSE\s0]
+.IP "\-name  <bool>" 4
+.IX Item "-name  <bool>"
+Group summary by taxon_name? [\s-1FALSE\s0]
+.IP "\-cutoff  <float>" 4
+.IX Item "-cutoff  <float>"
+Spacer/DR clustering cutoffs to summarize (range:0.8\-1; >=1 argument). [1]
+.IP "\-verbose  <bool>" 4
+.IX Item "-verbose  <bool>"
+Verbose output. [\s-1FALSE\s0]
+.IP "\-help  <bool>" 4
+.IX Item "-help  <bool>"
+This help message
 .SS "For more information:"
 .IX Subsection "For more information:"
 perldoc CLdb_summary.pl
@@ -167,7 +166,31 @@ perldoc CLdb_summary.pl
 .IX Header "DESCRIPTION"
 Get summary stats on CLdb.
 .PP
-The output is a tab-delimited file for easy parsing.
+The output is a tab-delimited file for easy parsing and plotting.
+.SS "Output description"
+.IX Subsection "Output description"
+The 1st column is the CLdb table (e.g. loci, spacers, leaders).
+.PP
+Grouping columns (e.g. subtype or taxon_name) are the subsequent
+columns.
+.PP
+Spacer and \s-1DR\s0 groups (clusters) are defined as having exactly the 
+same sequence (reverse-complemented sequences are considered the 
+same, but sequence length must match).
+.PP
+Next comes table-specific categories ('\s-1NA\s0' means not applicable):
+.IP "Loci: operon_status array_status" 4
+.IX Item "Loci: operon_status array_status"
+.PD 0
+.IP "Spacers: either all spacers ('All) or by group ('num_groups' 'clustering cutoff')" 4
+.IX Item "Spacers: either all spacers ('All) or by group ('num_groups' 'clustering cutoff')"
+.IP "DRs: either all DRs ('All) or by group ('num_groups' 'clustering cutoff')" 4
+.IX Item "DRs: either all DRs ('All) or by group ('num_groups' 'clustering cutoff')"
+.IP "Genes: in operon? (ie. operon start-end defined in loci table)" 4
+.IX Item "Genes: in operon? (ie. operon start-end defined in loci table)"
+.IP "Leaders: none" 4
+.IX Item "Leaders: none"
+.PD
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 .SS "Total summary"

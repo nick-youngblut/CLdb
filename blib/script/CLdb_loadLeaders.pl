@@ -8,6 +8,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+use List::Util qw/min max/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -80,19 +81,19 @@ sub update_loci_table{
 
 	# preparing sql #	
 	my $cmd = "UPDATE Loci SET 
-locus_start=?, locus_end=?, operon_start=?, operon_end=?, array_start=?, array_end=? 
-where locus_id = ?";
+locus_start=?, locus_end=? where locus_id = ?";
 	$cmd =~ s/[\r\n]//g;
 	my $sql = $dbh->prepare($cmd);
 
 	# updating #
-	my $cnt;
+	my $cnt = 0;
 	foreach my $locus_id (keys %$fasta_aln_r){
 		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
-		for my $i (0..$#${$loci_tbl_r->{$locus_id}}){
-			$sql->bind_param( $i+1, ${$loci_tbl_r->{$locus_id}}[$i] );
-			}
-		$sql->bind_param($#${$loci_tbl_r->{$locus_id}} + 1, $locus_id_e);
+				
+		$sql->bind_param( 1, ${$loci_tbl_r->{$locus_id_e}}[0] );		# updating locus start
+		$sql->bind_param( 2, ${$loci_tbl_r->{$locus_id_e}}[1] );		# updating locus end
+
+		$sql->bind_param(3, $locus_id_e);
 		$sql->execute( );
 		
 		if($DBI::err){
@@ -101,7 +102,6 @@ where locus_id = ?";
 		else{ $cnt++; }
 		}
 
-	
 	print STDERR "...Number of entries updated in loci table: $cnt\n"
 		unless $verbose;
 	}
@@ -162,7 +162,9 @@ sub adjust_locus_start_end{
 			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
 			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);	
 			}
-		}		
+		}	
+		
+		#print Dumper $loci_tbl_r; exit;	
 	}
 
 sub reset_locus_start_end{
@@ -172,47 +174,54 @@ sub reset_locus_start_end{
 	foreach my $locus_id (keys %$fasta_aln_r){			# each locus of interest
 		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
 
-		# checking for operon & array start-end #
-		next unless ${$loci_tbl_r->{$locus_id_e}}[2] && ${$loci_tbl_r->{$locus_id_e}}[4];
+		# checking for operon or array start-end #
+		die " ERROR: no array_start or operon_start found in loci table for cli.$locus_id_e!"
+			unless ${$loci_tbl_r->{$locus_id_e}}[2] || ${$loci_tbl_r->{$locus_id_e}}[4];
 		
 		# if just array or operon, give locus those values #
-		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){
-			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using operon start
-			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 		
-			}
-		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){
-			${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-			${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using array end 		
-			}
-		
-		
-		# adjusting using operon & array #
-		if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
-			 ${$loci_tbl_r->{$locus_id_e}}[1]){
-			if( ${$loci_tbl_r->{$locus_id_e}}[2] < 		# operon start is smaller, using 
-				 ${$loci_tbl_r->{$locus_id_e}}[4]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end 
-				 }
-			else{
-				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	# using array start
-				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	# using operon end
+		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){			# if no operon, using array
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+				}
+			else{											# locus start > end
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
 				}
 			}
-
-		else{											# locus start > end
-			if( ${$loci_tbl_r->{$locus_id_e}}[2] > 		# operon start is greater, using 
-				 ${$loci_tbl_r->{$locus_id_e}}[4]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[2];	# using operon start
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[5];	# using array end
-				 }
-			else{
-				${$loci_tbl_r->{$locus_id_e}}[0] = ${$loci_tbl_r->{$locus_id_e}}[4];	
-				${$loci_tbl_r->{$locus_id_e}}[1] = ${$loci_tbl_r->{$locus_id_e}}[3];	
+		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){			# if no array start'; using operon
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+				}
+			else{											# locus start > end
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
+				}
+			}
+		else{		 # both array and operon
+			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
+			
+			# adjusting using operon & array #
+			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id_e}}[1]){
+				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;				
+				}
+			else{											# locus start > end
+				${$loci_tbl_r->{$locus_id_e}}[0] = $max;
+				${$loci_tbl_r->{$locus_id_e}}[1] = $min;
 				}
 			}	
 		}
-		#print Dumper $loci_tbl_r; exit;
+		#print Dumper "here", $loci_tbl_r; exit;
 	}
 
 sub flip_se{
@@ -324,7 +333,6 @@ sub trim_se{
 		$fasta_aln_r->{$locus}{"seq"} =~ s/-//g if $rm_gap;
 		}
 		
-		#print Dumper $fasta_aln_r->{"cli.85"}; exit;
 		#print Dumper %$fasta_aln_r; exit;
 	}
 
@@ -347,7 +355,7 @@ sub count_gaps_old{
 	elsif($se eq "end"){
 		$seq = substr($seq, $trim_length - 1);
 		}
-	print Dumper $seq;	
+	#print Dumper $seq;	
 		
 	my $ngap = 0;
 	$ngap++ while $seq =~ /-/g;
@@ -559,7 +567,9 @@ CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =over
 
-=item -d 	CLdb database.
+=item -database  <char>
+
+CLdb database.
 
 =back
 
@@ -567,13 +577,21 @@ CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
 
 =over
 
-=item -t 	Number of bp (& gaps) to trim of end of alignment. [0]
+=item -trim  <int>
 
-=item -g 	Leave gaps in leader sequence entered into the DB? [TRUE] 
+Number of bp (& gaps) to trim of end of alignment. [0]
 
-=item -v	Verbose output. [FALSE]
+=item -gap  <bool>
 
-=item -h	This help message
+Leave gaps in leader sequence entered into the DB? [TRUE] 
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
 
 =back
 
@@ -604,7 +622,7 @@ degeneracy.
 
 =head2 Triming off the 50bp of unconserved alignment 
 
-CLdb_loadLeaders.pl -d CLdb.sqlite test_leader_Ib.fna test_leader_Ib_aln.fna -t 50
+CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
 
 =head1 AUTHOR
 
