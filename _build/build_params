@@ -150,6 +150,7 @@ do{ my $x = [
                              './bin/CLdb_groupLeaders.pl',
                              './bin/CLdb_loadGenes.pl',
                              './bin/CLdb_findBrokenArrays.pl',
+                             './bin/CLdb_spacerBlastGenome_v1.pl',
                              './bin/CLdb_dna_segs_formatColor.pl',
                              './bin/CLdb_subtypePA_ITOL.pl',
                              './bin/CLdb_delete.pl',

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "CLDB_GETPAMS 1"
-.TH CLDB_GETPAMS 1 "2013-09-19" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH CLDB_GETPAMS 1 "2013-09-30" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -168,10 +168,16 @@ Align the 5' & 3' end of protospacers by adding gaps in
 the middle of the protospacer. [\s-1TRUE\s0]
 .IP "\-group  <bool>" 4
 .IX Item "-group  <bool>"
-Get protospacers by spacer group (i.e. de-replicated spacers). [\s-1FALSE\s0]
-.IP "\-length  <int>" 4
-.IX Item "-length  <int>"
-Length cutoff for blast hit (>=; fraction of spacer length). [1]
+Get protospacers by spacer group (ie. de-replicated spacers). [\s-1TRUE\s0]
+.IP "\-region  <int>" 4
+.IX Item "-region  <int>"
+Write just the 3' (\-r 3) or 5' (\-r 5) region adjacent to protospacer.
+.IP "\-qlength  <int>" 4
+.IX Item "-qlength  <int>"
+Length cutoff for blast hit (>=; fraction of spacer length). [0.66]
+.IP "\-slength  <int>" 4
+.IX Item "-slength  <int>"
+Spacer max total length (<=; bp). [ ]
 .IP "\-x  <int>" 4
 .IX Item "-x  <int>"
 Extension beyond spacer blast to check for PAMs (bp). [10]
@@ -186,55 +192,63 @@ This help message
 perldoc CLdb_getPAMs.pl
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Get sequences of spacer blast hits plus adjacent nucleotides
+Get sequences of protospacers (found via 
+blast hits) plus adjacent nucleotides
 to look for PAMs.
 .PP
 Only spacer blast hits that were not found
-to fall into a \s-1CRISPR\s0 array are queried.
-.PP
-By default, only full-length spacer blast hits
-are used (change with '\-l').
+to fall into a \s-1CRISPR\s0 array are queried
+(must run CLdb_spacerBlastDRFilter.pl 1st!).
 .SS "Output"
 .IX Subsection "Output"
 The spacer blast hit sequence is capitalized, while the 
 extended region around the hit is lower case.
 .PP
-\fIDefault sequence naming\fR
-.IX Subsection "Default sequence naming"
+\fIDefault sequence naming (by spacer group)\fR
+.IX Subsection "Default sequence naming (by spacer group)"
 .PP
-\&\*(L"Spacer_group\*(R"_\|_\*(L"spacer_ID\*(R"_\|_\*(L"Query_taxon_name\*(R"_\|_\*(L"Query_taxon_ID\*(R"_\|_
-\&\*(L"Subject_Taxon_Name\*(R"_\|_\*(L"Subject_Taxon_ID\*(R"_\|_\*(L"Subject_scaffold_name\*(R"_\|_\*(L"blast_hit_start\*(R"_\|_\*(L"blast_hit_end\*(R"
+\&\*(L"Spacer_group\*(R"_\|_\*(L"cli#\*(R"_\|_\*(L"spacer_ID\*(R"_\|_\*(L"Subject_Taxon_Name\*(R"_\|_
+\&\*(L"Subject_Taxon_ID\*(R"_\|_\*(L"Subject_scaffold_name\*(R"_\|_\*(L"protospacer_start\*(R"_\|_\*(L"protospacer_end\*(R"_\|_\*(L"strand\*(R"
 .PP
-\fINaming for '\-g' flag (by spacer group)\fR
-.IX Subsection "Naming for '-g' flag (by spacer group)"
+\fINaming if '\-g' flag (not by spacer group; by individual spacer)\fR
+.IX Subsection "Naming if '-g' flag (not by spacer group; by individual spacer)"
 .PP
-\&\*(L"Spacer_group\*(R"_\|_\*(L"spacer_ID\*(R"_\|_\*(L"Subject_Taxon_Name\*(R"_\|_\*(L"Subject_Taxon_ID\*(R"
-_\|_\*(L"Subject_scaffold_name\*(R"_\|_\*(L"blast_hit_start\*(R"_\|_\*(L"blast_hit_end\*(R"
+\&\*(L"Spacer_group\*(R"_\|_\*(L"Subject_Taxon_Name\*(R"_\|_\*(L"Subject_Taxon_ID\*(R"
+_\|_\*(L"Subject_scaffold_name\*(R"_\|_\*(L"protospacer_start\*(R"_\|_\*(L"protospacer_end\*(R"_\|_\*(L"strand\*(R"
 .PP
 \&\*(L"Subject\*(R" = subject in the spacer blast.
 .PP
 \&\*(L"\s-1NULL\s0\*(R" will be used if any values are \s-1NULL\s0 in CLdb.
 .SS "Requirements for analysis"
 .IX Subsection "Requirements for analysis"
+\fIOrientation of the written sequences\fR
+.IX Subsection "Orientation of the written sequences"
+.PP
+The protospacer (& adjacent) regions as oriented so that 
+the 3' end is on the left. The sequence is actually the complement of
+the protospacer.
 .IP "\(bu" 4
 Spacer blasting with CLdb_spacerBlastGenome.pl or CLdb_spacerBlastDB.pl must be done prior
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
-.SS "Protospacers for all hits"
-.IX Subsection "Protospacers for all hits"
+.SS "Protospacers for all hits (by spacer group)"
+.IX Subsection "Protospacers for all hits (by spacer group)"
 CLdb_getPAMs.pl \-d CLdb.sqlite > all_proto.fasta
-.SS "Protospacers for all hits (hits grouped by spacer group)"
-.IX Subsection "Protospacers for all hits (hits grouped by spacer group)"
-CLdb_getPAMs.pl \-d CLdb.sqlite \-g > all_proto_grouped.fasta
+.SS "Protospacers for all hits (each identical spacer in each spacer group)"
+.IX Subsection "Protospacers for all hits (each identical spacer in each spacer group)"
+CLdb_getPAMs.pl \-d CLdb.sqlite \-g > all_proto_each.fasta
 .SS "Protospacers for just spacers in subtype I\-B"
 .IX Subsection "Protospacers for just spacers in subtype I-B"
 CLdb_getPAMs.pl \-d CLdb.sqlite \-subtype I\-B" > I\-B_proto.fasta
-.SS "Protospacers for just subtype I\-Bl smaller extention"
-.IX Subsection "Protospacers for just subtype I-Bl smaller extention"
+.SS "Protospacers for just subtype I\-B smaller extention"
+.IX Subsection "Protospacers for just subtype I-B smaller extention"
 CLdb_getPAMs.pl \-d CLdb.sqlite \-subtype I\-B" \-x 5 > I\-B_proto.fasta
 .SS "Protospacers from just 2 subject taxon_names"
 .IX Subsection "Protospacers from just 2 subject taxon_names"
 CLdb_getPAMs.pl \-d CLdb.sqlite \-staxon_name ecoli salmonela > proto_coli_sal.fasta
+.SS "Just the 3' region adjacent to the protospacer"
+.IX Subsection "Just the 3' region adjacent to the protospacer"
+CLdb_getPAMs.pl \-d CLdb.sqlite \-subtype I\-B" \-r 3 > I\-B_proto_3prime.fasta
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Nick Youngblut <nyoungb2@illinois.edu>

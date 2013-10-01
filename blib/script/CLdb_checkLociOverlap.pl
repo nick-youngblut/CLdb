@@ -195,7 +195,7 @@ Overlapping entries will be written to STDOUT.
 
 =head2 Usage:
 
-CLdb_checkLociOverlap.pl -d CL.sqlite 
+CLdb_checkLociOverlap.pl -d CLdb.sqlite 
 
 =head1 AUTHOR
 

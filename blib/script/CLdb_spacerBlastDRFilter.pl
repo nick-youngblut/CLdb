@@ -20,7 +20,7 @@ my $full_length = 0.7;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "range=i" => \$range,			# range beyond hit to consider overlap
-	   "full=f" => \$full_length, 		# just full length hits
+	   "full=f" => \$full_length, 		# DRs hit length must be x fraction of total query length
 	   "DR=i" => \$DR_cnt,				# number of sides that a DR must hit (adjacent to spacer)
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -48,10 +48,17 @@ sub filter_spacer_blast{
 	# selecting spacers #
 	# selecting DRs from DB #
 	my $q = "SELECT 
-S_taxon_id, S_taxon_name, S_accession, 
-sseqid, sstart, send, 
-qstart, qend, qlen, 
-array_hit, blast_id
+S_taxon_id, 
+S_taxon_name, 
+S_accession, 
+sseqid,
+sstart, 
+send, 
+qstart, 
+qend, 
+qlen, 
+array_hit, 
+blast_id
 FROM blast_hits
 WHERE spacer_DR='Spacer'";
 	$q =~ s/\n/ /g;
@@ -137,9 +144,15 @@ sub make_DR_itrees{
 	
 	# selecting DRs from DB #
 	my $q = "SELECT 
-S_taxon_id, S_taxon_name, S_accession, 
-sseqid, sstart, send,
-qstart, qend, qlen,
+S_taxon_id, 
+S_taxon_name, 
+S_accession, 
+sseqid, 
+sstart, 
+send,
+qstart, 
+qend, 
+qlen,
 Group_ID
 FROM blast_hits
 WHERE spacer_DR='DR'";

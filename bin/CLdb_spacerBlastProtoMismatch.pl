@@ -20,7 +20,8 @@ my (@staxon_id, @staxon_name, @sacc); 		# blast subject query refinement
 my $extra_query = "";
 my $len_cutoff = 1;
 my $proto_region = 3;	
-my ($pam_regex, @seed_region);
+my @seed_region = (1,8);
+my ($pam_regex);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
@@ -36,7 +37,7 @@ GetOptions(
 	   "group" => \$by_group,				# just per spacer group
 	   "pam=s" => \$pam_regex,				# pam regex for screening
 	   "region=s" => \$proto_region,		# proto region to look for pam; 3' by default
-	   "seed=i{2,2}" => \@seed_region, 		# seed region (eg. 1,8 or 8-1)
+	   "seed=i{2,2}" => \@seed_region, 		# seed region (eg. 1,8)
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -46,6 +47,7 @@ die " ERROR: provide a database file name!\n"
 	unless $database_file;
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
+map{$_--} @seed_region;
 
 ### MAIN	
 # connect 2 db #
@@ -61,17 +63,17 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 $join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name, \@sacc);
 
 # getting blast hits #
-my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
+my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query, $len_cutoff);
 
 # flipping proto & extension #
 ## protospacer stored as spacer match; need to revcomp ##
 flip_proto($blast_hits_r);
 
 # screen by user provided pam #
-#screen_by_pam($blast_hits_r, $pam_regex, $proto_region);
+screen_by_pam($blast_hits_r, $pam_regex, $proto_region) if $pam_regex;
 
 # make mismatch table #
-make_mismatch_table($blast_hits_r);
+make_mismatch_table($blast_hits_r, \@seed_region);
 
 
 ### Subroutines
@@ -79,7 +81,7 @@ sub make_mismatch_table{
 # making a mismatch table; determining number of mismatches between spacer & protospacer #
 ## mismatches aligned by 5' end of protospacer ##
 ## writing out 
-	my ($blast_hits_r) = @_;
+	my ($blast_hits_r, $seed_region_r) = @_;
 	
 	# getting max spacer-proto length #
 	my $max_len = 0;
@@ -100,16 +102,24 @@ sub make_mismatch_table{
 	
 	# parsing by seed & non-seed #
 	#my %mm_region; 		# mismatch by region (seed, non-seed)
-	print STDERR "Total number of mismatches: ", sum(@mismatch_sum), "\n";
-	print STDERR "Total seed region mismatches: ", sum(@mismatch_sum[0..7]), "\n";
-	print STDERR "Total non-seed region mismatches: ", sum(@mismatch_sum[8..$#mismatch_sum]), "\n";	
+	print STDERR "Total number of mismatches: ", 
+		sum(@mismatch_sum), "\n";
+	print STDERR "Total seed region mismatches: ", 
+		sum(@mismatch_sum[$$seed_region_r[0]..$$seed_region_r[1]]), "\n";
+	print STDERR "Total non-seed region mismatches: ", 
+		sum(@mismatch_sum[($$seed_region_r[1]+1)..$#mismatch_sum]), "\n";	
 
-	print STDERR "PercentID total: ", 
-			(1 - sum(@mismatch_sum) / $total_len) * 100, "\n";
-	print STDERR "PercentID seed: ", 
-			(1 - sum(@mismatch_sum[0..7]) / (8 * scalar @$blast_hits_r)) * 100, "\n";
-	print STDERR "PercentID non-seed: ", 
-			(1 - sum(@mismatch_sum[8..$#mismatch_sum]) / ($total_len - (8 * scalar @$blast_hits_r))) * 100, "\n";	
+	print STDERR "% SequenceID total: ", 
+			sprintf("%.2f",  (1 - sum(@mismatch_sum) / $total_len) * 100),
+			"\n";
+	print STDERR "% SequenceID seed: ", 
+			sprintf("%.2f", (1 - sum(@mismatch_sum[$$seed_region_r[0]..$$seed_region_r[1]]) / 
+				(($$seed_region_r[1]+1) * scalar @$blast_hits_r)) * 100),
+			"\n";
+	print STDERR "% SequenceID non-seed: ", 
+			sprintf("%.2f", (1 - sum(@mismatch_sum[($$seed_region_r[1]+1)..$#mismatch_sum]) / 
+				($total_len - (($$seed_region_r[1]+1) * scalar @$blast_hits_r))) * 100),
+			"\n";	
 	
 	
 	#print Dumper @mismatch_sum; 
@@ -138,29 +148,32 @@ sub calc_mismatches{
 			$$mismatch_sum_r[$i]++;
 			}
 		}
-	# adding zeros if neede #
-	for my $i (0..($max_len -1)){ $mismatch[$i] = 0 unless $mismatch[$i]; }
+		
+	# adding zeros & NAs if needed; not added to sequence length #
+	foreach (@mismatch){ $_ = 0 unless $_; }
+	for my $i (0..$#spacer_seq){ $mismatch[$i] = 0 unless $mismatch[$i]; }
+	for my $i (($#spacer_seq+1)..($max_len -1)){ $mismatch[$i] = 'NA' unless $mismatch[$i]; }
 		
 	# writing out basic mismatch table #
-	print join("\t", $blast_id, @mismatch), "\n";
+	print join("\t", "bid.$blast_id", @mismatch), "\n";
 	
 	}
 
 sub screen_by_pam{
 # screening by pam regex #
-	my ($blast_hits_r, $pam_regex, $proto_region);
-
-	# status #
-	print STDERR "...Number of protospacers selected: ", scalar @$blast_hits_r, "\n";
+	my ($blast_hits_r, $pam_regex, $proto_region) = @_;
 	
 	# pam regex #
 	$pam_regex = make_pam_regex($pam_regex);
 
+	#print Dumper $pam_regex; exit;
+
 	my @passed;
 	foreach my $entry (@$blast_hits_r){
+
 		# screening regions for pam #
 		my $hit;
-		if($proto_region != 5){			# screening 3' region
+		if($proto_region != 5){			# screening 3' region (right side after flipping proto)
 			$hit++ if $$entry[16] =~ /$pam_regex/;
 			}
 		elsif($proto_region != 3){		# screen 5' region
@@ -171,7 +184,7 @@ sub screen_by_pam{
 		push(@passed, $entry) if $hit;
 		}
 	
-	print STDERR "...Number of entries with specified PAM: ", scalar @passed, "\n";
+	print STDERR "Number of entries with specified PAM: ", scalar @passed, "\n";
 	return \@passed;
 	}
 
@@ -230,7 +243,7 @@ sub make_pam_regex{
 
 sub get_blast_hits{
 # 3 table join #
-	my ($dbh, $join_sqls, $extra_query) = @_;
+	my ($dbh, $join_sqls, $extra_query, $len_cutoff) = @_;
 	
 	# basic query #
 	my $query = "SELECT 
@@ -257,11 +270,14 @@ WHERE a.locus_id == b.locus_id
 AND c.group_id == b.spacer_group
 AND c.array_hit == 'no'
 AND c.spacer_DR == 'Spacer'
+AND abs(c.qend-c.qstart + 1) / (c.qlen * 1.0) >= $len_cutoff
 $join_sqls";
 	$query =~ s/[\n\r]+/ /g;
 	
 	$query = join(" ", $query, $extra_query);
 	$query .= " GROUP BY c.blast_id" unless $by_group;
+	
+		#print Dumper $query; exit;
 	
 	# status #
 	print STDERR "$query\n" if $verbose;
@@ -272,7 +288,10 @@ $join_sqls";
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
-		
+	
+	# status #
+	print STDERR "Number of protospacers selected by query: ", scalar @$ret, "\n";
+
 		#print Dumper @$ret; exit;
 	return $ret;
 	}
@@ -342,10 +361,6 @@ CLdb database.
 
 =over
 
-=item -bin  <int>
-
-Number of bins for grouping mismatches along the spacer-protospacer alignment. [20]
-
 =item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
@@ -396,18 +411,8 @@ perldoc CLdb_spacerBlastProtoMismatch.pl
 
 Make a table of protospacer mismatches.
 
-Spacers are not necessarily the same length,
-so mismatches are quantified by the number 
-of mismatches in a certain percentage of the alignment
-(e.g. 0%-5%, with 0% & 100% being the 5' & 3' of the alignment,
-respectively).
-The spacer-protospacer alignment is
-binned into percentages of the alignment length.
-Bins are rounded down, so a bin of 0%-5% may 
-technically be alignment positions 1-3.5, 
-but the program will use positions 1-3.
-Bins are not inclusive by percentage (e.g. 
-0%-4.99%, 5%-9.99%, 10%-15.99%, ...).
+Mismatches are aligned as protospacer 5' to 3' with
+all sequences aligned to the 5' end.
 
 =head2 WARNING!
 
