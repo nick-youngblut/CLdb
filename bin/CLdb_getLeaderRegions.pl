@@ -14,7 +14,7 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check);
+my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check, $loc_in);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $length = 1000;				# max length of leader region
@@ -26,9 +26,10 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,	   
 	   "query=s" => \$extra_query, 
 	   "length=i" => \$length,
-	   "overlap" => \$overlap_check,
+	   "overlap" => \$overlap_check,			# check for gene overlap w/ leader region? [TRUE]
 	   "cutoff=i" => \$gene_len_cutoff,	
-	   "both" => \$degen_check,			# use degeneracies to determine leader side? [FALSE]
+	   "repeat" => \$degen_check,					# use degeneracies to determine leader side? [FALSE]
+	   "location=s" => \$loc_in, 				# location table 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -54,15 +55,40 @@ $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
+## fasta dir path ##
+my $db_path = get_database_path($database_file);
+my $fasta_dir = make_fasta_dir($db_path);
+
+# sequence in genbank or fasta? If genbank, make fasta of genome #
+my ($subject_loci_r, $leader_tbl_r);
+if($loc_in){		# by location table 
+	$leader_tbl_r = load_loc($loc_in);
+	$subject_loci_r = get_loci_fasta_genbank($dbh, $leader_tbl_r);
+	}
+else{				# by query 
+	$subject_loci_r = get_loci_by_query($dbh, $join_sql);
+	}	
+
+# making fasta from genbank sequence if needed #
+my $loci_update = genbank2fasta($subject_loci_r, $fasta_dir);
+update_loci($dbh, $leader_tbl_r) if $loci_update;
+
 # getting array start-end from loci table #
-my $array_se_r = get_array_se($dbh, $join_sql, $extra_query);
+my $array_se_r;
+if($loc_in){
+	$array_se_r = get_closest_array_se($dbh, $leader_tbl_r);
+	}
+else{
+	$array_se_r = get_array_se($dbh, $join_sql, $extra_query);
+	}
 
 # determinig leader end of array based on DR degeneracy #
 ## pulling out direct repeat sequences for each loci ##
 my $leader_loc_r = get_DR_seq($dbh, $array_se_r);
 
 ## getting sequences from genbanks ##
-get_leader_seq($array_se_r, $leader_loc_r, $genbank_path, $length);
+get_leader_seq($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length);
+
 
 # disconnect #
 $dbh->disconnect();
@@ -70,13 +96,321 @@ exit;
 
 
 ### Subroutines
+sub get_leader_seq{
+# getting leader seqs from genbanks #
+	my ($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length) = @_;
+
+	# making fasta => scaffold => locus index #
+	my (%fasta_locus, %fasta_genbank);
+	foreach my $array (keys %$array_se_r){
+		push @{$fasta_locus{${$array_se_r->{$array}}[3]}{${$array_se_r->{$array}}[5]}}, $array;
+		$fasta_genbank{${$array_se_r->{$array}}[3]} = ${$array_se_r->{$array}}[4];
+		}
+
+	# getting all leader regions for each fasta #
+	foreach my $fasta (keys %fasta_locus){
+		# loading fasta #
+		my $fasta_r = load_fasta("$fasta_dir/$fasta");
+		
+		# loading genbank #
+		my $seqio = Bio::SeqIO->new(-format => "genbank", 
+								-file => "$genbank_path/$fasta_genbank{$fasta}");
+										
+		# just by scaffold #
+		#foreach my $scaf (keys %{$fasta_locus{$fasta}}){
+		while (my $seq = $seqio->next_seq){
+			my $scaf = $seq->display_id;
+			die " ERROR: cannot find $scaf in genome fasta!\n"
+				unless exists $fasta_r->{$scaf};
+			
+			foreach my $locus (@{$fasta_locus{$fasta}{$scaf}}){
+				# sanity check #
+				die " ERROR: cannot find cli.$locus in array start-end hash!\n"
+					unless exists $array_se_r->{$locus};
+				
+				# determining leader start-end #
+				my $array_start = ${$array_se_r->{$locus}}[1];
+				my $array_end = ${$array_se_r->{$locus}}[2];
+				
+				# both sides of array if needed #
+				
+				foreach my $loc (@{$leader_loc_r->{$locus}}){	
+					my ($leader_start, $leader_end);
+					if($loc eq "start"){
+						$leader_start = $array_start - $length;
+						$leader_end = $array_start; 						
+						}
+					elsif($loc eq "end"){
+						$leader_start = $array_end;
+						$leader_end = $array_end + $length;					
+						}
+					else{ die " LOGIC ERROR: $!\n"; }
+					
+					# no negative (or zero) values (due to $length extending beyond scaffold) #
+					$leader_start = 1 if $leader_start < 1;
+					$leader_end = 1 if $leader_end < 1;
+	
+					# leader start & end must be < total scaffold length #
+					my $scaf_len = length $fasta_r->{$scaf};
+					$leader_start = $scaf_len if $leader_start > $scaf_len;
+					$leader_end = $scaf_len if $leader_end > $scaf_len;
+					
+					# checking for gene overlap #
+					($leader_start, $leader_end) = check_gene_overlap($seq, $leader_start, $leader_end, $loc, $locus)
+						unless $overlap_check;
+					
+					# skipping if leader start is <= 5 bp #
+					if(abs($leader_end - $leader_start) <= 5){
+						print STDERR "WARNING: Skipping leader region '", 
+							join(",", "cli.$locus", $loc, "start:$leader_start", "end:$leader_end"),
+							"' due to short length!\n";
+						next;
+						}
+						
+					# parsing seq from fasta #
+					my $leader_seq = substr($fasta_r->{$scaf}, $leader_start -1, $leader_end - $leader_start);
+					
+					# strand #
+					my $strand = ${$array_se_r->{$locus}}[7];
+					if($strand == -1){
+						$leader_seq = revcomp($leader_seq);
+						}
+					
+					# writing out sequence #
+					print join("\n", 
+						join("___", ">cli.$locus\___$loc\___$scaf\___$leader_start\___$leader_end\___$strand"),
+						$leader_seq), "\n";
+					}
+				}
+			}
+		}
+	}
+
+sub revcomp{
+	# reverse complements DNA #
+	my $seq = shift;
+	$seq = reverse($seq);
+	$seq =~ tr/[a-z]/[A-Z]/;
+	$seq =~ tr/ACGTNBVDHKMRYSW\.-/TGCANVBHDMKYRSW\.-/;
+	return $seq;
+	}
+
+sub get_array_se{
+# getting the array start-end from loci table #
+	my ($dbh, $join_sql, $extra_query) = @_;
+	
+	my $cmd = "SELECT Locus_ID, array_start, array_end, fasta_file, genbank_file, scaffold, 'NA' 
+FROM loci
+WHERE (array_start is not null or array_end is not null) 
+$join_sql $extra_query";
+	my $ret = $dbh->selectall_arrayref($cmd);
+
+	my %array_se;
+	foreach my $row (@$ret){
+		# moving array start-end to + strand #
+		my $strand = 1;
+		if($$row[1] > $$row[2]){
+			$strand = -1;
+			($$row[2], $$row[1]) = ($$row[1], $$row[2]);
+			}
+		push @$row, $strand;
+		$array_se{$$row[0]} = $row;
+		}
+	
+		#print Dumper %array_se; exit;
+	return \%array_se; 
+	}
+
+sub get_closest_array_se{
+# getting arrays that start w/in 500 bp of leader #
+	my ($dbh, $leader_tbl_r) = @_;
+	
+	# querying for taxon_names #
+	## sql ##
+	my $q = "SELECT
+Locus_ID, array_start, array_end, fasta_file, genbank_file, scaffold, 
+min( min(abs(array_start - ?)), min(abs(array_end - ?)) ) as min_dist
+FROM loci
+WHERE (array_start is not null OR array_end is not null)
+AND (taxon_name = ? OR taxon_id = ?)
+AND scaffold = ?
+ORDER BY min_dist
+";
+
+	$q =~ s/\n/ /g;
+	my $sql = $dbh->prepare($q);
+	
+	## querying db ##
+	my %ret;
+	foreach my $row (@$leader_tbl_r){
+		my @tmp = @$row;
+		@tmp[3..4] = ($$row[4], $$row[3]) if $$row[3] > $$row[4]; 	# flipping start-end to + strand
+	
+		$sql->execute(@tmp[3..4,0..2]);
+		
+		my @res;
+		while(my $i = $sql->fetchrow_arrayref()){
+			# moving array start-end to + strand # 
+			my $strand = 1;
+			if($$i[1] > $$i[2]){
+				$strand = -1;
+				($$i[2], $$i[1]) = ($$i[1], $$i[2]);
+				}
+			my @tmp = @$i;
+			push @tmp, $strand;
+			push @res, \@tmp;
+			}
+		die " ERROR: no matching entries!\n" unless @res;
+		
+		print STDERR "...Distance to closest array for specified leader region: '", join(",", @$row), "' = $res[0][6] bp (cli.$res[0][0])\n";
+		print STDERR " WARNING!!! Closest distance is >500bp!" if $res[0][6] > 500;
+		
+		$ret{$res[0][0]} = [@{$res[0]}];
+		}
+
+		#print Dumper %ret; exit;
+	return \%ret;
+	}
+
+sub genbank2fasta{
+# getting fasta from genbank unless -e fasta #
+	my ($leader_tbl_r, $fasta_dir) = @_;
+	
+	my $update_cnt = 0;
+	foreach my $loci (@$leader_tbl_r){
+		if(! $$loci[3]){		# if no fasta file
+			print STDERR " WARNING: no fasta for taxon_name->$$loci[0] taxon_id->$$loci[1]! Trying to extract sequence from genbank...\n";
+			$$loci[3] = genbank2fasta_extract($$loci[2], $fasta_dir);
+			$update_cnt++;
+			}
+		elsif($$loci[3] && ! -e "$fasta_dir/$$loci[3]"){
+			print STDERR " WARNING: cannot find $$loci[3]! Trying to extract sequence from genbank...\n";
+			$$loci[3] = genbank2fasta_extract($$loci[2], $fasta_dir);
+			$update_cnt++;
+			}
+		}
+	return $update_cnt;		# if >0; update loci tbl
+	}
+
+sub get_loci_fasta_genbank{
+# querying CLdb for fasta & genbank files for each taxon #
+	my ($dbh, $leader_tbl_r) = @_;
+	
+	# querying for taxon_names #
+	## sql ##
+	my $q = "SELECT 
+taxon_name, taxon_id, genbank_file, fasta_file 
+FROM loci 
+WHERE taxon_name = ? OR taxon_id = ?";
+	$q =~ s/\n/ /g;
+	my $sql = $dbh->prepare($q);
+	
+	## querying db ##
+	my @ret;
+	foreach my $row (@$leader_tbl_r){
+		$sql->execute(@$row[0..1]);
+		my $res = $sql->fetchrow_arrayref();
+		push @ret, [@$res]; 
+		}
+	
+	die " ERROR: no matches found to query!\n"
+		unless @ret;
+
+		#print Dumper @ret; exit;
+	return \@ret;
+	}
+	
+sub get_loci_by_query{
+# querying CLdb for fasta & genbank files for each taxon #
+	my ($dbh, $join_sql) = @_;
+	
+	my $q = "SELECT taxon_name, taxon_id, genbank_file, fasta_file
+FROM loci
+WHERE locus_id=locus_id 
+$join_sql 
+GROUP BY taxon_name, taxon_id";
+	
+	my $res = $dbh->selectall_arrayref($q);
+	die " ERROR: no matches found to query!\n"
+		unless @$res;
+
+		#print Dumper @$res; exit;
+	return $res;
+	}
+
+sub update_loci{
+# updating loci w/ fasta file info for newly written fasta #
+	my ($dbh, $leader_tbl_r) = @_;
+	
+	# status#
+	print STDERR "...updating Loci table with newly made fasta files\n";
+	
+	# sql #
+	my $q = "UPDATE loci SET fasta_file=? WHERE genbank_file=?";
+	my $sth = $dbh->prepare($q);
+	
+	foreach my $row (@$leader_tbl_r){
+		next unless $$row[3]; 						# if no fasta_file; skipping
+		my @parts = File::Spec->splitpath($$row[3]);
+
+		$sth->bind_param(1, $parts[2]);				# fasta_file (just file name)
+		$sth->bind_param(2, $$row[2]);				# genbank_file
+		$sth->execute( );
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$row), "\n";
+			}
+		}
+	$dbh->commit();
+	
+	print STDERR "...updates committed!\n";
+	}
+
+sub load_loc{
+# loading locations of leaders #
+	my ($loc_in) = @_;
+	my @loc;
+	open IN, $loc_in or die $!;
+	while(<IN>){
+		chomp;
+		next if /^\s*$/;
+		my @line = split /\t/;
+		die " ERROR! line$. does not have >=5 columns: '", join("\t", @line), "'\n"
+			unless scalar @line >= 5;
+		push(@loc, [split /\t/]);
+		}
+		#print Dumper @loc; exit;
+	return \@loc;
+	}
+	
+sub load_fasta{
+# loading fasta file as a hash #
+	my $fasta_in = shift;
+	open IN, $fasta_in or die $!;
+	my (%fasta, $tmpkey);
+	while(<IN>){
+		chomp;
+ 		s/#.+//;
+ 		next if  /^\s*$/;	
+ 		if(/>.+/){
+ 			s/^>//;
+ 			$fasta{$_} = "";
+ 			$tmpkey = $_;	# changing key
+ 			}
+ 		else{$fasta{$tmpkey} .= $_; }
+		}
+	close IN;
+		#print Dumper %fasta; exit;
+	return \%fasta;
+	} #end load_fasta
+	
 sub path_by_database{
 	my ($database_file) = @_;
 	my @parts = File::Spec->splitpath($database_file);
 	return join("/", $parts[1], "genbank");
 	}
 
-sub get_leader_seq{
+sub get_leader_seq_OLD{
 # getting leader seqs from genbanks #
 	my ($array_se_r, $leader_loc_r, $genbank_path, $length) = @_;
 
@@ -155,7 +489,7 @@ sub check_gene_overlap{
 # checking to see if and genes overlap w/ leader region #
 # if yes, truncating leader region #
 	my ($seq, $region_start, $region_end, $leader_loc, $locus) = @_;
-	
+		
 	# making an interval tree #
 	my $itree = Set::IntervalTree->new();
 	for my $feat ($seq->get_SeqFeatures){
@@ -210,7 +544,7 @@ sub check_gene_overlap{
 		
 	# altering start-end #
 	if($overlap_pos){
-		print STDERR "WARNING: Gene(s) overlap the leader in cli.$locus array. Truncating\n" unless $verbose;
+		print STDERR "WARNING: Gene(s) overlap the potential leader region in cli.$locus array. Truncating\n" unless $verbose;
 		
 		if($leader_loc eq "start"){
 			$region_start = $overlap_pos;
@@ -226,10 +560,10 @@ sub check_gene_overlap{
 	die " ERROR: For locus$locus, start and/or end is negative!: start=$region_start; end=$region_end\n"
 		unless $region_start >= 0 && $region_end >= 0;
 
-	return $seq, $region_start, $region_end;
+	return $region_start, $region_end;
 	}
 
-sub check_gene_overlap_old{
+sub check_gene_overlap_OLD{
 # checking to see if and genes overlap w/ leader region #
 # if yes, truncating leader region #
 	my ($seq, $region_start, $region_end, $leader_loc, $locus) = @_;
@@ -323,7 +657,7 @@ sub get_DR_seq{
 			unless $$ret[0][3];
 		
 		# determining leader based on degeneracies #
-		if($degen_check){			# skipping if opted 
+		if(! $degen_check){			# skipping if opted 
 			$leader_loc{$locus} = ["start", "end"];
 			}
 		else{	
@@ -375,24 +709,6 @@ sub determine_leader{
 		return ["start", "end"];
 		}
 	}
-
-sub get_array_se{
-# getting the array start-end from loci table #
-	my ($dbh, $join_sql, $extra_query) = @_;
-	
-	my $cmd = "SELECT Locus_ID, array_start, array_end, genbank_file, scaffold FROM loci WHERE (array_start is not null or array_end is not null) $join_sql $extra_query";
-	my $ret = $dbh->selectall_arrayref($cmd);
-
-	my %array_se;
-	foreach my $row (@$ret){
-		# moving array start-end to + strand #
-		($$row[1], $$row[2]) = pos_strand_se($$row[1], $$row[2]);
-		$array_se{$$row[0]} = $row;
-		}
-		
-		#print Dumper %array_se; exit;
-	return \%array_se; 
-	}
 	
 sub pos_strand_se{
 	my ($start, $end) = @_;
@@ -422,6 +738,22 @@ sub join_query_opts{
 	return join("", " AND $cat IN (", join(", ", @$vals_r), ")");
 	}
 
+sub make_fasta_dir{
+	my $db_path = shift;
+	
+	my $dir = join("/", $db_path, "fasta");
+	mkdir $dir unless -d $dir;
+
+	return $dir;
+	}
+
+sub get_database_path{
+	my $database_file = shift;
+	$database_file = File::Spec->rel2abs($database_file);
+	my @parts = File::Spec->splitpath($database_file);
+	return $parts[1];
+	}
+
 __END__
 
 =pod
@@ -447,6 +779,10 @@ CLdb database.
 =head2 options
 
 =over
+
+=item -location  <char>
+
+Location file specifying leader region start-end.
 
 =item -subtype  <char>
 
@@ -476,9 +812,9 @@ Check for overlapping genes (& trim region if overlap)? [TRUE]
 
 Gene length cutoff for counting gene as real in overlap assessment (bp). [150]
 
-=item -both  <bool>
+=item -repeat  <bool>
 
-Get sequence on both sides of the array regardless of degeneracies? [FALSE]
+Use repeat degeneracies to determine which side contains the leader region? [FALSE]
 
 =item -verbose  <bool>
 
@@ -499,42 +835,87 @@ perldoc CLdb_getLeaderRegions.pl
 Get the suspected leader regions for CRISPR loci 
 in the CRISPR database.
 
-Leader regions are determined by direct repeat (DR) degeneracy,
+The leader region length will be truncated if any genes overlap in 
+that region (unless -overlap used).
+
+The default leader region length is 1000bp from the CRISPR array.
+
+=head2 Selecting leader regions
+
+Leader regions can be selected by providing a query such as 
+"-sub I-A" for all leader regions adjacent to the I-A arrays.
+
+Leader regions can also be specified using a location file ('-location' flag).
+The file should have the following columns:
+
+=over
+
+=item taxon_name (need this or taxon_id)
+
+=item taxon_id (need this or taxon_name)
+
+=item scaffold ('CLDB_ONE_CHROMOSOME' if scaffold was not provided in loci.txt table)
+
+=item region start (> region end if negative strand)
+
+=item region end 
+
+=back
+
+
+=head2 '-repeat' flag
+
+Leader regions can determined by direct repeat (DR) degeneracy,
 which should occur at the trailer end.
 For example: leader half has 1 cluster due to DR conservation,
 while the trailer half has 3 clusters due to DR degeneracy). 
 This is determined by the 'repeat_group' column in the 
 Directrepeats table in the CRISPR database. Therefore, 
 CLdb_groupArrayElements.pl has to be run on the database 
-before running this script!
-
+before running this script! 
 Both end regions of a CRISPR array are written if a CRISPR
 array has equal numbers of DR clusters on each half.
 
-The default leader region length is 1000bp from the CRISPR array.
+The number of repeat_groups on each side (5' & 3') of the
+CRISPR array will be printed to STDERR (unless '-v').
+The output values are: 'degeracies', locus_id', 
+'5-prime_number_repeat_groups', '3-prime_number_repeat_groups'
 
-The leader region length will be truncated if any genes overlap in 
-that region. 
-
+=head2 Output
 Leader regions in the output fasta are named as: 
-"cli.ID" "start|end"__"region_start"__"region_end"
+"cli.ID"___"start|end"___"region_start"___"region_end"___"strand"
 
 Leader region start & end are according to the + strand. 
 
-The number of repeat_groups on each side (5' & 3') of the
-CRISPR array will be printed to STDERR (unless '-v'). 
-The output values are: 'degeracies', locus_id', 
-'5-prime_number_repeat_groups', '3-prime_number_repeat_groups'
+=head2 Next step after getting potential leader regions
+
+Align the leader regions (eg. mafft --adjustdirection).
+
+Remove any leaders that don't align or split the 
+alignment into >=2 files if multiple groups of sequences
+align together but not globally.
+
+Make sure that each locus_ID only has 1 leader region in the alignment!
+
+Determine where the leader region ends (number of bp to 
+trim off from the non-conserved end).
+
+Load the leader region using CLdb_loadLeaders.pl
+
 
 =head1 EXAMPLES
 
 =head2 Leader regions for all loci
 
-CLdb_getLeaderRegion.pl -d CLdb.sqlite > leaders.fna
+CLdb_getLeaderRegion.pl -d CLdb.sqlite > psbl_leaders.fna
 
 =head2 Leader regions for just subtype I-B
 
-CLdb_getLeaderRegions.pl -d CLdb.sqlite -sub I-B > leader_I-B.fna
+CLdb_getLeaderRegions.pl -d CLdb.sqlite -sub I-B > psbl_leaders_I-B.fna
+
+=head2 Leader regions specified in location file
+
+CLdb_getLeaderRegions.pl -d CLdb.sqlite -loc locations.txt > psbl_leaders.fna
 
 =head1 AUTHOR
 
