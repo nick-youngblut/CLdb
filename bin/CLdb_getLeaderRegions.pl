@@ -115,15 +115,15 @@ sub get_leader_seq{
 		# loading genbank #
 		my $seqio = Bio::SeqIO->new(-format => "genbank", 
 								-file => "$genbank_path/$fasta_genbank{$fasta}");
-										
+		
 		# just by scaffold #
-		#foreach my $scaf (keys %{$fasta_locus{$fasta}}){
-		while (my $seq = $seqio->next_seq){
+		while (my $seq = $seqio->next_seq){			
 			my $scaf = $seq->display_id;
 			die " ERROR: cannot find $scaf in genome fasta!\n"
 				unless exists $fasta_r->{$scaf};
 			
 			foreach my $locus (@{$fasta_locus{$fasta}{$scaf}}){
+				
 				# sanity check #
 				die " ERROR: cannot find cli.$locus in array start-end hash!\n"
 					unless exists $array_se_r->{$locus};
@@ -133,7 +133,6 @@ sub get_leader_seq{
 				my $array_end = ${$array_se_r->{$locus}}[2];
 				
 				# both sides of array if needed #
-				
 				foreach my $loc (@{$leader_loc_r->{$locus}}){	
 					my ($leader_start, $leader_end);
 					if($loc eq "start"){
@@ -310,6 +309,8 @@ WHERE taxon_name = ? OR taxon_id = ?";
 	foreach my $row (@$leader_tbl_r){
 		$sql->execute(@$row[0..1]);
 		my $res = $sql->fetchrow_arrayref();
+		die " ERROR: no matching entries! Is the location file formatted correctly?\n" unless $res;
+		
 		push @ret, [@$res]; 
 		}
 	
