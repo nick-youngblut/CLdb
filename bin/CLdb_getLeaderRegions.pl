@@ -82,12 +82,17 @@ else{
 	$array_se_r = get_array_se($dbh, $join_sql, $extra_query);
 	}
 
-# determinig leader end of array based on DR degeneracy #
-## pulling out direct repeat sequences for each loci ##
 my $leader_loc_r = get_DR_seq($dbh, $array_se_r);
-
-## getting sequences from genbanks ##
-get_leader_seq($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length);
+	
+# if leader table provided, pulling out regions of interest #
+if($loc_in){
+	extract_leader_seq($array_se_r, $leader_tbl_r, $fasta_dir, $genbank_path, $leader_loc);
+	}
+# else: determinig leader end of array based on DR degeneracy #
+else{
+	## getting sequences from genbanks ##
+	get_leader_seq($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length);
+	}
 
 
 # disconnect #
@@ -96,6 +101,71 @@ exit;
 
 
 ### Subroutines
+sub extract_leader_seq{
+# getting leader seqs from genbanks; leader regions known #
+	my ($array_se_r, $leader_tbl_r, $fasta_dir, $genbank_path, $leader_loc) = @_;
+
+	#	print Dumper $array_se_r; exit;
+	#	print Dumper $leader_tbl_r; exit;
+	# making leader table as hash #
+
+	# making fasta => scaffold => locus index #
+	my (%fasta_locus, %fasta_genbank);
+	foreach my $array (keys %$array_se_r){
+		push @{$fasta_locus{${$array_se_r->{$array}{'array'}}[3]}{${$array_se_r->{$array}{'array'}}[5]}}, $array;
+		$fasta_genbank{${$array_se_r->{$array}{'array'}}[3]} = ${$array_se_r->{$array}{'array'}}[4];
+		}
+
+	# getting all leader regions for each fasta #
+	foreach my $fasta (keys %fasta_locus){
+		# loading fasta #
+		my $fasta_r = load_fasta("$fasta_dir/$fasta");
+		
+		# loading genbank #
+		my $seqio = Bio::SeqIO->new(-format => "genbank", 
+								-file => "$genbank_path/$fasta_genbank{$fasta}");
+		
+		# just by scaffold #
+		while (my $seq = $seqio->next_seq){			
+			my $scaf = $seq->display_id;
+			die " ERROR: cannot find $scaf in genome fasta!\n"
+				unless exists $fasta_r->{$scaf};
+			
+			foreach my $locus (@{$fasta_locus{$fasta}{$scaf}}){
+				
+				# sanity check #
+				die " ERROR: cannot find cli.$locus in array start-end hash!\n"
+					unless exists $array_se_r->{$locus};
+				
+				# determining leader start-end #
+				my $leader_start = ${$array_se_r->{$locus}{'leader'}}[3];
+				my $leader_end = ${$array_se_r->{$locus}{'leader'}}[4];
+				
+				# flipping leader seq if needed #
+				($leader_end, $leader_start) = ($leader_start, $leader_end)
+					if $leader_end < $leader_start;
+				
+				# leader start & end must be < total scaffold length #
+				my $scaf_len = length $fasta_r->{$scaf};
+				$leader_start = $scaf_len if $leader_start > $scaf_len;
+				$leader_end = $scaf_len if $leader_end > $scaf_len;
+				
+				# checking for gene overlap #
+				($leader_start, $leader_end) = check_gene_overlap($seq, $leader_start, $leader_end, $loc, $locus)
+						unless $overlap_check;
+				
+
+				
+				# parsing seq from fasta #
+				my $leader_seq = substr($fasta_r->{$scaf}, $leader_start -1, $leader_end - $leader_start + 1);
+				
+				# 
+				}
+			}
+		}
+	}
+
+
 sub get_leader_seq{
 # getting leader seqs from genbanks #
 	my ($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length) = @_;
@@ -264,7 +334,8 @@ ORDER BY min_dist
 		print STDERR "...Distance to closest array for specified leader region: '", join(",", @$row), "' = $res[0][6] bp (cli.$res[0][0])\n";
 		print STDERR " WARNING!!! Closest distance is >500bp!" if $res[0][6] > 500;
 		
-		$ret{$res[0][0]} = [@{$res[0]}];
+		$ret{$res[0][0]}{'array'} = [@{$res[0]}];
+		$ret{$res[0][0]}{'leader'} = $row;
 		}
 
 		#print Dumper %ret; exit;
@@ -843,8 +914,12 @@ The default leader region length is 1000bp from the CRISPR array.
 
 =head2 Selecting leader regions
 
+=head3 If you do now know the leader regions
+
 Leader regions can be selected by providing a query such as 
 "-sub I-A" for all leader regions adjacent to the I-A arrays.
+
+=head3 IF you know the leader regions:
 
 Leader regions can also be specified using a location file ('-location' flag).
 The file should have the following columns:
