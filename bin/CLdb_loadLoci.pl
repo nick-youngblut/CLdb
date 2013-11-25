@@ -144,6 +144,19 @@ make_genbank_array_dirs($loci_r, $header_r);
 # updating / loading_db #
 load_db_table($dbh, "loci", $header_r, $loci_r);
 
+
+# loading leader table #
+load_leader($dbh, $loci_r, $db_path) 
+	if exists $header_r->{'leader_start'} && exists $header_r->{'leader_end'};
+
+# loading pam table #
+#load_pam($dbh, $loci_r) if exists $header_r->{'pam_seq'};
+
+# loading arrays if found #
+
+
+# status report #
+
 # disconnect to db #
 $dbh->disconnect();
 exit;
@@ -230,44 +243,6 @@ sub make_genbank_array_dirs{
 				unless -e $file_chk;
 			}					
 		}
-	}
-
-sub load_db_old{
-# updating any entries with CLI identifiers #
-	my ($dbh, $loci_r, $header_r) = @_;
-	
-	# entries ordered #
-	my @keys = keys %$header_r;
-	@keys = grep(!/^locus_id$/i, @keys);
-	my @values = @$header_r{@keys};
-
-	# setting up update for all columns #
-	my @set;
-	foreach my $key (@keys){
-		(my $tmp = $key) =~ s/$/ = ?/;
-		push @set, $tmp;
-		}
-
-	# preparing sql #	
-	my $cmd = join(" ", "UPDATE Loci SET", join(",", @set), "where locus_id = ?");
-	my $sql = $dbh->prepare($cmd);
-
-	# updating #
-	foreach my $entry (keys %$loci_r){
-		next if $entry eq "new_entry";
-		my $row = $loci_r->{$entry};
-		
-		$sql->execute( (@$row[@values], $$row[$header_r->{"locus_id"}]) );
-		
-		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$row[@values]), "\n";
-			}
-		}
-	
-	$dbh->commit;	
-	
-	print STDERR "...Number of entries updated in loci table (locus_ID provided in loci table): ", (scalar keys %$loci_r) -1, "\n"
-		unless $verbose;
 	}
 
 sub add_scaffold_ID{
@@ -361,5 +336,7 @@ sub check_headers{
 		}
 	
 	}
+	
+
 
 
