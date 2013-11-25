@@ -1,17 +1,22 @@
-package CLdb;
+package CLdb::seq;
 
-use 5.006;
+# module use #
 use strict;
 use warnings FATAL => 'all';
+use Carp  qw( carp confess croak );
+use Data::Dumper;
+use DBI;
 
+# export #
+use base 'Exporter';
+our @EXPORT_OK = qw/
+revcomp
+/;
 
-use FindBin;
-use lib "$FindBin::RealBin/../lib";
-use CLdb::query;
-
+	
 =head1 NAME
 
-CLdb - The great new CLdb!
+CLdb::seq
 
 =head1 VERSION
 
@@ -21,38 +26,25 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+Subroutines for editing sequence data
 
-Perhaps a little code snippet.
+=head1 EXPORT_OK
 
-    use CRISPR_db;
-
-    my $foo = CRISPR_db->new();
-    ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
-=head1 SUBROUTINES/METHODS
-
-=head2 function1
+revcomp
 
 =cut
 
-sub function1 {
-}
-
-=head2 function2
-
-=cut
-
-sub function2 {
-}
+sub revcomp{
+# reverse complement of a sequence
+# caps invariant 
+	my $seq = shift;
+	$seq = reverse($seq);
+	$seq =~ tr/[a-z]/[A-Z]/;
+	$seq =~ tr/ACGTNBVDHKMRYSWacgtnbvdhkmrysw\.-/TGCANVBHDMKYRSWtgcanvbhdmkyrsw\.-/;
+	return $seq;
+	}
 
 =head1 AUTHOR
 
@@ -65,13 +57,11 @@ the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=CRISPR_db>
 automatically be notified of progress on your bug as I make changes.
 
 
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc CRISPR_db
+    perldoc CLdb::seq
 
 
 You can also look for information at:
@@ -110,7 +100,6 @@ by the Free Software Foundation; or the Artistic License.
 
 See L<http://dev.perl.org/licenses/> for more information.
 
-
 =cut
 
-1; # End of CRISPR_db
+1; 
