@@ -173,7 +173,10 @@ my $dbh = connect2db($database_file);
 
 # checking table existence #
 table_exists($dbh, "loci"); 
+table_exists($dbh, "leaders") if $leader_b;
 
+
+# determining table of interest
 my $tbl_oi = "spacers";
 $tbl_oi = "DRs" if $spacer_DR_b;
 table_exists($dbh, $tbl_oi); 

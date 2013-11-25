@@ -11,6 +11,7 @@ use base 'Exporter';
 our @EXPORT_OK = qw/
 file_exists
 connect2db
+lineBreaks2unix
 /;
 
 	
@@ -38,6 +39,18 @@ connect2db
 
 
 =cut
+
+sub lineBreaks2unix{
+#-- Description --#
+# converting line breaks to unix #
+	my $fh = shift;	
+	my @table = <$fh>;
+	my @tmp;
+	map{ s/\r$//; s/\r/\n/g; s/\n+/\n/g; push @tmp, split /\n/;  } @table;
+	@table = @tmp;
+	
+	return \@table;
+	}
 
 sub connect2db{
 # connecting to CLdb 

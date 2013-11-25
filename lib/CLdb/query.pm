@@ -22,6 +22,7 @@ join_query_opts
 get_array_seq
 get_leader_pos
 get_arrays_seq_byLeader
+list_columns
 /;
 
 	
@@ -50,6 +51,27 @@ join_query_opts
 get_array_seq
 
 =cut
+
+sub list_columns{
+#-- description --#
+# listing all columns in specified table (table must exist) 
+# lists column names
+#-- input --#
+# $dbh = DBI object
+# $tbl = sql table of interest
+# $silent_ret = no verbose & exit; return column names
+	my ($dbh, $tbl, $silent_ret) = @_;
+	my $all = $dbh->selectall_arrayref("pragma table_info($tbl)");
+
+	my %tmp;
+	foreach (@$all){ 
+		$$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
+		$tmp{$$_[1]} = 1; 
+		}
+		
+	if(defined $silent_ret){ return \%tmp; }
+	else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
+	}
 
 sub get_arrays_seq_byLeader{
 # getting array sequences and orienting by leaders #

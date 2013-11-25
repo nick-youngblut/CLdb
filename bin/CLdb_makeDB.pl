@@ -1,5 +1,81 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_makeDB.pl -- Initial DB construction
+
+=head1 SYNOPSIS
+
+CLdb_makeDB.pl [options] [DATABASE_name]
+
+=head2 options
+
+=over
+
+=item -replace  <bool>
+
+Replace existing database.
+
+=item -table  <char>
+
+Table(s) to keep as is (if they exist). ["leaders" "genes"]
+
+=item -drop  <bool>
+
+Drop all tables. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_makeDB.pl
+
+=head1 DESCRIPTION
+
+Make all of the CL_db tables.
+
+The default database name is "CLdb.sqlite"
+
+=head2 '-t' flag
+
+This is needed if you want to keep 'manual' information 
+in tables while still being able to remake the rest
+of the database. By default, all leader sequences and gene alias info
+is saved because manual processing was involved.
+Capitalization of table names doesn't matter. 
+
+=head1 EXAMPLES
+
+=head2 Naming database 'CLdb_test'
+
+CLdb_makeDB.pl CLdb_test
+
+=head2 Remaking a database and keeping old "spacers" table
+
+CLdb_makeDB.pl -r -t "spacers"
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -73,7 +149,7 @@ sub get_sql{
 DROP TABLE IF EXISTS Loci;
 
 CREATE TABLE Loci (
-Locus_ID	INTEGER	PRIMARY KEY,
+Locus_ID	TEXT	NOT NULL,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT,
@@ -92,8 +168,8 @@ Array_File	TEXT,
 Scaffold_count	INTEGER,
 File_Creation_Date	TEXT,
 Author	TEXT	NOT NULL,
-UNIQUE (Taxon_ID, Taxon_name, Scaffold, Locus_Start, Locus_End)
-ON CONFLICT IGNORE
+UNIQUE (Locus_ID)
+ON CONFLICT REPLACE
 );
 
 HERE
@@ -304,81 +380,4 @@ HERE
 
 	return \%sql;
 	}
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_makeDB.pl -- Initial DB construction
-
-=head1 SYNOPSIS
-
-CLdb_makeDB.pl [options] [DATABASE_name]
-
-=head2 options
-
-=over
-
-=item -replace  <bool>
-
-Replace existing database.
-
-=item -table  <char>
-
-Table(s) to keep as is (if they exist). ["leaders" "genes"]
-
-=item -drop  <bool>
-
-Drop all tables. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_makeDB.pl
-
-=head1 DESCRIPTION
-
-Make all of the CL_db tables.
-
-The default database name is "CLdb.sqlite"
-
-=head2 '-t' flag
-
-This is needed if you want to keep 'manual' information 
-in tables while still being able to remake the rest
-of the database. By default, all leader sequences and gene alias info
-is saved because manual processing was involved.
-Capitalization of table names doesn't matter. 
-
-=head1 EXAMPLES
-
-=head2 Naming database 'CLdb_test'
-
-CLdb_makeDB.pl CLdb_test
-
-=head2 Remaking a database and keeping old "spacers" table
-
-CLdb_makeDB.pl -r -t "spacers"
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 
