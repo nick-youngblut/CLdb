@@ -11,6 +11,8 @@ use DBI;
 use base 'Exporter';
 our @EXPORT_OK = qw/
 revcomp
+read_fasta
+seq_from_genome_fasta
 /;
 
 	
@@ -35,6 +37,71 @@ Subroutines for editing sequence data
 revcomp
 
 =cut
+
+
+sub seq_from_genome_fasta{
+#-- Description --#
+# extracting leader sequence from genome fasta
+#-- Input --#
+# $fasta_r = %$; {seq_name}=>seq
+# $coords_r = @$; [scaf, start, end]
+# $db_path = file path
+
+	my ($fasta_r, $coords_r) = @_;
+	
+	# IO check #
+	die "ERROR: coords must be [scaffold,start,end]\n"
+		unless scalar @$coords_r == 3;
+	
+	# getting fasta #
+	#my $fasta_r = load_fasta("$db_path/fasta/$locus_r->{'fasta_file'}");
+	
+	# checking for existence of scaffold #
+	my $scaf = $$coords_r[0];
+	unless(exists $fasta_r->{$scaf}){
+		#print STDERR "WARNING: '$scaf' not found . Not loading leader sequence!\n";
+		return "";			# no sequence
+		}
+		
+	# start-stop #
+	my $start = $$coords_r[1];
+	my $end = $$coords_r[2];
+	
+	my $leader_seq;
+	if($start < $end){		# neg strand
+		$leader_seq = substr($fasta_r->{$scaf}, $start -1, $end-$start+1);
+		}
+	else{
+		$leader_seq = substr($fasta_r->{$scaf}, $end -1, $start-$end+1);
+		$leader_seq = revcomp($leader_seq);
+		}
+		
+		#print Dumper $leader_seq; exit;
+	return $leader_seq;
+	}
+
+sub read_fasta{
+# loading fasta file as a hash #
+	my $fasta_in = shift;
+	die " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
+
+	open IN, $fasta_in or die $!;
+	my (%fasta, $tmpkey);
+	while(<IN>){
+		chomp;
+ 		s/#.+//;
+ 		next if  /^\s*$/;	
+ 		if(/>.+/){
+ 			s/>//;
+ 			$fasta{$_} = "";
+ 			$tmpkey = $_;	# changing key
+ 			}
+ 		else{$fasta{$tmpkey} .= $_; }
+		}
+	close IN;
+		#print Dumper %fasta; exit;
+	return \%fasta;
+	} #end load_fasta
 
 sub revcomp{
 # reverse complement of a sequence

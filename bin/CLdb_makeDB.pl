@@ -149,18 +149,18 @@ sub get_sql{
 DROP TABLE IF EXISTS Loci;
 
 CREATE TABLE Loci (
-Locus_ID	TEXT	NOT NULL,
+Locus_ID	TEXT	NOT NULL	UNIQUE,
 Taxon_ID	TEXT	NOT NULL,
 Taxon_Name	TEXT	NOT NULL,
 Subtype	TEXT,
 Scaffold	TEXT	NOT NULL,
 Locus_Start	INTEGER	NOT NULL,
 Locus_End	INTEGER	NOT NULL,
-Operon_Start	INTEGER,
-Operon_End	INTEGER,
+CAS_Start	INTEGER,
+CAS_End	INTEGER,
 Array_Start	INTEGER,
 Array_End	INTEGER,
-Operon_Status	TEXT	NOT NULL,
+CAS_Status	TEXT	NOT NULL,
 Array_Status	TEXT	NOT NULL,
 Genbank_File	TEXT	NOT NULL,
 Fasta_File	TEXT,
@@ -179,7 +179,7 @@ HERE
 DROP TABLE IF EXISTS Spacers;
 
 CREATE TABLE Spacers (
-Locus_ID	INTEGER	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
 Spacer_Start	INTEGER	NOT NULL,
 Spacer_End	INTEGER	NOT NULL,
@@ -196,7 +196,7 @@ HERE
 DROP TABLE IF EXISTS DRs;
 
 CREATE TABLE DRs (
-Locus_ID	INTEGER	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
 DR_ID	INTEGER	NOT NULL,
 DR_Start	INTEGER	NOT NULL,
 DR_End	INTEGER	NOT NULL,
@@ -213,7 +213,7 @@ HERE
 DROP TABLE IF EXISTS DR_Consensus;
 
 CREATE TABLE DR_Consensus (
-Locus_ID	INTEGER	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
 Consensus_Sequence_IUPAC	TEXT	NOT NULL,
 Consensus_Sequence_Threshold	TEXT	NOT NULL,
 UNIQUE (Locus_ID)
@@ -227,7 +227,7 @@ HERE
 DROP TABLE IF EXISTS Leaders;
 
 CREATE TABLE Leaders (
-Locus_ID	INTEGER	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
 Leader_Start	INTEGER	NOT NULL,
 Leader_End	INTEGER	NOT NULL,
 Leader_Sequence	TEXT	NOT NULL,
@@ -243,7 +243,7 @@ HERE
 DROP TABLE IF EXISTS Genes;
 
 CREATE TABLE Genes (
-Locus_ID	INTEGER	NOT NULL,
+Locus_ID	TEXT	NOT NULL,
 Gene_ID	TEXT	NOT NULL,
 Gene_Start	INTEGER	NOT NULL,
 Gene_End	INTEGER	NOT NULL,
@@ -251,73 +251,6 @@ Gene_Length__AA	INTEGER	NOT NULL,
 In_Operon	TEXT	NOT NULL,
 Gene_Alias	TEXT,
 UNIQUE (Locus_ID, Gene_ID)
-ON CONFLICT REPLACE
-);
-
-HERE
-
-
-	$sql{"blast_hits"} = <<HERE;
-DROP TABLE IF EXISTS blast_hits;
-
-CREATE TABLE blast_hits (
-blast_id	INTEGER	PRIMARY KEY,
-spacer_DR    TEXT    NOT NULL,
-Group_ID    TEXT    NOT NULL,
-S_taxon_ID    TEXT,
-S_taxon_name    TEXT,
-S_accession    TEXT,
-S_GI    TEXT,
-sseqid    TEXT    NOT NULL,
-pident    REAL    NOT NULL,
-mismatch    INTEGER    NOT NULL,
-gaps    INTEGER    NOT NULL,
-evalue    TEXT    NOT NULL,
-bitscore    INTEGER    NOT NULL,
-strand	INTEGER	NOT NULL,
-len    INTEGER    NOT NULL,
-qlen	INTEGER	NOT NULL,
-slen    INTEGER    NOT NULL,
-qseq	TEXT,
-sseq	TEXT,
-qstart    INTEGER    NOT NULL,
-qend    INTEGER    NOT NULL,
-sstart    INTEGER    NOT NULL,
-send    INTEGER    NOT NULL,
-qseq_full	TEXT,
-sseq_full	TEXT,
-qseq_full_start	INTEGER,
-qseq_full_end	INTEGER,
-sseq_full_start INTEGER,
-sseq_full_end 	INTEGER,
-proto3px	TEXT,
-proto3px_start	INTEGER,
-proto3px_end	INTEGER,
-proto5px	TEXT,
-proto5px_start	INTEGER,
-proto5px_end	INTEGER,
-array_hit    TEXT,
-UNIQUE(Group_ID, S_taxon_ID, S_taxon_name, S_accession, sseqid, sstart, send)
-ON CONFLICT REPLACE
-);
-
-HERE
-
-
-	$sql{"spacer_blast_subject"} = <<HERE;
-DROP TABLE IF EXISTS spacer_blast_subject;
-
-CREATE TABLE spacer_blast_subject (
-Blast_subject_ID	TEXT	NOT NULL,
-Taxon_ID	TEXT,
-Taxon_name	TEXT,
-Accession	TEXT,
-Scaffold_name	TEXT	NOT NULL,
-Scaffold_sequence	TEXT	NOT NULL,
-Fragment_start	INTEGER	NOT NULL,
-Fragment_end	INTEGER	NOT NULL,
-Extension	INTEGER	NOT NULL,
-UNIQUE (Blast_subject_ID)
 ON CONFLICT REPLACE
 );
 
@@ -373,6 +306,20 @@ send	INTEGER	NOT NULL,
 evalue	TEXT	NOT NULL,
 bitscore	INTEGER	NOT NULL,
 UNIQUE( Query_locus_ID, Query_spacer_ID, Subject_locus_ID, Subject_spacer_ID )
+ON CONFLICT REPLACE
+);
+
+HERE
+
+$sql{"PAM"} = <<HERE;
+DROP TABLE IF EXISTS PAM;
+
+CREATE TABLE PAM (
+Locus_ID	TEXT	NOT NULL,
+PAM_sequence	TEXT,
+PAM_start	INTEGER,
+PAM_end	INTEGER,
+UNIQUE (Locus_ID)
 ON CONFLICT REPLACE
 );
 

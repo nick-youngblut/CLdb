@@ -40,22 +40,23 @@ perldoc CLdb_loadLoci.pl
 
 =head1 DESCRIPTION
 
-Load and/or update CRISPR loci table entries.
+Add and/or update CLdb 'loci' table entries.
+The 'Locus_ID' column must be unique! 
+Existing entries that have the same Locus_ID
+will be replaces (entry update). 
 
-Loci entries will be added if no Locus_id is provided;
-otherwise, the entrie will be updated.
+Leader start-stop and sequence information can be provided also.
+This information will be added to the 'leaders' table.
+
+PAM start-stop and/or sequence information can be provided also.
+This information will be added to the 'PAM' table.
+
+Scaffold names will try to be obtained from the genome genbank/fasta
+if not provided.
 
 =head2 WARNING!
 
 The loci table must be in tab-delimited format.
-
-Loci entries must be unique by 'taxon_name', 'taxon_id', 'scaffold', 'locus_start', 'locus_end'.
-Only the 1st of duplicated entries will be kept.
-
-A scaffold name will be added to any entries lacking one. 
-
-File names in the loci table should match files in the 
-$CLdb_HOME/genbank/ & $CLdb_HOME/array/ directories.
 
 Extra columns (not in CLdb Loci table) can exist in the 
 input loci table. They just won't be added to CLdb.
@@ -91,6 +92,7 @@ use Getopt::Long;
 use File::Spec;
 use File::Path;
 use File::Copy;
+use Bio::SeqIO;
 use DBI;
 
 # CLdb #
@@ -102,10 +104,14 @@ use CLdb::query qw/
 	list_columns/;
 use CLdb::load qw/
 	load_db_table/;
+use CLdb::seq qw/
+	read_fasta
+	seq_from_genome_fasta/;
 use CLdb::utilities qw/
 	file_exists 
 	connect2db
-	lineBreaks2unix/;
+	lineBreaks2unix
+	get_file_path/;
 
 
 
@@ -128,34 +134,46 @@ file_exists($database_file, "database");
 # connect 2 db #
 my $dbh = connect2db($database_file);
 
+# database path #
+my $db_path = get_file_path($database_file);
+
 # database metadata #
 table_exists($dbh, "loci"); 
-my $column_list_r = list_columns($dbh, "loci", 1);
+#my $column_list_r = list_columns($dbh, "loci", 1);
 
 # getting input loci table #
-my ($loci_r, $header_r) = get_loci_table($column_list_r);
+my ($loci_r, $header_r) = get_loci_table();
 
-# adding scaffold values if not found #
-add_scaffold_ID($loci_r, $header_r);
+# checks#
+make_external_file_dirs($loci_r, $header_r, $db_path);	 # copying array files & genbanks if not in ./genbank & ./array #
+unix_line_breaks($loci_r, $db_path);						# line breaks of all copied files to unix
 
-# copying array files & genbanks if not in ./genbank & ./array #
-make_genbank_array_dirs($loci_r, $header_r);
+# inferring from table #
+## getting genome fasta from genbank ##
+genbank2fasta($loci_r, $db_path); 	
+## getting scaffold name 
+get_scaffold_name($loci_r, $db_path);
+
 
 # updating / loading_db #
-load_db_table($dbh, "loci", $header_r, $loci_r);
+my $loci_header_r = just_table_columns($header_r, 'loci');
+	#print Dumper $loci_header_r; exit;
+load_db_table($dbh, "loci", $loci_header_r, $loci_r);
 
 
 # loading leader table #
-load_leader($dbh, $loci_r, $db_path) 
-	if exists $header_r->{'leader_start'} && exists $header_r->{'leader_end'};
+my $leader_header_r = just_table_columns($header_r, 'leader');
+$leader_header_r->{"leader_sequence"} = 1;
+my $leader_loci_r = get_leader_seq($loci_r, $db_path);
+load_db_table($dbh, "leaders", $leader_header_r, $leader_loci_r);
+
 
 # loading pam table #
-#load_pam($dbh, $loci_r) if exists $header_r->{'pam_seq'};
+my $pam_header_r = just_table_columns($header_r, 'pam');
+my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
+$pam_header_r->{"pam_sequence"} = 1;
+load_db_table($dbh, "pam", $pam_header_r, $pam_loci_r);
 
-# loading arrays if found #
-
-
-# status report #
 
 # disconnect to db #
 $dbh->disconnect();
@@ -163,6 +181,331 @@ exit;
 
 
 ### Subroutines
+sub get_pam_seq{
+# getting pam seq if needed #
+	my ($loci_r, $db_path, $pam_header_r) = @_;
+	
+	if(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}
+		&& exists $pam_header_r->{"pam_sequence"}){
+		print STDERR "### PAM sequence & start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
+		}
+	elsif(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}){
+		print STDERR "### PAM start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
+		}
+	elsif(exists $pam_header_r->{"pam_sequence"}){
+		print STDERR "### PAM sequence column provided. Loading values into PAM table ###\n"
+		}
+	else{
+		print STDERR "### no PAM info provided. Skipping PAM loading ###\n"
+		}
+	
+	# getting pam sequence if possible #
+	my %cp;
+	foreach my $locus_id (keys %$loci_r){
+		if(exists $loci_r->{$locus_id}{'pam_sequence'}){
+			$cp{$locus_id} = $loci_r->{$locus_id};
+			}
+		elsif( exists $loci_r->{$locus_id}{'pam_start'}
+			   && exists $loci_r->{$locus_id}{'pam_start'} 
+			   && exists $loci_r->{$locus_id}{'scaffold'}
+			   && exists $loci_r->{$locus_id}{'fasta_file'}){		# geting sequence 
+			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
+			
+			$loci_r->{$locus_id}{'pam_sequence'} = 
+				seq_from_genome_fasta( $fasta_r, 
+						[$loci_r->{$locus_id}{'scaffold'},
+						$loci_r->{$locus_id}{'pam_start'}, 
+						$loci_r->{$locus_id}{'pam_end'}]
+						);
+			}
+		else{
+			next;
+			}
+		
+	
+		# checking for existence of genome fasta, if yes, extract leader sequence #
+		if(exists $loci_r->{$locus_id}{'fasta_file'}){
+			
+			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
+			
+			$loci_r->{$locus_id}{'leader_sequence'} = 
+				seq_from_genome_fasta( $fasta_r, 
+						[$loci_r->{$locus_id}{'scaffold'},
+						$loci_r->{$locus_id}{'leader_start'}, 
+						$loci_r->{$locus_id}{'leader_end'}]
+						) unless exists $loci_r->{$locus_id}{'leader_sequence'};
+			
+			if($loci_r->{$locus_id}{'pam_sequence'} eq ""){
+				print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
+					"' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
+					". Not loading pam sequence!\n";
+				}
+			else{		# just entries w/ leader sequence #
+				$cp{$locus_id} = $loci_r->{$locus_id};
+				}
+			}
+		}
+
+		#print Dumper %cp; exit;
+	return \%cp;
+	
+	}
+
+sub get_leader_seq{
+# loading leader; pulling out sequence from genome if available #
+	my ($loci_r, $db_path) = @_;
+	
+	# status #
+	print STDERR "### Leader start-end provided. Loading values into leader table ###\n"
+		unless $verbose;
+	
+	# getting leader sequence if possible #
+	my %cp;
+	foreach my $locus_id (keys %$loci_r){
+		# next unless leader_start && leader_end #
+		next unless exists $loci_r->{$locus_id}{'leader_start'} 
+					&& exists $loci_r->{$locus_id}{'leader_end'}
+					&& exists $loci_r->{$locus_id}{'scaffold'}
+					&& exists $loci_r->{$locus_id}{'fasta_file'};
+	
+		# checking for existence of genome fasta, if yes, extract leader sequence #
+		if(exists $loci_r->{$locus_id}{'fasta_file'}){
+			
+			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
+			
+			$loci_r->{$locus_id}{'leader_sequence'} = 
+				seq_from_genome_fasta( $fasta_r, 
+						[$loci_r->{$locus_id}{'scaffold'},
+						$loci_r->{$locus_id}{'leader_start'}, 
+						$loci_r->{$locus_id}{'leader_end'}]
+						) unless exists $loci_r->{$locus_id}{'leader_sequence'};
+			
+			if($loci_r->{$locus_id}{'leader_sequence'} eq ""){
+				print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
+					"' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
+					". Not loading leader sequence!\n";
+				}
+			else{		# just entries w/ leader sequence #
+				$cp{$locus_id} = $loci_r->{$locus_id};
+				}
+			}
+		}
+
+		#print Dumper %cp; exit;
+	return \%cp;
+	}
+
+sub just_table_columns{
+#-- Description --#
+# just the columns of interest #
+	my ($header_r, $table) = @_;
+	$table =~ tr/A-Z/a-z/;
+
+	my %col_lists;
+	@{$col_lists{'loci'}} = qw/Locus_ID Taxon_ID Taxon_Name 
+				Subtype Scaffold 
+				Locus_start Locus_end
+				CAS_Start CAS_End  
+				Array_Start Array_End
+				CAS_Status Array_Status 
+				Genbank_File Fasta_File Array_File 
+				Scaffold_count 
+				File_Creation_Date Author/;
+
+	@{$col_lists{'leader'}} = qw/Locus_ID Leader_start Leader_end Leader_end Leader_sequence/;
+	@{$col_lists{'pam'}} = qw/Locus_ID PAM_seq PAM_start PAM_end PAM_sequence/;
+	
+	die "ERROR: '$table' not found in column lists!\n"
+		unless exists $col_lists{$table};
+	
+	map{ $_ =~ tr/A-Z/a-z/ } @{$col_lists{$table}};
+	
+	my %header_parse;
+	map{$header_parse{$_} = $header_r->{$_} if exists $header_r->{$_}} @{$col_lists{$table}};
+	
+		#print Dumper %header_parse; exit;
+	return \%header_parse; 
+	}
+
+sub get_scaffold_name{
+# if no scaffold value, try to get from fasta #
+	my ($loci_r, $db_path) = @_;
+	
+	print STDERR "### checking for genome fasta ###\n";
+	
+	# getting all fasta files needed #
+	my @fasta_need;
+	foreach my $locus_id (keys %$loci_r){
+		next unless exists $loci_r->{$locus_id}{'fasta_file'};		# cannot do w/out genome fasta
+		push @fasta_need, $loci_r->{$locus_id}{'fasta_file'}
+			unless $loci_r->{$locus_id}{'scaffold'};
+		}
+	# extracting scaffolds #
+	my %fasta_scaf;
+	foreach my $file (@fasta_need){
+		my $path_file = "$db_path/fasta/$file";
+		die " ERROR: cannot find $path_file!\n" unless -e $path_file;
+		
+		open IN, $path_file or die $!;
+		while(<IN>){
+			chomp;
+			if(/^>/){
+				s/^>//;
+				die " ERROR: multiple scaffolds in $file! You must designate the scaffold name yourself!\n"
+					if exists $fasta_scaf{$file};
+				$fasta_scaf{$file} = $_; 
+				}
+			die " ERROR: count not find a scaffold name in the genome fasta: $file! You must designate the scaffold name yourself!\n"
+				unless exists $fasta_scaf{$file};
+			}
+		close IN;
+		}
+	# adding scaffold values #
+	foreach my $locus_id (keys %$loci_r){
+		$loci_r->{$locus_id}{'scaffold'} = $fasta_scaf{$loci_r->{$locus_id}{'fasta_file'}}
+			unless exists $loci_r->{$locus_id}{'scaffold'};
+		die " ERROR: could not add a scaffold to locus: $locus_id! Add it yourself!\n"
+			unless exists $loci_r->{$locus_id}{'scaffold'};
+		}
+
+	#print Dumper %$loci_r; exit;
+	#print Dumper @fasta_need; exit;
+	}
+
+sub unix_line_breaks{
+	my ($loci_r, $db_path) = @_;
+	
+	print STDERR "### checking line breaks for all external files ###\n";
+	
+	#my @file_columns = qw/genbank_file fasta_file array_file/;
+	my %file_cols = (
+		"genbank_file" => "genbank",
+		"fasta_file" => "fasta",
+		"array_file" => "array");
+	
+	foreach my $locus_id (keys %$loci_r){
+		foreach my $file_col (keys %file_cols){
+			if(exists $loci_r->{$locus_id}{$file_col}){
+				my $file_path = join("/", $db_path, $file_cols{$file_col}, 
+									$loci_r->{$locus_id}{$file_col});
+				lineBreaks2unix($file_path, 1);
+				}
+			}
+		}
+	}
+
+sub make_external_file_dirs{
+# moving files to directory in CLdb_home #
+	my ($loci_r, $header_r, $dir) = @_;
+	
+	foreach my $locus_id (keys %$loci_r){			
+		$loci_r->{$locus_id}{"genbank_file"} = 
+			make_CLdb_dir($dir, 'genbank', $loci_r->{$locus_id}{"genbank_file"}) 
+				if exists $loci_r->{$locus_id}{"genbank_file"};
+		$loci_r->{$locus_id}{"array_file"} = 
+			make_CLdb_dir($dir, 'array', $loci_r->{$locus_id}{"array_file"}) 
+				if exists $loci_r->{$locus_id}{"array_file"};
+		$loci_r->{$locus_id}{"fasta_file"} = 
+			make_CLdb_dir($dir, 'fasta', $loci_r->{$locus_id}{"fasta_file"})
+				if exists $loci_r->{$locus_id}{"fasta_file"};
+		}
+	
+		#print Dumper %$loci_r; exit;	
+	return $dir;
+	}
+
+sub make_CLdb_dir{
+	my ($dir, $name, $infile) = @_;
+	my @parts = File::Spec->splitpath( $infile );
+
+	# making dir; copying files #
+	if(File::Spec->rel2abs($parts[1]) ne "$dir/$name"){
+		mkdir "$dir/$name" unless -d "$dir/$name";
+		unless(-e "$dir/$name/$parts[2]"){		# can't find in needed directory, is it in specified directory?
+			die " ERROR: cannot find ", $infile, "\n"
+				unless -e $infile;			# can't be found anywhere
+			
+			print STDERR "...$infile not in CLdb_home/$name/\n";
+			copy($infile, "$dir/array/$parts[2]") or die $!;
+			print STDERR "...Copied $infile to $dir/$name/$parts[2]\n" unless $quiet;
+			}
+		}
+			
+	return $parts[2];
+	}
+
+sub genbank2fasta{
+# getting fasta from genbank unless -e fasta #
+	my ($loci_r, $db_path) = @_;
+	
+	print STDERR "### checking for genome fasta ###\n";
+	
+	foreach my $locus_id (keys %$loci_r){
+		next unless exists $loci_r->{$locus_id}{'genbank_file'};		# cannot do w/out genbank
+		
+		if(! exists $loci_r->{$locus_id}{'fasta_file'} ){
+			print STDERR "No genome fasta for locus_id: $locus_id! Trying to extract sequence from genbank...\n";
+			$loci_r->{$locus_id}{'fasta_file'} = 
+				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");
+			}
+		elsif( ! -e $loci_r->{$locus_id}{'fasta_file'}){
+			my $fasta_name = $loci_r->{$locus_id}{'fasta_file'};
+			print STDERR "WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
+			$loci_r->{$locus_id}{'fasta_file'} = 
+				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");			
+			}
+		}
+	}
+
+sub genbank2fasta_extract{
+	my ($genbank_file, $db_path, $fasta_dir) = @_;
+
+	# making fasta dir if not present #
+	mkdir $fasta_dir unless -d $fasta_dir;
+	
+	# checking for existence of fasta #
+	my @parts = File::Spec->splitpath($genbank_file);
+	$parts[2] =~ s/\.[^.]+$|$/.fasta/;
+	my $fasta_out = "$fasta_dir/$parts[2]";
+	if(-e $fasta_out){
+		print STDERR "\t'$fasta_out' does exist, but not in loci table. Adding to loci table.\n";
+		return $parts[2]; 
+		}
+
+	# sanity check #
+	die " ERROR: cannot find $genbank_file!\n"
+		unless -e "$db_path/genbank/$genbank_file";
+	
+	# I/O #
+	my $seqio = Bio::SeqIO->new(-file => "$db_path/genbank/$genbank_file", -format => "genbank");
+	open OUT, ">$fasta_out" or die $!;
+	
+	# writing fasta #
+	my $seq_cnt = 0;
+	while(my $seqo = $seqio->next_seq){
+		$seq_cnt++;
+		
+		# seqID #
+		my $scafID = $seqo->display_id;
+		print OUT ">$scafID\n";
+			for my $feato (grep { $_->primary_tag eq 'source' } $seqo->get_SeqFeatures){
+			print OUT $feato->seq->seq, "\n";
+			}
+		}
+	close OUT;
+	
+	# if genome seq found and fasta written, return fasta #
+	if($seq_cnt == 0){
+		print STDERR "\tWARNING: no genome sequnece found in Genbank file: $genbank_file!\nSkipping BLAST!\n";
+		unlink $fasta_out;
+		return 0;
+		}
+	else{ 
+		print STDERR "\t\tFasta file extracted from $genbank_file, written: $fasta_out\n";
+		return $parts[2]; 			# just fasta name
+		}
+	}
+
 sub make_genbank_array_dirs{
 	my ($loci_r, $header_r) = @_;
 	
@@ -269,14 +612,13 @@ sub add_scaffold_ID{
 
 sub get_loci_table{
 # loading tab-delimited table from STDIN #
-	my $column_list_r = shift;
-	
-	# checking line breaks #
+
 	my $tbl_r = lineBreaks2unix(\*STDIN);
-	
+
 	# loading into a hash #
 	my %loci;
 	my %header;
+	my %header_rev;
 	my $line_cnt = 0;
 	foreach (@$tbl_r){
 		chomp;
@@ -288,26 +630,34 @@ sub get_loci_table{
 			tr/ /_/;
 			my @line = split /\t/;
 			for my $i (0..$#line){
-				next unless exists $column_list_r->{$line[$i]};		# only including columns in loci DB table
+				#next unless grep(/^$line[$i]$/, @column_list);		# only including columns in loci DB table
 				next if exists $header{$line[$i]}; 					# only using 1st column found with a particular name
 				$header{$line[$i]} = $i;		# column_name => index
+				$header_rev{$i} = $line[$i];		# column_name => index
 				}
+			
+			# checking for locus_id #
+			die " ERROR: 'locus_id' column not found!\n"
+				unless exists $header{'locus_id'};
+				
 			}
 		else{
-			check_headers(\%header) if $.==2;	
-			my @line = split /\t/;
+			my @line = split /\t/;	
 			
-			if(exists $loci{$line[$header{"locus_id"}]} ){
-				die "ERROR: '", $line[$header{"locus_id"}], "' is duplicated!\n";
+			my $locus_id = $line[$header{'locus_id'}];
+			die " ERROR: locus_id: '$locus_id' is not unique in loci table!\n"
+				if exists $loci{$locus_id};
+			
+			foreach my $i (0..$#line){
+				next unless $header_rev{$i};
+				$loci{$locus_id}{$header_rev{$i}} = $line[$i];
 				}
-			$loci{$line[$header{"locus_id"}]} = \@line;
 			}
 		}
 	# sanity check #
 	die " ERROR: entries found in loci table!\n" unless %loci;	
-	
 		#print Dumper %loci; exit; 
-		#print Dumper %header; exit;
+		#print Dumper %header; exit;	
 	return (\%loci, \%header);
 	}
 
@@ -334,9 +684,11 @@ sub check_headers{
 		print STDERR join(",\n", sort @found), "\n";
 		exit;
 		}
+		
 	
 	}
-	
+
+
 
 
 

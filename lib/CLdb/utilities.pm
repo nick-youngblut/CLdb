@@ -5,6 +5,7 @@ use strict;
 use warnings FATAL => 'all';
 use Carp  qw( carp confess croak );
 use Data::Dumper;
+use File::Spec;
 
 # export #
 use base 'Exporter';
@@ -12,6 +13,7 @@ our @EXPORT_OK = qw/
 file_exists
 connect2db
 lineBreaks2unix
+get_file_path
 /;
 
 	
@@ -40,16 +42,41 @@ connect2db
 
 =cut
 
+sub get_file_path{
+#-- Description --#
+# converting line breaks to unix #
+#-- input --#
+# $file = file name 
+	my ($file) = @_;
+	die "ERROR: no file provided!\n" unless defined $file;
+	my @parts = File::Spec->splitpath(File::Spec->rel2abs($file));
+	return $parts[1];
+	}
+
 sub lineBreaks2unix{
 #-- Description --#
 # converting line breaks to unix #
-	my $fh = shift;	
-	my @table = <$fh>;
-	my @tmp;
-	map{ s/\r$//; s/\r/\n/g; s/\n+/\n/g; push @tmp, split /\n/;  } @table;
-	@table = @tmp;
+#-- input --#
+# $fh = filehandle or file name
+# $ext = external file? 
+	my ($fh, $ext) = @_;
 	
-	return \@table;
+	if($ext){			# external file 
+		die "ERROR: cannot find $fh!\n" unless -e $fh || -l $fh;
+		# mac to unix #
+		my $cmd = "perl -pi -e 's/\\r/\\n/g' $fh";
+		`$cmd`;
+		# win to unix #
+		$cmd = "perl -pi -e 's/\\r\$//g' $fh";
+		`$cmd`;					
+		}
+	else{				# internal; filehandle
+		my @table = <$fh>;
+		my @tmp;
+		map{ s/\r$//; s/\r/\n/g; s/\n+/\n/g; push @tmp, split /\n/;  } @table;
+		@table = @tmp;
+		return \@table;
+		}
 	}
 
 sub connect2db{
