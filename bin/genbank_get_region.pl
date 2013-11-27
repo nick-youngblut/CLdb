@@ -77,8 +77,17 @@ sub get_regions_scaffold{
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
 			$feat_tags{$feat_id}{"contig"} = [($feat->location->seq_id)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
+
+	# flipping start-end if strand = -1 #
+	foreach my $feat (keys %feat_tags){
+		if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+			(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+				(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+			}
+		}	
 	
 	# writing out features #
 	my @tags = ("contig", "start", "end");
@@ -123,9 +132,17 @@ sub get_regions{
 				}
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
-
+	
+	# flipping start-end if strand = -1 #
+	foreach my $feat (keys %feat_tags){
+		if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+			(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+				(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+			}
+		}	
 	
 	# writing out features #
 	my @tags = ("start", "end");

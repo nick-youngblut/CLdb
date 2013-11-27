@@ -72,7 +72,7 @@ The query can be refined with many of the flags.
 
 =head2 Output
 
-If not using grouping: ">cli.[locus_ID]__[start]-[end]__[array_order]"
+If not using grouping: ">[locus_ID]__[start]-[end]__[array_order]"
 
 =head2 WARNING
 
@@ -236,7 +236,7 @@ sub write_array_seq{
 			foreach my $start (sort{$a<=>$b} keys %{$arrays_r->{$seq_id}}){	
 				$order++;
 				print join("\n", 
-						join("__", ">cli.$seq_id", 
+						join("__", ">$seq_id", 
 							join("-", $start, $arrays_r->{$seq_id}{$start}{"stop"}),
 							$order),
 						$arrays_r->{$seq_id}{$start}{"seq"}), "\n";

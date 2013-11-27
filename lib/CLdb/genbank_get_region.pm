@@ -9,49 +9,54 @@ use Getopt::Long;
 use File::Spec;
 use Bio::SeqIO;
 use Set::IntervalTree;
+use Carp  qw( carp confess croak );
 
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, @regions, $tRNA, $strand_b);
-GetOptions(
-		"regions=s{,}" => \@regions,
-		"tRNA" => \$tRNA,
-		"strand" => \$strand_b,			# all + strand? [false]
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
+# export #
+use base 'Exporter';
+our @EXPORT_OK = qw/
+genbank_get_region/;
 
 
-### MAIN
-# loading/editing region(s) #
-my $regions_r;
-if(@regions){ $regions_r = \@regions; }
-elsif($ARGV[0]){ $regions_r = load_regions($ARGV[0]); }
-else{ die " ERROR: provide at least 1 region (scaffold,start,end). Either via '-region' or as file\n"; }
-
-die " ERROR: you must provide: (scaffold) ,start, & end for each region!\n"
-	unless scalar @$regions_r % 2 == 0 || scalar @$regions_r % 3 == 0;
-
-# loading features #
-my $feats_r = load_genbank_features();
-
-
-if(scalar @$regions_r % 2 == 0){  # without scaffolding #
-	my $itree = load_itree($feats_r);
-	get_regions($itree, $regions_r);
+#--- main ---#
+sub genbank_get_region{
+#--- Description ---#
+# getting features in select regions of genbank
+#--- Input ---#
+# @regions = start,end
+# $genbank_file = genbank file
+# $tRNA = include tRNAs? [false]
+# $strand_b = all on + strand? [false]
+	my @regions = @_[0..1];
+	my ($genbank_file, $tRNA, $strand_b, $verbose) = @_[2..$#_];
+	
+	my $regions_r;
+	if(@regions){ $regions_r = \@regions; }
+	elsif($ARGV[0]){ $regions_r = load_regions($ARGV[0]); }
+	else{ die " ERROR: provide at least 1 region (scaffold,start,end). Either via '-region' or as file\n"; }
+	
+	die " ERROR: you must provide: (scaffold) ,start, & end for each region!\n"
+		unless scalar @$regions_r % 2 == 0 || scalar @$regions_r % 3 == 0;
+	
+	# loading features #
+	my $feats_r = load_genbank_features($genbank_file,$tRNA);
+	
+	my $ret_r;
+	if(scalar @$regions_r % 2 == 0){  # without scaffolding #
+		my $itree = load_itree($feats_r);
+		$ret_r = get_regions($itree, $regions_r, $strand_b);
+		}
+	else{			# by-scaffold #
+		my $itrees_r = load_itrees($feats_r);
+		$ret_r = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
+		}
+	return $ret_r;
 	}
-else{			# by-scaffold #
-	my $itrees_r = load_itrees($feats_r);
-	get_regions_scaffold($itrees_r, $regions_r);
-	}
 
-### Subroutines
+
+#--- accessory subroutines ---#
 sub get_regions_scaffold{
 # getting CDS tag info that falls into regions #
-	my ($itrees_r, $regions_r) = @_;
+	my ($itrees_r, $regions_r, $strand_b) = @_;
 	
 	my %feat_tags;
 	my %tags;
@@ -77,13 +82,25 @@ sub get_regions_scaffold{
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
 			$feat_tags{$feat_id}{"contig"} = [($feat->location->seq_id)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
+
+	# flipping start-end if strand = -1 #
+	unless($strand_b){
+		foreach my $feat (keys %feat_tags){
+			if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+				(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+					(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+				}
+			}	
+		}
 	
-	# writing out features #
+	# returning features #
+	my @ret;
 	my @tags = ("contig", "start", "end");
 	push(@tags, sort keys %tags);
-	print join("\t", "Feature_num", @tags), "\n";
+	push @ret, ["Feature_num", @tags];
 	
 	foreach my $feat (keys %feat_tags){
 		my @line;
@@ -95,13 +112,15 @@ sub get_regions_scaffold{
 				push(@line, "NA");
 				}
 			}
-		print join("\t", $feat, @line), "\n";
+		push @ret, [$feat, @line];
 		}
+		
+	return \@ret;
 	}
 	
 sub get_regions{
 # getting CDS tag info that falls into regions #
-	my ($itree, $regions_r) = @_;
+	my ($itree, $regions_r, $strand_b) = @_;
 	
 	my %feat_tags;
 	my %tags;
@@ -123,14 +142,25 @@ sub get_regions{
 				}
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
-
+	
+	# flipping start-end if strand = -1 #
+	unless($strand_b){
+		foreach my $feat (keys %feat_tags){
+			if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+				(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+					(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+				}
+			}	
+		}
 	
 	# writing out features #
+	my @ret;
 	my @tags = ("start", "end");
 	push(@tags, sort keys %tags);
-	print join("\t", "Feature_num", @tags), "\n";
+	push @ret, ["Feature_num", @tags];
 	
 	foreach my $feat (keys %feat_tags){
 		my @line;
@@ -142,8 +172,9 @@ sub get_regions{
 				push(@line, "NA");
 				}
 			}
-		print join("\t", $feat, @line), "\n";
+		push @ret, [$feat, @line];
 		}
+	return \@ret;
 	}
 
 sub load_itrees{
@@ -175,7 +206,8 @@ sub load_itree{
 	}
 
 sub load_genbank_features{
-	my $seqio = Bio::SeqIO->new(-fh => \*STDIN, -format => "genbank");
+	my ($genbank_file, $tRNA) = @_;
+	my $seqio = Bio::SeqIO->new(-file => $genbank_file, -format => "genbank");
 	my @feats;
 	while ( my $seqo = $seqio->next_seq){
 		push(@feats, grep { $_->primary_tag eq 'CDS' } $seqo->get_SeqFeatures);

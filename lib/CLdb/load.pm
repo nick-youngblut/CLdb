@@ -8,9 +8,6 @@ use Carp  qw( carp confess croak );
 use Data::Dumper;
 use DBI;
 
-## CLdb ##
-
-
 # export #
 use base 'Exporter';
 our @EXPORT_OK = qw/
@@ -46,7 +43,7 @@ sub load_db_table{
 # dbh = DBI object
 # table = table to update
 # $header_r = %$; all columns to add values to; ${column_name} => column_index
-# $vals_r = %%$; {id}=>{cat}=>{value}
+# $vals_r = %%$; {unique_id}=>{cat}=>{value}
 
 	my ($dbh, $table, $header_r, $vals_r, $vb) = @_;
 
@@ -63,11 +60,12 @@ sub load_db_table{
 	
 
 	my $q = "INSERT INTO $table($l) values ($Qmrk)";	
-	my $sql = $dbh->prepare($q);	
-	
+	my $sql = $dbh->prepare($q);
+		
 	my $cnt = 0;
 	foreach my $entry (keys %$vals_r){			
 		$sql->execute( @{$vals_r->{$entry}}{@header} );
+		
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr for $entry\n";
 			}
