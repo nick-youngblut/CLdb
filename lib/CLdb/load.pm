@@ -36,6 +36,50 @@ Subroutines for querying CLdb
 
 =cut
 
+sub update_db_table{
+#-- description --#
+# updating existing table entries #
+#-- input --#
+# dbh = DBI object
+# table = table to update
+# $header_r = %$; all columns to add values to; ${column_name} => column_index
+# $vals_r = %%$; {unique_id}=>{cat}=>{value}
+# $spec_r = %$; {set|where}=>{cat}
+#		set: category to change
+#		where: WHERE category
+
+	my ($dbh, $table, $header_r, $vals_r, $vb) = @_;
+
+	# sanity check #
+	croak "ERROR: no categories provided!\n"
+		unless defined $header_r || scalar keys %$header_r > 0;
+
+	# header order #
+	my @header = keys %$header_r;
+	
+	# making query #
+	my $l = join(",", @header);
+	my $Qmrk = join(",", ("?") x scalar @header);
+	
+
+	my $q = "INSERT INTO $table($l) values ($Qmrk)";	
+	my $sql = $dbh->prepare($q);
+		
+	my $cnt = 0;
+	foreach my $entry (keys %$vals_r){			
+		$sql->execute( @{$vals_r->{$entry}}{@header} );
+		
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr for $entry\n";
+			}
+		else{ $cnt++; }
+		}
+	$dbh->commit;
+
+	print STDERR "...Number of entries added/updated to '$table' table: $cnt\n"
+		unless $vb;
+	}
+
 sub load_db_table{
 #-- description --#
 # adding table entries; assuming redundant entries will replace or be ignored #

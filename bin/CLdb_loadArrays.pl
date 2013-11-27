@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-CLdb_loadArrays.pl -- loading direct repeats & spacers into CRISPR database
+CLdb_loadArrays.pl -- loading direct repeats & spacers into CLdb
 
 =head1 SYNOPSIS
 
@@ -47,6 +47,9 @@ Array file names are obtained from the loci table in the
 CRISPR database.
 
 Array files must be in $CLdb_HOME/array/
+
+Start-stop is based on CRISPRFinder orientation, which is
+always + strand.
 
 =head1 EXAMPLES
 
@@ -138,35 +141,6 @@ exit;
 
 
 ### Subroutines 
-sub add_entries{
-# adding entries to spacer & dr tables #
-	my ($dbh, $arrays_r, $cat) = @_;
-	
-	
-	my $cmd;
-	if($cat eq "spacer"){
-		$cmd = "INSERT INTO Spacers(Locus_ID, Spacer_ID, Spacer_start, Spacer_end, Spacer_sequence) values (?,?,?,?,?)";
-		}
-	elsif($cat eq "DR"){
-		$cmd = "INSERT INTO DRs(Locus_ID, DR_ID, DR_start, DR_end, DR_sequence) values (?,?,?,?,?)";
-		}
-	else{ die " LOGIC ERROR: $!\n"; }
-	
-	my $sql = $dbh->prepare($cmd);
-	
-	foreach my $locus_id (keys %$arrays_r){
-		foreach my $x_id (keys %{$arrays_r->{$locus_id}{$cat}}){
-			$sql->execute( ($locus_id, $x_id, @{$arrays_r->{$locus_id}{$cat}{$x_id}}) );
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr in: ", join("\t", $locus_id, $x_id, @{$arrays_r->{$locus_id}{$cat}{$x_id}}), "\n";
-				}
-			}
-		}
-	$dbh->commit;
-
-	print STDERR "...$cat entries added to database\n" unless $verbose;
-	}
-
 sub make_headers{
 # headers for CLdb entry loading #
 	my %dr_header = (

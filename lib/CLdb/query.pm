@@ -80,7 +80,7 @@ sub get_arrays_seq_byLeader{
 	
 	# checking for opts #
 	map{ confess "ERROR: cannot find option: '$_'" 
-		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query by_group join_sql/;
+		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
 
 	# getting table info #
 	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
@@ -156,7 +156,7 @@ sub get_array_seq{
 	
 	# checking for opts #
 	map{ confess "ERROR: cannot find option: '$_'" 
-		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query by_group join_sql/;
+		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
 	
 	# getting table info #
 	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
@@ -173,6 +173,11 @@ sub get_array_seq{
 		FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
 		}
 
+	### TODO:
+	## need to have spacer|DR ID in ouput (>sp.#__start-end__locusID)
+	## spacer ID should be order in array ##
+	
+
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
 	
@@ -184,7 +189,11 @@ sub get_array_seq{
 	# making hash of sequences #
 	my %arrays;
 	foreach my $row (@$ret){
-		#my $pos = join("-", $$row[2], $$row[3]);
+		if(defined $opts_r->{"by_group"} && ! defined $$row[0]){
+			$dbh->disconnect();
+			die "ERROR: not all entries have group IDs! Have you run CLdb_groupArrayElements.pl?\n";
+			}
+		
 		$arrays{$$row[0]}{$$row[2]}{"seq"} = $$row[1];		# seqID=>start=>cat=>value
 		$arrays{$$row[0]}{$$row[2]}{"stop"} = $$row[3];
 		}

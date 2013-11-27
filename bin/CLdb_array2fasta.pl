@@ -223,10 +223,10 @@ sub write_array_seq{
 		if(defined $opts_r->{"by_group"}){
 			foreach my $start ( keys %{$arrays_r->{$seq_id}} ){	
 				if(defined $opts_r->{"spacer_DR_b"}){
-					print join("\n", ">DR-Group.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
+					print join("\n", ">DR-Grp.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
 					}
 				else{
-					print join("\n", ">Spacer-Group.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
+					print join("\n", ">Sp-Grp.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
 					}
 				}
 			}
