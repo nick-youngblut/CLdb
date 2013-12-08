@@ -218,30 +218,10 @@ sub write_array_seq{
 # writing arrays as fasta
 	my ($arrays_r, $opts_r) = @_;
 	
-	foreach my $seq_id (sort keys %$arrays_r){
-		# grouping #
-		if(defined $opts_r->{"by_group"}){
-			foreach my $start ( keys %{$arrays_r->{$seq_id}} ){	
-				if(defined $opts_r->{"spacer_DR_b"}){
-					print join("\n", ">DR-Grp.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
-					}
-				else{
-					print join("\n", ">Sp-Grp.$seq_id", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
-					}
-				}
-			}
-		# no grouping #
-		else{
-			my $order = 0;
-			foreach my $start (sort{$a<=>$b} keys %{$arrays_r->{$seq_id}}){	
-				$order++;
-				print join("\n", 
-						join("__", ">$seq_id", 
-							join("-", $start, $arrays_r->{$seq_id}{$start}{"stop"}),
-							$order),
-						$arrays_r->{$seq_id}{$start}{"seq"}), "\n";
-				}
-			}
+	foreach (@$arrays_r){
+		print join("\n", 
+			join("|", ">$$_[0]", @$_[1..($#$_-1)]), 
+			$$_[$#$_]), "\n";
 		}
 	}
 

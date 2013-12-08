@@ -196,7 +196,7 @@ sub get_array_table{
 		# loading hash #
 		my $uID = join("_", $locus_id, "dri.$repeat_cnt");
 		$arrays_r->{"DR"}{$uID}{"locus_id"} = $locus_id;
-		$arrays_r->{"DR"}{$uID}{"dr_id"} = "dr.$repeat_cnt";
+		$arrays_r->{"DR"}{$uID}{"dr_id"} = "$repeat_cnt";
 		$arrays_r->{"DR"}{$uID}{"dr_start"} = $$pos_r[0];
 		$arrays_r->{"DR"}{$uID}{"dr_end"} = $$pos_r[1];
 		$arrays_r->{"DR"}{$uID}{"dr_sequence"} = $line[1];
@@ -205,7 +205,7 @@ sub get_array_table{
 		if($$pos_r[2] && $$pos_r[3]){
 			my $uID = join("_", $locus_id, "$repeat_cnt");
 			$arrays_r->{"spacer"}{$uID}{"locus_id"} = $locus_id;
-			$arrays_r->{"spacer"}{$uID}{"spacer_id"} = "sp.$repeat_cnt";
+			$arrays_r->{"spacer"}{$uID}{"spacer_id"} = "$repeat_cnt";
 			$arrays_r->{"spacer"}{$uID}{"spacer_start"} = $$pos_r[2];
 			$arrays_r->{"spacer"}{$uID}{"spacer_end"} = $$pos_r[3];
 			$arrays_r->{"spacer"}{$uID}{"spacer_sequence"} = $line[2];			

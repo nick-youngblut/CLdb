@@ -89,10 +89,10 @@ sub get_arrays_seq_byLeader{
 	
 	my $query = "SELECT
 $tbl_oi.Locus_ID, 
+'$tbl_prefix', 
+$tbl_oi.$tbl_prefix\_ID,
 $tbl_oi.$tbl_prefix\_group, 
 $tbl_oi.$tbl_prefix\_sequence,
-$tbl_oi.$tbl_prefix\_start,
-$tbl_oi.$tbl_prefix\_end,
 loci.array_end,
 leaders.leader_end
 FROM loci, leaders, $tbl_oi
@@ -103,7 +103,8 @@ AND leaders.locus_id IS NOT NULL
 
 	$query .= "GROUP BY $tbl_oi.$tbl_prefix\_group" if $opts_r->{"by_group"};
 	$query =~ s/\n/ /g;
-		#print Dumper $query;
+	
+	#print Dumper $query; exit;
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
@@ -111,7 +112,7 @@ AND leaders.locus_id IS NOT NULL
 		unless $$ret[0];
 	
 	# making fasta #
-	my %arrays;
+	my @arrays;
 	foreach my $row (@$ret){
 		
 		# loading fasta #
@@ -120,25 +121,24 @@ AND leaders.locus_id IS NOT NULL
 		
 		# rev-comp if leader end > array end #
 		if ($$row[6] > $$row[5]){
-			$$row[2] = revcomp($$row[2]);
-			($$row[3],$$row[4]) = ($$row[4],$$row[3]);
+			$$row[4] = revcomp($$row[4]);
 			}
 	
-		# loading hash #
-		## grouping ##
-		if($opts_r->{"by_group"}){					
-			$arrays{$$row[1]}{$$row[3]}{"seq"} = $$row[2];
-			$arrays{$$row[1]}{$$row[3]}{"stop"} = $$row[4];			
+		@$row = @$row[0..4];
+
+		# 'NA' if needed #
+		if(defined $$row[3] && defined $opts_r->{"by_group"}){		# group found 
+			$$row[0] = 'NA';
+			$$row[2] = 'NA';
 			}
-		## no grouping ##
-		else{			
-			$arrays{$$row[0]}{$$row[3]}{"seq"} = $$row[2];
-			$arrays{$$row[0]}{$$row[3]}{"stop"} = $$row[4];			
+		else{
+			$$row[3] = 'NA' if ! defined $$row[3];
+			die "ERROR: no group ID found for an entry. Cannot group sequences!\n"
+				if defined $opts_r->{"by_group"};
 			}
 		}
-	
-		#print Dumper %arrays; exit;
-	return \%arrays;
+		#print Dumper @$ret; exit;
+	return $ret;
 	}
 
 sub get_array_seq{
@@ -160,46 +160,45 @@ sub get_array_seq{
 	
 	# getting table info #
 	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-	($tbl_oi, $tbl_prefix) = ("DRs","DR") if defined $opts_r->{"spacer_DR_b"};
-
-	my $query;
-	if(defined $opts_r->{"by_group"}){		# unique spacer group
-		$query = "SELECT $tbl_oi.$tbl_prefix\_group, $tbl_oi.$tbl_prefix\_sequence, 0, 0
-		FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'} GROUP BY $tbl_oi.$tbl_prefix\_group";
-		}
-	else{			# no grouping 
-		$query = "SELECT $tbl_oi.Locus_ID, $tbl_oi.$tbl_prefix\_sequence, 
-			$tbl_oi.$tbl_prefix\_start, $tbl_oi.$tbl_prefix\_end
-		FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
-		}
-
-	### TODO:
-	## need to have spacer|DR ID in ouput (>sp.#__start-end__locusID)
-	## spacer ID should be order in array ##
+	($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
 	
-
+	my $query = "SELECT 
+$tbl_oi.Locus_ID, 
+'$tbl_prefix', 
+$tbl_oi.$tbl_prefix\_ID,
+$tbl_oi.$tbl_prefix\_group, 
+$tbl_oi.$tbl_prefix\_sequence 
+FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
+	
+	if(defined $opts_r->{"by_group"}){
+		$query .= " GROUP BY $tbl_oi.$tbl_prefix\_group";
+		$query .= " ORDER BY $tbl_oi.$tbl_prefix\_group";
+		}
+	
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	die "ERROR: no matching entries!\n"
 		unless $$ret[0];
 
-	# making hash of sequences #
-	my %arrays;
+	# 'NA' for ID & locus is group defined #
 	foreach my $row (@$ret){
-		if(defined $opts_r->{"by_group"} && ! defined $$row[0]){
-			$dbh->disconnect();
-			die "ERROR: not all entries have group IDs! Have you run CLdb_groupArrayElements.pl?\n";
+		# @$row = locus,spacer/DR,ID,groupID,seq
+		if(defined $$row[3] && defined $opts_r->{"by_group"}){		# group found 
+			$$row[0] = 'NA';
+			$$row[2] = 'NA';
 			}
-		
-		$arrays{$$row[0]}{$$row[2]}{"seq"} = $$row[1];		# seqID=>start=>cat=>value
-		$arrays{$$row[0]}{$$row[2]}{"stop"} = $$row[3];
+		else{
+			$$row[3] = 'NA' if ! defined $$row[3];
+			die "ERROR: no group ID found for an entry. Cannot group sequences!\n"
+				if defined $opts_r->{"by_group"};
+			}
 		}
 
-		#print Dumper %arrays; exit;
-	return \%arrays;
+		#print Dumper @$ret; exit;
+	return $ret;
 	}
 
 sub join_query_opts{

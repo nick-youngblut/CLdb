@@ -101,7 +101,7 @@ sub read_fasta{
 	close IN;
 		#print Dumper %fasta; exit;
 	return \%fasta;
-	} #end load_fasta
+	} 
 
 sub revcomp{
 # reverse complement of a sequence

@@ -70,6 +70,7 @@ if($spacer_bool){
 		spacer_DR_b => 0,
 		);
 	my $arrays_r = get_array_seq($dbh,\%opts); 
+	
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'spacers');
 	chdir $curdir or die $!;
@@ -78,17 +79,13 @@ if($dr_bool){
 	my %opts = (
 		extra_query => "",
 		join_sql => "",
-		spacer_DR_b => 0,
+		spacer_DR_b => 1,
 		);
 	my $arrays_r = get_array_seq($dbh,\%opts); 
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'DRs');
 	chdir $curdir or die $!;
 	}
-
-# make fasta 
-#my $spacer_fasta = call_array2fasta($dir, $database_file, "") if $spacer_bool;
-#my $dr_fasta = call_array2fasta($dir, $database_file, "-r") if $dr_bool;
 
 # call cd-hit-est #
 chdir $dir or die $!;
@@ -123,16 +120,22 @@ sub update_db{
 	
 	my $sql = $dbh->prepare($cmd);
 	
-	foreach my $locus_id (keys %$clust_r){
-		foreach my $x_id (keys %{$clust_r->{$locus_id}}){
-			$sql->execute( ($clust_r->{$locus_id}{$x_id}, $locus_id, $x_id) );
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr in: ", join("\t", $clust_r->{$locus_id}{$x_id}, $locus_id, $x_id), "\n";
-				}
+	my $cnt = 0;
+	foreach my $row (@$clust_r){
+		# @$row = locus,spacer/DR,ID,groupID,seq
+			#print Dumper @$row; exit;
+		map{ undef $_ if $_ eq 'NA' } @$row;
+		$sql->execute( $$row[3], $$row[0], $$row[2] );
+		
+		if($DBI::err){
+			my $entry = join("|", @$row);
+			print STDERR "ERROR: $DBI::errstr for $entry\n";
 			}
+		else{ $cnt++; }
 		}
+		
 	$dbh->commit;
-	print STDERR "...$cat groups added\n" unless $verbose;
+	print STDERR "...$cat group info added to $cnt entries\n" unless $verbose;
 	}
  
 sub parse_cdhit{
@@ -141,10 +144,10 @@ sub parse_cdhit{
 
 	open IN, "$cdhit_out.clstr" or die $!;
 	
-	my %clusters;			# file=>spacer/dr=>cluster_ID
+	my @clusters;			
 	my $cluster_id;
+	my %clust_chk;
 	while(<IN>){
-			#print Dumper $_; next;
 		chomp;
 		if(/^>/){
 			($cluster_id = $_) =~ s/>.+ //g;
@@ -163,25 +166,27 @@ sub parse_cdhit{
 		# getting ID (aliase -> id) #
 		$line[2] =~ s/^>|\.{3}$//g;	
 		die "ERROR: cannot find $line[2] in alias list!\n"
-			unless exists $aliases_r->{$line[2]};		
-		$line[2] = $aliases_r->{$line[2]};
+			unless exists $aliases_r->{$line[2]};
 		
-		my @name_parts = split /__/, $line[2];		# locus_ID, start-end, order
-		
-		# length #
-		$line[1] =~ s/nt//g;
-	
-		# loading hashes #
-		my $uID = join("_", $name_parts[0], $name_parts[2]);
-		$clusters{$uID}{"$cat\_group"} = $cluster_id + 1;			# groups start at 1
-		$clusters{$uID}{"locus_id"} = $name_parts[0];
-		
+		${$aliases_r->{$line[2]}}[3] = $cluster_id;
+		push @clusters, $aliases_r->{$line[2]};
+		$clust_chk{$line[2]} = 1;
 		}
 	close IN;
 
-		### need to fix how spacer/DR sequence names are written
-		print Dumper %clusters; exit;
-	return \%clusters;
+	# checking to see if all clusters are accounted for #
+	my @not_found;
+	foreach (keys %$aliases_r){
+		push @not_found, $_ unless exists $clust_chk{$_};
+		}
+	if(@not_found){
+		print STDERR "ERROR: some sequences do not have a cluster:\n";
+		print STDERR join(",\n", @not_found), "\n";
+		exit(1);
+		}
+		
+		#exit;
+	return \@clusters;
 	}
 
 sub call_cdhit{
@@ -234,20 +239,14 @@ sub write_array_seq{
 	open OUT, ">$cat.fna" or die $!;
 
 	my $alias_cnt = 0;
-	foreach my $seq_id (sort keys %$arrays_r){
-		my $order = 0;
-		foreach my $start (sort{$a<=>$b} keys %{$arrays_r->{$seq_id}}){	
-			$alias_cnt++;
-			$order++;
+	foreach my $row (@$arrays_r){	
+		$alias_cnt++;
 			
-			$aliases_r->{$alias_cnt} = join("__", "$seq_id", 
-									join("-", $start, $arrays_r->{$seq_id}{$start}{"stop"}),
-									$order);
-			print OUT join("\n", ">$alias_cnt", $arrays_r->{$seq_id}{$start}{"seq"}), "\n";
-			}
+		$aliases_r->{$alias_cnt} = $row;
+		print OUT join("\n", ">$alias_cnt", $$row[$#$row]), "\n";
 		}
 	close OUT;
-
+	
 		#print Dumper %$aliases_r; exit;
 	}
 	
