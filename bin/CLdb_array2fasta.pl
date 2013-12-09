@@ -72,7 +72,7 @@ The query can be refined with many of the flags.
 
 =head2 Output
 
-If not using grouping: ">[locus_ID]__[start]-[end]__[array_order]"
+If not using grouping: ">locus_ID|spacer/DR|elementID|groupID"
 
 =head2 WARNING
 
@@ -101,7 +101,7 @@ CLdb_array2fasta.pl -d CLdb.sqlite -q "AND loci.Locus_ID=1"
 
 CLdb_array2fasta.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
-=head2 Ordering by leaders 
+=head2 Orienting sequence by leaders
 
 CLdb_array2fasta.pl -d CLdb.sqlite -l 
 

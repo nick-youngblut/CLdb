@@ -82,10 +82,13 @@ sub seq_from_genome_fasta{
 
 sub read_fasta{
 # loading fasta file as a hash #
-	my $fasta_in = shift;
-	die " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
+	my ($fasta_in) = @_;
+	if(defined $fasta_in){
+		die " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
+		open IN, $fasta_in or die $!;
+		}
+	else{ *IN = *STDIN; }
 
-	open IN, $fasta_in or die $!;
 	my (%fasta, $tmpkey);
 	while(<IN>){
 		chomp;
@@ -99,7 +102,6 @@ sub read_fasta{
  		else{$fasta{$tmpkey} .= $_; }
 		}
 	close IN;
-		#print Dumper %fasta; exit;
 	return \%fasta;
 	} 
 
