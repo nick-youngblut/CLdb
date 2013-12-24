@@ -54,6 +54,32 @@ This information will be added to the 'PAM' table.
 Scaffold names will try to be obtained from the genome genbank/fasta
 if not provided.
 
+=head2 REQUIRED columns/values in loci file
+
+=over
+
+=item * locus_id
+
+=item * taxon_id
+
+=item * taxon_name
+
+=item * locus_start
+
+=item * locus_end
+
+=item * operon_status
+
+=item * array_status
+
+=item * genbank_file
+
+=item * array_file
+
+=item * author
+
+=back
+
 =head2 WARNING!
 
 The loci table must be in tab-delimited format.
@@ -94,6 +120,7 @@ use File::Path;
 use File::Copy;
 use Bio::SeqIO;
 use DBI;
+use List::Util qw/max/;
 
 # CLdb #
 use FindBin;
@@ -150,14 +177,13 @@ unix_line_breaks($loci_r, $db_path);						# line breaks of all copied files to u
 
 # inferring from table #
 ## getting genome fasta from genbank ##
-genbank2fasta($loci_r, $db_path); 	
+genbank2fasta($loci_r, $db_path, $header_r); 	
 ## getting scaffold name 
 get_scaffold_name($loci_r, $db_path);
 
 
 # updating / loading_db #
 my $loci_header_r = just_table_columns($header_r, 'loci');
-	#print Dumper $loci_header_r; exit;
 load_db_table($dbh, "loci", $loci_header_r, $loci_r);
 
 
@@ -297,7 +323,7 @@ sub get_leader_seq{
 
 sub just_table_columns{
 #-- Description --#
-# just the columns of interest #
+# loading just the columns of interest #
 	my ($header_r, $table) = @_;
 	$table =~ tr/A-Z/a-z/;
 
@@ -436,7 +462,7 @@ sub make_CLdb_dir{
 
 sub genbank2fasta{
 # getting fasta from genbank unless -e fasta #
-	my ($loci_r, $db_path) = @_;
+	my ($loci_r, $db_path, $header_r) = @_;
 	
 	print STDERR "### checking for genome fasta ###\n";
 	
@@ -455,6 +481,9 @@ sub genbank2fasta{
 				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");			
 			}
 		}
+		
+	$header_r->{'fasta_file'} = max(values %$header_r) + 1
+		unless exists $header_r->{'fasta_file'};
 	}
 
 sub genbank2fasta_extract{
@@ -501,7 +530,7 @@ sub genbank2fasta_extract{
 		return 0;
 		}
 	else{ 
-		print STDERR "\t\tFasta file extracted from $genbank_file, written: $fasta_out\n";
+		print STDERR "\tFasta file extracted from $genbank_file, written: $fasta_out\n";
 		return $parts[2]; 			# just fasta name
 		}
 	}

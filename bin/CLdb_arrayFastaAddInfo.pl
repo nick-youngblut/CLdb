@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-CLdb_arrayFastaAddInfo.pl -- write CRISPR array spacers or direct repeats to fasta
+CLdb_arrayFastaAddInfo.pl -- add CLdb info to fastas of array spacers or direct repeats
 
 =head1 SYNOPSIS
 
@@ -43,6 +43,7 @@ Add start-stop position? [FALSE]
 =item -order  <bool>
 
 Add spacer-leader order? [FALSE]
+# not implemented yet! #
 
 =item -v 	Verbose output. [FALSE]
 
@@ -138,7 +139,7 @@ my $dbh = connect2db($database_file);
 
 # checking table existence #
 table_exists($dbh, "loci"); 
-table_exists($dbh, "leaders") if $leader_b;
+#table_exists($dbh, "leaders") if $leader_b;
 
 # loading fasta #
 my $fasta_r = read_fasta();
@@ -199,6 +200,7 @@ $tbl_oi.$prefix\_group";
 		# adding other query options #
 		$cmd .= ", $query" if $query;
 		if($pos_b){
+			$cmd .= ", loci.Scaffold";
 			$cmd .= ", $tbl_oi.$prefix\_start";
 			$cmd .= ", $tbl_oi.$prefix\_end";
 			}	

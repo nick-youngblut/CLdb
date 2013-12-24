@@ -28,6 +28,8 @@ die " ERROR: provide a database file name!\n"
 die " ERROR: cannot find database file!\n"
 	unless -e $database_file;
 
+exit;
+
 ### MAIN
 # connect 2 db #
 my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
@@ -51,6 +53,7 @@ check_headers($header_r);
 add_scaffold_ID($loci_r, $header_r);
 
 # copying array files & genbanks if not in ./genbank & ./array #
+exit;
 make_genbank_array_dirs($loci_r, $header_r);
 
 # striping off paths from file columns #
@@ -70,6 +73,8 @@ sub make_genbank_array_dirs{
 	
 	# current directory #
 	my $dir = File::Spec->rel2abs(File::Spec->curdir());
+
+	print Dumper $loci_r; exit;
 
 	#print STDERR "...Removing any paths in file names\n" unless $verbose;
 	
