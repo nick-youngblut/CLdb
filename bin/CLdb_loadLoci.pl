@@ -516,10 +516,12 @@ sub genbank2fasta_extract{
 		
 		# seqID #
 		my $scafID = $seqo->display_id;
-		print OUT ">$scafID\n";
-			for my $feato (grep { $_->primary_tag eq 'source' } $seqo->get_SeqFeatures){
-			print OUT $feato->seq->seq, "\n";
-			}
+		print OUT join("\n", ">$scafID", $seqo->seq), "\n";
+
+		#print OUT ">$scafID\n";
+		#	for my $feato (grep { $_->primary_tag eq 'source' } $seqo->get_SeqFeatures){
+		#	print OUT $feato->seq->seq, "\n";
+		#	}
 		}
 	close OUT;
 	
