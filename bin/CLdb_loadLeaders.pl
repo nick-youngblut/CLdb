@@ -1,5 +1,93 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_loadLeaders.pl -- adding/updating leader entries in to CRISPR_db
+
+=head1 SYNOPSIS
+
+CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -trim  <int>
+
+Number of bp (& gaps) to trim of end of alignment. [0]
+
+=item -gap  <bool>
+
+Leave gaps in leader sequence entered into the DB? [TRUE] 
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_loadLeaders.pl
+
+=head1 DESCRIPTION
+
+After determining the actual leader region by aligning
+approximate leader regions written by CLdb_getLeaderRegions.pl,
+automatically trim and load leader sequences & start-end
+information into the CRISPR database.
+
+Trimming will be done from the leader region end most
+distant from the CRISPR array. Reversing & 
+reverse-complementation of sequences during the alignment
+will be accounted for (that's why both the aligned and
+'raw' sequenced must be provided).
+
+Not all sequences in the aligned fasta need to be in
+the 'raw' leader fasta (eg. if both ends of the array
+were written because the side containing the leader
+region could not be determined from direct-repeat
+degeneracy.
+
+=head1 EXAMPLES
+
+=head2 Triming off the 50bp of unconserved alignment 
+
+CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
+
 ### modules
 use strict;
 use warnings;
@@ -9,6 +97,18 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use List::Util qw/min max/;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -23,11 +123,8 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
 die " ERROR: provide the original leader fasta file!\n"
 	unless $ARGV[0];
 die " ERROR: provide the aligned leader fasta file!\n"
@@ -35,11 +132,9 @@ die " ERROR: provide the aligned leader fasta file!\n"
 map{die " ERROR: $_ not found!\n" unless -e $_} @ARGV[0..1];
 
 
-### MAIN
+#--- MAIN ---#
 # connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+my $dbh = connect2db($database_file);
 
 # database metadata #
 my $table_list_r = list_tables();
@@ -81,19 +176,18 @@ sub update_loci_table{
 
 	# preparing sql #	
 	my $cmd = "UPDATE Loci SET 
-locus_start=?, locus_end=? where locus_id = ?";
+	locus_start=?, locus_end=? where locus_id = ?";
 	$cmd =~ s/[\r\n]//g;
 	my $sql = $dbh->prepare($cmd);
 
 	# updating #
 	my $cnt = 0;
 	foreach my $locus_id (keys %$fasta_aln_r){
-		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
 				
-		$sql->bind_param( 1, ${$loci_tbl_r->{$locus_id_e}}[0] );		# updating locus start
-		$sql->bind_param( 2, ${$loci_tbl_r->{$locus_id_e}}[1] );		# updating locus end
+		$sql->bind_param( 1, ${$loci_tbl_r->{$locus_id}}[0] );		# updating locus start
+		$sql->bind_param( 2, ${$loci_tbl_r->{$locus_id}}[1] );		# updating locus end
 
-		$sql->bind_param(3, $locus_id_e);
+		$sql->bind_param(3, $locus_id);
 		$sql->execute( );
 		
 		if($DBI::err){
@@ -110,57 +204,58 @@ sub adjust_locus_start_end{
 # locus start-end #
 	my ($loci_tbl_r, $fasta_aln_r) = @_;
 	
-	foreach my $locus_id (keys %$fasta_aln_r){
-		(my $locus_id_e = $locus_id) =~ s/cli\.//;
-		
+	foreach my $locus_id (keys %$fasta_aln_r){	
 		die " ERROR: $locus_id does not exist in locus table!\n"	
-			unless exists $loci_tbl_r->{$locus_id_e};
+			unless exists $loci_tbl_r->{$locus_id};
 		
 		# flipping start-end of locus & leader if needed #
 		my @flip_bool = (0,0);
-		if( ${$fasta_aln_r->{$locus_id}{"meta"}}[3] > 			# leader
-			${$fasta_aln_r->{$locus_id}{"meta"}}[4]){
-			
-			@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4] = 
-				flip_se(@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4]);
+		if( $fasta_aln_r->{$locus_id}{"meta"}{"start"} >   # leader 			
+			$fasta_aln_r->{$locus_id}{"meta"}{"end"}){
+			($fasta_aln_r->{$locus_id}{"meta"}{"start"}, 			
+			$fasta_aln_r->{$locus_id}{"meta"}{"end"}) = 
+				flip_se($fasta_aln_r->{$locus_id}{"meta"}{"start"},
+					$fasta_aln_r->{$locus_id}{"meta"}{"end"});
 			$flip_bool[0] = 1;
 			}
 			
-		if ( ${$loci_tbl_r->{$locus_id_e}}[0] >					# locus
-			 ${$loci_tbl_r->{$locus_id_e}}[1]){
+		if ( ${$loci_tbl_r->{$locus_id}}[0] >					# locus
+			 ${$loci_tbl_r->{$locus_id}}[1]){
 			
-			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
-			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);
+			 @{$loci_tbl_r->{$locus_id}}[0..1] =
+			 	flip_se(@{$loci_tbl_r->{$locus_id}}[0..1]);
 			 $flip_bool[1] = 1;
 			 }
 			
 		# checking whether leader falls outside of locus #
 		## if yes, updating locus table ##
-		if(${$fasta_aln_r->{$locus_id}{"meta"}}[3] < 			# leader_start < locus_start
-		   ${$loci_tbl_r->{$locus_id_e}}[0] ){
-		   	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id_e}}[0], ${$fasta_aln_r->{$locus_id}{"meta"}}[3]);
+		if($fasta_aln_r->{$locus_id}{"meta"}{"start"} < 			# leader_start < locus_start
+		   ${$loci_tbl_r->{$locus_id}}[0] ){
+		   	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id}}[0], $fasta_aln_r->{$locus_id}{"meta"}{"start"});
 		   	
-		   	${$loci_tbl_r->{$locus_id_e}}[0] = ${$fasta_aln_r->{$locus_id}{"meta"}}[3];
+		   	${$loci_tbl_r->{$locus_id}}[0] = $fasta_aln_r->{$locus_id}{"meta"}{"start"};
 		   	
 		   	
 		   	print STDERR "...Locus_start for $locus_id extended to include leader region ($se)\n";
 			}
-		elsif( ${$fasta_aln_r->{$locus_id}{"meta"}}[4] > 			# leader_end > locus_end
-		     ${$loci_tbl_r->{$locus_id_e}}[1]){
-		 	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id_e}}[1], ${$fasta_aln_r->{$locus_id}{"meta"}}[4]);
+		elsif( $fasta_aln_r->{$locus_id}{"meta"}{"end"} > 			# leader_end > locus_end
+		     ${$loci_tbl_r->{$locus_id}}[1]){
+		 	my $se = join(" -> ", ${$loci_tbl_r->{$locus_id}}[1], $fasta_aln_r->{$locus_id}{"meta"}{"end"});
 		   
-		    ${$loci_tbl_r->{$locus_id_e}}[1] = ${$fasta_aln_r->{$locus_id}{"meta"}}[4];
+		    ${$loci_tbl_r->{$locus_id}}[1] = $fasta_aln_r->{$locus_id}{"meta"}{"end"};
 		   	print STDERR "...Locus_end for $locus_id extended to include leader region ($se)\n";
 			}
 
 		# flipping back start-end if necessary #
 		if($flip_bool[0]){
-			@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4] = 
-				flip_se(@{$fasta_aln_r->{$locus_id}{"meta"}}[3..4]);
+			($fasta_aln_r->{$locus_id}{"meta"}{"start"},
+			 $fasta_aln_r->{$locus_id}{"meta"}{"end"} ) =
+				flip_se($fasta_aln_r->{$locus_id}{"meta"}{"start"},
+			 			$fasta_aln_r->{$locus_id}{"meta"}{"end"});
 			}
 		if($flip_bool[1]){
-			 @{$loci_tbl_r->{$locus_id_e}}[0..1] =
-			 	flip_se(@{$loci_tbl_r->{$locus_id_e}}[0..1]);	
+			 @{$loci_tbl_r->{$locus_id}}[0..1] =
+			 	flip_se(@{$loci_tbl_r->{$locus_id}}[0..1]);	
 			}
 		}	
 		
@@ -172,52 +267,50 @@ sub reset_locus_start_end{
 	my ($loci_tbl_r, $fasta_aln_r) = @_;
 	
 	foreach my $locus_id (keys %$fasta_aln_r){			# each locus of interest
-		(my $locus_id_e = $locus_id) =~ s/^cli\.//;
-
 		# checking for operon or array start-end #
-		die " ERROR: no array_start or operon_start found in loci table for cli.$locus_id_e!"
-			unless ${$loci_tbl_r->{$locus_id_e}}[2] || ${$loci_tbl_r->{$locus_id_e}}[4];
+		die " ERROR: no array_start or operon_start found in loci table for cli.$locus_id!"
+			unless ${$loci_tbl_r->{$locus_id}}[2] || ${$loci_tbl_r->{$locus_id}}[4];
 		
 		# if just array or operon, give locus those values #
-		if(! ${$loci_tbl_r->{$locus_id_e}}[2] ){			# if no operon, using array
-			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
-			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[4..5]);
-			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
-				 ${$loci_tbl_r->{$locus_id_e}}[1]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+		if(! ${$loci_tbl_r->{$locus_id}}[2] ){			# if no operon, using array
+			my $min = min(@{$loci_tbl_r->{$locus_id}}[4..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id}}[4..5]);
+			if ( ${$loci_tbl_r->{$locus_id}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id}}[1]){
+				 ${$loci_tbl_r->{$locus_id}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id}}[1] = $max;
 				}
 			else{											# locus start > end
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
+				 ${$loci_tbl_r->{$locus_id}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id}}[1] = $min;
 				}
 			}
-		elsif(! ${$loci_tbl_r->{$locus_id_e}}[4] ){			# if no array start'; using operon
-			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
-			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..3]);
-			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
-				 ${$loci_tbl_r->{$locus_id_e}}[1]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;
+		elsif(! ${$loci_tbl_r->{$locus_id}}[4] ){			# if no array start'; using operon
+			my $min = min(@{$loci_tbl_r->{$locus_id}}[2..3]);
+			my $max = max(@{$loci_tbl_r->{$locus_id}}[2..3]);
+			if ( ${$loci_tbl_r->{$locus_id}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id}}[1]){
+				 ${$loci_tbl_r->{$locus_id}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id}}[1] = $max;
 				}
 			else{											# locus start > end
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = $max;
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = $min;
+				 ${$loci_tbl_r->{$locus_id}}[0] = $max;
+				 ${$loci_tbl_r->{$locus_id}}[1] = $min;
 				}
 			}
 		else{		 # both array and operon
-			my $min = min(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
-			my $max = max(@{$loci_tbl_r->{$locus_id_e}}[2..5]);
+			my $min = min(@{$loci_tbl_r->{$locus_id}}[2..5]);
+			my $max = max(@{$loci_tbl_r->{$locus_id}}[2..5]);
 			
 			# adjusting using operon & array #
-			if ( ${$loci_tbl_r->{$locus_id_e}}[0] <			# locus start < end
-				 ${$loci_tbl_r->{$locus_id_e}}[1]){
-				 ${$loci_tbl_r->{$locus_id_e}}[0] = $min;
-				 ${$loci_tbl_r->{$locus_id_e}}[1] = $max;				
+			if ( ${$loci_tbl_r->{$locus_id}}[0] <			# locus start < end
+				 ${$loci_tbl_r->{$locus_id}}[1]){
+				 ${$loci_tbl_r->{$locus_id}}[0] = $min;
+				 ${$loci_tbl_r->{$locus_id}}[1] = $max;				
 				}
 			else{											# locus start > end
-				${$loci_tbl_r->{$locus_id_e}}[0] = $max;
-				${$loci_tbl_r->{$locus_id_e}}[1] = $min;
+				${$loci_tbl_r->{$locus_id}}[0] = $max;
+				${$loci_tbl_r->{$locus_id}}[1] = $min;
 				}
 			}	
 		}
@@ -233,8 +326,9 @@ sub get_loci_table{
 # getting loci table for updating #
 	my ($dbh) = @_;
 	
-	my $cmd = "SELECT locus_id, locus_start, locus_end, operon_start, operon_end, array_start, array_end from loci";
+	my $cmd = "SELECT locus_id, locus_start, locus_end, CAS_start, CAS_end, array_start, array_end from loci";
 	my $ret = $dbh->selectall_arrayref($cmd);
+	die "ERROR: not entries in loci table!\n" unless defined $ret;
 	
 	my %loci_tbl;
 	foreach my $row (@$ret){
@@ -253,13 +347,11 @@ sub load_leader{
 	
 	my $cnt = 0;
 	foreach my $locus (keys %$fasta_aln_r){
-		(my $tmp_locus = $locus) =~ s/cli\.//;
-		#print Dumper ($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
-		#					int ${$fasta_aln_r->{$locus}{"meta"}}[4], 
-		#					$fasta_aln_r->{$locus}{"seq"}); 
-		$sql->execute($tmp_locus, int ${$fasta_aln_r->{$locus}{"meta"}}[3], 
-							int ${$fasta_aln_r->{$locus}{"meta"}}[4], 
-							$fasta_aln_r->{$locus}{"seq"});
+		
+		$sql->execute( $locus, 									# locus_ID
+				int $fasta_aln_r->{$locus}{"meta"}{"start"}, 	# start
+				int $fasta_aln_r->{$locus}{"meta"}{"end"}, 		# end
+				$fasta_aln_r->{$locus}{"seq"});					# sequence
 		if($DBI::err){
 			print STDERR "ERROR: $DBI::errstr for $locus\n";
 			}
@@ -285,45 +377,47 @@ sub trim_se{
 		
 		# trimming sequences #
 		if($ori_r->{$locus} eq "norm"){
-			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 5' end (+ strand)
+			if($fasta_aln_r->{$locus}{"meta"}{"loc"} eq "start"){		# trimming from 5' end (+ strand)
 				# trim seq #
 				my $trimmed_seq = substr( $fasta_aln_r->{$locus}{"seq"}, 0, $trim_length);
 				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length , $seq_len);
 
 				# changing start position (moving up toward 3') #
 				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains
-				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length - $ngap);
+					#${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length - $ngap);
+				$fasta_aln_r->{$locus}{"meta"}{"start"} += ($trim_length - $ngap);
 				}
-			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 3' end (+ strand)
+			elsif( $fasta_aln_r->{$locus}{"meta"}{"loc"} eq "end" ){		# trimming from 3' end (+ strand)
 				# trim seq #
 				my $trimmed_seq = substr($fasta_aln_r->{$locus}{"seq"}, $seq_len - $trim_length );
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
 
 				# changing end position (moving back toward 5') #
 				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains
-				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length - $ngap);				
+					#${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length - $ngap);				
+				$fasta_aln_r->{$locus}{"meta"}{"end"} -= ($trim_length - $ngap);
 				}
 			else{ die $!; }
 			}
 		elsif($ori_r->{$locus} eq "rev" || $ori_r->{$locus} eq "rev-comp"){
 
-			if(${$fasta_aln_r->{$locus}{"meta"}}[1] eq "start"){		# trimming from 3' end (+ strand)
+			if($fasta_aln_r->{$locus}{"meta"}{"loc"} eq "start"){		# trimming from 3' end (+ strand)
 				# trim seq #
 				my $trimmed_seq = substr($fasta_aln_r->{$locus}{"seq"}, $seq_len - $trim_length );
 				$fasta_aln_r->{$locus}{"seq"} = substr($fasta_aln_r->{$locus}{"seq"}, 0, $seq_len - $trim_length);
 				
 				# changing end position (moving back toward 5') #
 				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains				
-				${$fasta_aln_r->{$locus}{"meta"}}[4] -= ($trim_length - $ngap);			
+				$fasta_aln_r->{$locus}{"meta"}{"end"} -= ($trim_length - $ngap);			
 				}
-			elsif( ${$fasta_aln_r->{$locus}{"meta"}}[1] eq "end" ){		# trimming from 5' end (+ strand)
+			elsif( $fasta_aln_r->{$locus}{"meta"}{"loc"} eq "end" ){		# trimming from 5' end (+ strand)
 				# trim seq #
 				my $trimmed_seq = substr( $fasta_aln_r->{$locus}{"seq"}, 0, $trim_length);
 				$fasta_aln_r->{$locus}{"seq"} = substr( $fasta_aln_r->{$locus}{"seq"}, $trim_length , $seq_len);
 				
 				# changing start position (moving up toward 3') #
 				my $ngap = count_gaps($trimmed_seq);			# counting gaps of what remains				
-				${$fasta_aln_r->{$locus}{"meta"}}[3] += ($trim_length - $ngap);
+				$fasta_aln_r->{$locus}{"meta"}{"start"} += ($trim_length - $ngap);
 				}		
 			else{ die $!; }
 			}
@@ -390,7 +484,7 @@ sub get_orientation{
 	my ($fasta_raw_r, $fasta_aln_r) = @_;
 
 	my %ori;
-	foreach my $aln (keys %$fasta_aln_r){
+	foreach my $aln (keys %$fasta_aln_r){			# checking for intersect of seq in the input files
 		die " ERROR: \"$aln\" not found in raw leader sequence file!\n"
 			unless exists $fasta_raw_r->{$aln}; 
 		# making permutations of aligned seq #
@@ -410,6 +504,7 @@ sub get_orientation{
 			}
 		else{ die " ERROR: could not match aligned sequence of $aln with raw sequence!\n"; }
 		}
+		#print Dumper %ori; exit;
 	return \%ori;
 	}
 	
@@ -434,17 +529,23 @@ sub load_fasta{
  		next if  /^\s*$/;	
  		
  		if(/>.+/){
- 			my @line = split /  |___/;
- 			$line[0] =~ s/.+(cli\.\d+).*/$1/;
- 			die " ERROR: seq name: \"$_\" does not have identifiablle cli ID!\n"
- 				unless $line[0] =~ /^cli\.\d+$/;
- 			$fasta{$line[0]}{"meta"} = \@line;
+ 			die "ERROR: leader sequence name: '$_' does not have CLdb_getLeaderRegions.pl formatting!\n"
+ 				unless />[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+/;
+
+ 			my @line = split /[>|]/;
  			
- 			$tmpkey = $line[0];	# changing key
+ 			# loading metadata
+ 			my @meta = qw/NA locus_id loc scaffold start end strand/;
+ 			foreach my $i (1..$#line){
+ 				$fasta{$line[1]}{"meta"}{$meta[$i]} = $line[$i];
+ 				}
+ 			
+ 			$tmpkey = $line[1];	# changing key
  			}
  		else{$fasta{$tmpkey}{"seq"} .= $_; }
 		}
 	close IN;
+		
 		#print Dumper %fasta; exit;
 	return \%fasta;
 	} #end load_fasta
@@ -550,92 +651,4 @@ sub list_tables{
 	return [keys %$all];
 	}
 
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_loadLeaders.pl -- adding/updating leader entries in to CRISPR_db
-
-=head1 SYNOPSIS
-
-CLdb_loadLeaders.pl [flags] leader.fasta leader_aligned.fasta
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -trim  <int>
-
-Number of bp (& gaps) to trim of end of alignment. [0]
-
-=item -gap  <bool>
-
-Leave gaps in leader sequence entered into the DB? [TRUE] 
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_loadLeaders.pl
-
-=head1 DESCRIPTION
-
-After determining the actual leader region by aligning
-approximate leader regions written by CLdb_getLeaderRegions.pl,
-automatically trim and load leader sequences & start-end
-information into the CRISPR database.
-
-Trimming will be done from the leader region end most
-distant from the CRISPR array. Reversing & 
-reverse-complementation of sequences during the alignment
-will be accounted for (that's why both the aligned and
-'raw' sequenced must be provided).
-
-Not all sequences in the aligned fasta need to be in
-the 'raw' leader fasta (eg. if both ends of the array
-were written because the side containing the leader
-region could not be determined from direct-repeat
-degeneracy.
-
-=head1 EXAMPLES
-
-=head2 Triming off the 50bp of unconserved alignment 
-
-CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 
