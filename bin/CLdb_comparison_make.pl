@@ -430,16 +430,16 @@ c.spacer_start, c.spacer_end,
 d.spacer_start, d.spacer_end,
 c.spacer_id, d.spacer_id
 FROM
-(SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
+(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
 FROM loci a, spacers b
 WHERE a.locus_id = b.locus_id
-AND a.spacer_id= ?
+AND b.spacer_id= ?
 AND a.locus_id = ?) c,
-(SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
+(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
 FROM loci a, spacers b
 WHERE a.locus_id = b.locus_id
 AND a.locus_id = ?) d
-WHERE c.group_id = d.group_id
+WHERE c.spacer_group = d.spacer_group
 ";
 	print STDERR "$query\n" if $verbose;
 	
@@ -460,7 +460,9 @@ WHERE c.group_id = d.group_id
 			$locus_id2 = $locus_id;
 			}
 		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
-				#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2; exit;
+				#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2
+				#		unless exists 
+			
 			$sth->bind_param(1, $feat_id);		
 				#$sth->bind_param(2, $spacer_cutoff);
 			$sth->bind_param(2, $locus_id1);
@@ -468,8 +470,6 @@ WHERE c.group_id = d.group_id
 			$sth->bind_param(3, $locus_id2);
 			$sth->execute();
 			my $res = $sth->fetchall_arrayref();
-			
-			print Dumper @$res;
 			
 			# skipping any spacers not in both loci #
 			next unless @$res;
@@ -484,7 +484,7 @@ WHERE c.group_id = d.group_id
 				}
 			}
 		}
-		print Dumper %$compare_r; exit;
+		#print Dumper %$compare_r; exit;
 		#print "exit\n"; exit;
 	}
 
