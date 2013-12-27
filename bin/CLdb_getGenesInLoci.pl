@@ -102,29 +102,50 @@ sub check_exists_in_gene_table{
 	map{ $exists{$$_[0]}{$$_[3]} = [@$_[1..$#$_]] } @$genes_r;
 	
 	# checking for existing #
+	my %status;
 	foreach my $locus (sort keys %$loci_tbl_r){
 		foreach my $feat (keys %{$loci_tbl_r->{$locus}}){
 			my $gene_id = ${$loci_tbl_r->{$locus}{$feat}}[2];
 
 			if(exists $exists{ $locus }{ $gene_id } ){		# existing entry for gene
-				# just conflicting entries 
+				$status{'existing'}++;
+				
+				# writing just conflicting entries 
 				if($conflicting){				
 					$loci_tbl_r->{$locus}{"N$feat"} = $exists{$locus}{$gene_id};
 					}
 				# removing existing gene
 				else{		
 					delete $loci_tbl_r->{$locus}{$feat};				
+					
 					# replacing existing 
 					if($all_genes){					
 						$loci_tbl_r->{$locus}{$feat} = $exists{$locus}{$gene_id};
+						$status{'replacing'}++;
 						}
+					else{ $status{'keeping'}++; }		# keeping existing entries 
 					}
 				}
-			else{
-				delete $loci_tbl_r->{$locus}{$feat} if $conflicting;		# just 
+			else{			# entry does not exists 
+				if ($conflicting){		# just writing conflicting
+					delete $loci_tbl_r->{$locus}{$feat};
+					}
+				else{ $status{'adding'}++; }
 				}
 			}
 		}
+		
+	# status #
+	print STDERR "\n### gene entry new/existing/conflicting report ###\n";
+	print STDERR "Number of already existing entries: ", $status{'existing'}, "\n"
+		if exists $status{'existing'};
+	print STDERR "Number of entries to be replaced: ", $status{'replacing'}, "\n"
+		if exists $status{'replacing'};
+	print STDERR "Number of entries to keep as they were: ", $status{'keeping'}, "\n"
+		if exists $status{'keeping'};
+	print STDERR "Number of already existing entries: ", $status{'adding'}, "\n"
+		if exists $status{'adding'};
+	print STDERR "######\n\n";
 		#print Dumper %$loci_tbl_r; exit;
 	}
 
@@ -210,7 +231,7 @@ sub check_in_CAS{
 			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }		# no in operon
 			}
 		}
-		#print Dumper %$loci_tbl_r; exit;
+		print Dumper %$loci_tbl_r; exit;
 	}
 
 sub set_to_pos_strand{
@@ -242,11 +263,10 @@ sub call_genbank_get_region{
 		else{
 			$ret_r = genbank_get_region($end,$start, $genbank_file);
 			}
-					
 		
 		my %header;
 		my @col_sel = qw/start end db_xref product translation/;
-		#while(<PIPE>){
+
 		foreach(@$ret_r){
 			my @line = @$_;
 		
@@ -280,9 +300,11 @@ sub call_genbank_get_region{
 		}
 		
 	# sanity check #
-	die "ERROR: no values returned by the genbank_get_region.pl calls!\n"
-		unless %loci_tbl;
-
+	unless (%loci_tbl){
+		$dbh->disconnect();
+		die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
+		}
+		
 		#print Dumper %loci_tbl; exit;
 	return \%loci_tbl;		#  locusID=>feature_num = \@feature
 	}

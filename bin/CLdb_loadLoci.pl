@@ -183,18 +183,18 @@ get_scaffold_name($loci_r, $db_path);
 
 
 # updating / loading_db #
+## loci ##
+print STDERR "\n### loading entries into CLdb ###\n";
 my $loci_header_r = just_table_columns($header_r, 'loci');
 load_db_table($dbh, "loci", $loci_header_r, $loci_r);
 
-
-# loading leader table #
+## loading leader table ##
 my $leader_header_r = just_table_columns($header_r, 'leader');
 $leader_header_r->{"leader_sequence"} = 1;
 my $leader_loci_r = get_leader_seq($loci_r, $db_path);
 load_db_table($dbh, "leaders", $leader_header_r, $leader_loci_r);
 
-
-# loading pam table #
+## loading pam table ##
 my $pam_header_r = just_table_columns($header_r, 'pam');
 my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
 $pam_header_r->{"pam_sequence"} = 1;
@@ -357,7 +357,7 @@ sub get_scaffold_name{
 # if no scaffold value, try to get from fasta #
 	my ($loci_r, $db_path) = @_;
 	
-	print STDERR "### checking for genome fasta ###\n";
+	print STDERR "### checking for genome fasta for scaffold names ###\n";
 	
 	# getting all fasta files needed #
 	my @fasta_need;
@@ -366,6 +366,7 @@ sub get_scaffold_name{
 		push @fasta_need, $loci_r->{$locus_id}{'fasta_file'}
 			unless $loci_r->{$locus_id}{'scaffold'};
 		}
+		
 	# extracting scaffolds #
 	my %fasta_scaf;
 	foreach my $file (@fasta_need){
@@ -448,12 +449,12 @@ sub make_CLdb_dir{
 	if(File::Spec->rel2abs($parts[1]) ne "$dir/$name"){
 		mkdir "$dir/$name" unless -d "$dir/$name";
 		unless(-e "$dir/$name/$parts[2]"){		# can't find in needed directory, is it in specified directory?
-			die " ERROR: cannot find ", $infile, "\n"
-				unless -e $infile;			# can't be found anywhere
+			die " ERROR: cannot find $infile\n" 
+				unless -e $infile;			# specified file can't be found anywhere
 			
-			print STDERR "...$infile not in CLdb_home/$name/\n";
-			copy($infile, "$dir/array/$parts[2]") or die $!;
-			print STDERR "...Copied $infile to $dir/$name/$parts[2]\n" unless $quiet;
+			print STDERR "'$infile' not in CLdb_HOME/$name/\n";
+			copy($infile, "$dir/$name/$parts[2]") or die $!;
+			print STDERR "\tCopied $infile to $dir/$name/$parts[2]\n" unless $quiet;
 			}
 		}
 			
@@ -464,7 +465,7 @@ sub genbank2fasta{
 # getting fasta from genbank unless -e fasta #
 	my ($loci_r, $db_path, $header_r) = @_;
 	
-	print STDERR "### checking for genome fasta ###\n";
+	print STDERR "### checking for existence of genome fasta ###\n";
 	
 	foreach my $locus_id (keys %$loci_r){
 		next unless exists $loci_r->{$locus_id}{'genbank_file'};		# cannot do w/out genbank
@@ -474,7 +475,7 @@ sub genbank2fasta{
 			$loci_r->{$locus_id}{'fasta_file'} = 
 				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");
 			}
-		elsif( ! -e $loci_r->{$locus_id}{'fasta_file'}){
+		elsif( ! -e "$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}"){
 			my $fasta_name = $loci_r->{$locus_id}{'fasta_file'};
 			print STDERR "WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
 			$loci_r->{$locus_id}{'fasta_file'} = 
@@ -517,11 +518,6 @@ sub genbank2fasta_extract{
 		# seqID #
 		my $scafID = $seqo->display_id;
 		print OUT join("\n", ">$scafID", $seqo->seq), "\n";
-
-		#print OUT ">$scafID\n";
-		#	for my $feato (grep { $_->primary_tag eq 'source' } $seqo->get_SeqFeatures){
-		#	print OUT $feato->seq->seq, "\n";
-		#	}
 		}
 	close OUT;
 	
