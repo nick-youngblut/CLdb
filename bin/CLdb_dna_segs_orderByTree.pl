@@ -181,8 +181,6 @@ sub order_dna_segs{
 # writing out dna segs with new tree order #
 	my ($dna_segs_r, $tree_order_r, $header_r, $name_index_r) = @_;
 	
-		#print Dumper $tree_order_r; exit;
-	
 	# header #
 	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
 	

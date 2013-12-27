@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_groupArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
+CLdb_hclustArrays.pl -- group spacers and DRs by 100% sequence ID; add to database
 
 =head1 SYNOPSIS
 
-CLdb_groupArrayElements.pl [flags] 
+CLdb_hclustArrays.pl [flags] 
 
 =head2 Required flags
 
@@ -34,17 +34,17 @@ Cluster direct repeats. [FALSE]
 
 =item -cluster  <float>
 
-CD-HIT-EST cluster cutoff. [1]
+CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
 
 =item -path  <char>
 
 Directory where intermediate files are written. [$CLdb_HOME/grouping/]
 
-=item -verbose  <bool>	
+=item -verbose  <char>
 
-Verbose output. [FALSE]
+Verbose output. [TRUE]
 
-=item -help  <bool>
+=item -help  <char>
 
 This help message
 
@@ -52,15 +52,19 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_groupArrayElements.pl
+perldoc CLdb_hclustArrays.pl
 
 =head1 DESCRIPTION
 
-Group the spacers and/or direct repeats in the CRISPR
-database using CD-HIT-EST and add the group ID of
-each spacer/DR to the CRISPR database. 
+Pseudo-hierarchical clustering of spacers and/or
+direct repeats in the CRISPR database.
+CD-HIT-EST is used to cluster the array elements
+at different similarity cutoffs (default: 0.8 to 1 by 0.01 steps).
 
-Spacer and DR fasta files and CD-HIT-EST files
+The spacer/DR cluster IDs are added to
+the spacer_hclust & directrepeat_hclust tables in CLdb.
+
+Temporary spacer and DR fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
 
 Sequences must be the same length to be in the same group
@@ -72,13 +76,18 @@ cd-hit-est, CLdb_array2fasta.pl
 
 =head1 EXAMPLES
 
-=head2 Grouping spacers
+=head2 Clustering spacers
 
-CLdb_groupArrayElements.pl -d CRISPR.sqlite -s
+CLdb_hclustArrays.pl -d CRISPR.sqlite -s
 
-=head2 Grouping spacers & DRs
+=head2 Clustering spacers & DRs
 
-CLdb_groupArrayElements.pl -d CRISPR.sqlite -s -r
+CLdb_hclustArrays.pl -d CRISPR.sqlite -s -r
+
+=head2 Clustering spacers & DRs (only at 0.9 & 1 cutoffs)
+
+CLdb_hclustArrays.pl -d CRISPR.sqlite -s -r -c 0.9 1 0.1
+
 
 =head1 AUTHOR
 
@@ -117,21 +126,19 @@ use CLdb::utilities qw/
 	file_exists 
 	connect2db/;
 
-
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-
-my ($verbose, $database_file, $spacer_bool, $dr_bool, $path, $debug);
+my ($verbose, $database_file, $spacer_bool, $dr_bool, $path);
 my $cluster = 1;
+my @cluster = (0.8, 1.0, 0.01);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "spacer" => \$spacer_bool,
 	   "repeat" => \$dr_bool,
-	   "cluster=f" => \$cluster,
+	   "cluster=f{,}" => \@cluster,
 	   "path=s" => \$path,
 	   "verbose" => \$verbose,
-	   "z" => \$debug,
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -139,26 +146,26 @@ GetOptions(
 file_exists($database_file, "database");
 print STDERR " WARNING: neither '-s' nor '-r' flags used. No grouping will be performed!\n"
 	unless $spacer_bool || $dr_bool;
+
+# path #
 $database_file = File::Spec->rel2abs($database_file);
 $path = File::Spec->rel2abs($path) if $path;
+my $curdir = File::Spec->rel2abs(File::Spec->curdir());
+
+# cluster #
+my $cluster_r = check_cluster(\@cluster);
 
 
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
 
-# checking table existence #
-table_exists($dbh, "loci"); 
-table_exists($dbh, "spacers") if $spacer_bool;
-table_exists($dbh, "DRs") if $dr_bool;
-
-# making a grouping directory; getting current directory #
+# making a grouping directory #
 my $dir = make_group_dir($database_file, $path); 
-my $curdir = File::Spec->rel2abs(File::Spec->curdir());
 
 # making fastas of array sequences #
 ## spacers ##
-my %aliases;
+my (%aliases, $spacer_fasta, $dr_fasta);
 if($spacer_bool){
 	my %opts = (
 		extra_query => "",
@@ -170,6 +177,7 @@ if($spacer_bool){
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'spacers');
 	chdir $curdir or die $!;
+	$spacer_fasta = "spacers.fna";
 	}
 if($dr_bool){
 	my %opts = (
@@ -181,57 +189,64 @@ if($dr_bool){
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'DRs');
 	chdir $curdir or die $!;
+	$dr_fasta = "DRs.fna";
 	}
-
-# call cd-hit-est #
+	
+# 'hcluster' #
 chdir $dir or die $!;
-my $spacer_cdhit_out = call_cdhit("spacers.fna", $cluster) if $spacer_bool;
-my $dr_cdhit_out = call_cdhit("DRs.fna", $cluster) if $dr_bool;
+my %spacer_hclust;
+my %DR_hclust;
+for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[2]){
+	print STDERR "...clustering at cutoff $i\n" unless $verbose;
+	
+	## call cd-hit-est ##
+	my $spacer_cdhit_out = call_cdhit($spacer_fasta, $i) if $spacer_bool;
+	my $dr_cdhit_out = call_cdhit($dr_fasta, $i) if $dr_bool;
 
-# parse cd-hit-est output #
-my $spacer_clust_r = parse_cdhit($spacer_cdhit_out, $cluster, \%aliases, 'spacers') if $spacer_bool;
-my $dr_clust_r = parse_cdhit($dr_cdhit_out, $cluster, \%aliases, 'DRs') if $dr_bool;
-
+	## parse cd-hit-est output ##
+	$spacer_hclust{$i} = parse_cdhit($spacer_cdhit_out, $i, \%aliases, 'spacers') if $spacer_bool;
+	$DR_hclust{$i} = parse_cdhit($dr_cdhit_out, $i, \%aliases, 'DRs') if $dr_bool;
+	}
+		
 # updating db #
-update_db($dbh, $spacer_clust_r, "spacers") if $spacer_bool;
-update_db($dbh, $dr_clust_r, "DR") if $dr_bool;
+add_entry($dbh, \%spacer_hclust, "spacer") if $spacer_bool;
+add_entry($dbh, \%DR_hclust, "DR") if $dr_bool;
+
 
 # disconnect #
 $dbh->disconnect();
 exit;
 
 ### Subroutines
-sub update_db{
-# update group column #
-	my ($dbh, $clust_r, $cat) = @_;
-
-	my $cmd;
-	if($cat eq "spacers"){
-		$cmd = "UPDATE spacers SET spacer_group = ? WHERE locus_id = ? and spacer_id = ?";
-		}
-	elsif($cat eq "DR"){
-		$cmd = "UPDATE DRs SET DR_group = ? WHERE locus_id = ? and DR_id = ?";
-		}
-	else{ die " LOGIC ERROR: $!\n"; }
+sub check_cluster{
+	my $cluster_r = shift;
 	
+	$$cluster_r[1] = 1 unless $$cluster_r[1];
+	$$cluster_r[2] = 0.1 unless $$cluster_r[2];
+	
+	return $cluster_r;
+	}
+
+sub add_entry{
+# add_entry to *_hcluster #
+	my ($dbh, $clust_r, $cat) = @_;
+	
+	my $cmd = "INSERT into $cat\_hclust(locus_id, $cat\_id, cutoff, cluster_id) values(?,?,?,?)";
 	my $sql = $dbh->prepare($cmd);
 	
-	my $cnt = 0;
-	foreach my $row (@$clust_r){
-		# @$row = locus,spacer/DR,ID,groupID,seq
-			#print Dumper @$row; exit;
-		map{ undef $_ if $_ eq 'NA' } @$row;
-		$sql->execute( $$row[3], $$row[0], $$row[2] );
-		
-		if($DBI::err){
-			my $entry = join("|", @$row);
-			print STDERR "ERROR: $DBI::errstr for $entry\n";
+	my $entry_cnt = 0;
+	foreach my $cutoff (keys %$clust_r){
+		foreach my $entry ( @{$clust_r->{$cutoff}}){
+			$sql->execute($$entry[0], $$entry[2], $cutoff, $$entry[3] );
+			if($DBI::err){
+				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$entry ), "\n";
+				}
+			else{ $entry_cnt++; }
 			}
-		else{ $cnt++; }
 		}
-		
 	$dbh->commit;
-	print STDERR "...$cat group info added to $cnt entries\n" unless $verbose;
+
+	print STDERR "...$entry_cnt $cat cluster entries added/updated\n" unless $verbose;
 	}
  
 sub parse_cdhit{
@@ -253,10 +268,14 @@ sub parse_cdhit{
 		my @line = split /[\t ]+/;		# 1=number; 2=length; 3=name; 4=[at|*]; 5=%id
 		
 		# checking cluster ID #
+		
 		if($line[4]){
+			
 			$line[4] =~ s/[\+\-%\/]*//g;
+			$line[4] = sprintf '%.3f', $line[4];
+				
 			die " ERROR: cluster '$cluster_id' has SeqID < cutoff of '$cluster'\n"
-				if $line[4] / 100 < $cluster;
+				if $line[4] / 100 < sprintf '%.3f', $cluster;
 			}
 			
 		# getting ID (aliase -> id) #
@@ -282,7 +301,7 @@ sub parse_cdhit{
 		exit(1);
 		}
 		
-		#exit;
+		#print Dumper @clusters; exit;
 	return \@clusters;
 	}
 
@@ -314,7 +333,7 @@ sub make_group_dir{
 	
 	return $dir;
 	}
-	
+
 sub write_array_seq{
 # writing arrays as fasta
 	my ($arrays_r, $aliases_r, $cat) = @_;
@@ -332,7 +351,4 @@ sub write_array_seq{
 	
 		#print Dumper %$aliases_r; exit;
 	}
-	
-
-
 
