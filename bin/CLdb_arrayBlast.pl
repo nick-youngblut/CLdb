@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_spacerBlast.pl -- BLASTn-short of spacers and/or DRs against >=1 genome in CLdb
+CLdb_arrayBlast.pl -- BLASTn-short of spacers and/or DRs against >=1 genome in CLdb
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlast.pl [flags]
+CLdb_arrayBlast.pl [flags]
 
 =head2 Required flags
 
@@ -60,7 +60,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlast.pl
+perldoc CLdb_arrayBlast.pl
 
 =head1 DESCRIPTION
 
@@ -87,19 +87,19 @@ Athough, it may be best to blast DRs with a higher evalue cutoff.
 
 CLdb_array2fasta.pl -g > all_spacer_groups.fna
 
-CLdb_spacerBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna
+CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna
 
 =head2 Blasting all DRs against all genomes in CLdb
 
 CLdb_array2fasta.pl -r -g > all_DR_groups.fna
 
-CLdb_spacerBlast.pl -d CLdb.sqlite -q all_DR_groups.fna
+CLdb_arrayBlast.pl -d CLdb.sqlite -q all_DR_groups.fna
 
 =head2 Blasting all spacers against 1 genome
 
 CLdb_array2fasta.pl -g > all_spacer_groups.fna
 
-CLdb_spacerBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna -taxon_name "e.coli"
+CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna -taxon_name "e.coli"
 
 =head1 AUTHOR
 

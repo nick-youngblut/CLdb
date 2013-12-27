@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_spacerBlastGetProto.pl -- getting the protospacers for spacer blast hits (& adjacent regions)
+CLdb_arrayBlastGetProto.pl -- getting the protospacers for spacer blast hits (& adjacent regions)
 
 =head1 SYNOPSIS
 
-CLdb_spacerBlastGetProto.pl [flags] < spacerBlast.txt > spacerBlast_proto.txt
+CLdb_arrayBlastGetProto.pl [flags] < spacerBlast.txt > spacerBlast_proto.txt
 
 =head2 flags
 
@@ -44,7 +44,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlastGetProto.pl
+perldoc CLdb_arrayBlastGetProto.pl
 
 =head1 DESCRIPTION
 
@@ -113,15 +113,15 @@ in the "# Database:" comment lines!
 
 =head2 Protospacers for all hits (by spacer group)
 
-CLdb_spacerBlastGetProto.pl < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastGetProto.pl < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head2 Protospacers for just full length spacer blast hits
 
-CLdb_spacerBlastGetProto.pl -l 1 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastGetProto.pl -l 1 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head2 Protospacers with 5 bp extensions 
 
-CLdb_spacerBlastGetProto.pl -x 5 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastGetProto.pl -x 5 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head1 AUTHOR
 

@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_hclustArrays.pl -- group spacers and DRs by 100% sequence ID; add to database
+CLdb_hclusterArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
 
 =head1 SYNOPSIS
 
-CLdb_hclustArrays.pl [flags] 
+CLdb_hclusterArrayElements.pl [flags] 
 
 =head2 Required flags
 
@@ -52,7 +52,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_hclustArrays.pl
+perldoc CLdb_hclusterArrayElements.pl
 
 =head1 DESCRIPTION
 
@@ -78,15 +78,15 @@ cd-hit-est, CLdb_array2fasta.pl
 
 =head2 Clustering spacers
 
-CLdb_hclustArrays.pl -d CRISPR.sqlite -s
+CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s
 
 =head2 Clustering spacers & DRs
 
-CLdb_hclustArrays.pl -d CRISPR.sqlite -s -r
+CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s -r
 
 =head2 Clustering spacers & DRs (only at 0.9 & 1 cutoffs)
 
-CLdb_hclustArrays.pl -d CRISPR.sqlite -s -r -c 0.9 1 0.1
+CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s -r -c 0.9 1 0.1
 
 
 =head1 AUTHOR

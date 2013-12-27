@@ -173,7 +173,7 @@ sub write_blast_file{
 						print join("\n", @{$lines_r->{$query}{$db}{$blast}{'comments'}}), "\n";
 						foreach my $l (@{$lines_r->{$query}{$db}{$blast}{'hits'}}){
 							my @l = split /\t/, $l;
-							print join("\t", $new_query, @l[0..$#l]), "\n";
+							print join("\t", $new_query, @l[1..$#l]), "\n";
 							}
 						}				
 					}

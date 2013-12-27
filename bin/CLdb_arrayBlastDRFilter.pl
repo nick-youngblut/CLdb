@@ -4,17 +4,17 @@
 
 =head1 NAME
 
-CLdb_spacerBlastDRFilter_raw.pl -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
+CLdb_arrayBlastDRFilter.pl -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
 
 =head1 SYNOPSIS
 
 =head2 Separate spacer & DR blast tables 
 
-CLdb_spacerBlastDRFilter_raw.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+CLdb_arrayBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
 
 =head2 Combined spacer & DR blast tables
 
-CLdb_spacerBlastDRFilter_raw.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+CLdb_arrayBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
 
 =head2 options
 
@@ -52,7 +52,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc CLdb_spacerBlastDRFilter_raw.pl
+perldoc CLdb_arrayBlastDRFilter.pl
 
 =head1 DESCRIPTION
 
@@ -68,7 +68,7 @@ spacer hit falls in a CRISPR array).
 
 =head2 Basic Usage:
 
-CLdb_spacerBlastDRFilter_raw.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
+CLdb_arrayBlastDRFilter.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
 
 =head1 AUTHOR
 
