@@ -178,7 +178,10 @@ sub tree_write{
 	}
 
 sub order_dna_segs{
+# writing out dna segs with new tree order #
 	my ($dna_segs_r, $tree_order_r, $header_r, $name_index_r) = @_;
+	
+		#print Dumper $tree_order_r; exit;
 	
 	# header #
 	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
@@ -189,20 +192,22 @@ sub order_dna_segs{
 		die " ERROR: leaf -> \"$taxon_name\" not found in dna_segs table!\n"
 			unless exists $dna_segs_r->{$taxon_name};
 		
-		if($leaf =~ /\|\d+$/){							## if lociID already in name (prevents duplicates)
-			(my $locus_id = $leaf) =~ s/.+\|(\d+).*/$1/ if $leaf =~ /\|\d+$/;
+		if($leaf =~ /__[^_]+/){				## if lociID already in name (prevents duplicates)
+			(my $locus_id = $leaf) =~ s/^.*?__([^_]+).*/$1/; 	#if $leaf =~ /\|\d+$/;
+			die "ERROR: $taxon_name -> $locus_id not found in dna_segs!\n"
+				unless exists $dna_segs_r->{$taxon_name}{$locus_id};
 			foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 				print join("\t", @$row), "\n";
 				}		
 			}
-		else{												## if 1 lociID per taxon_name
+		else{										## if 1 lociID per taxon_name
 			foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
 				foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 					print join("\t", @$row), "\n";
 					}
 				}
 			}
-		}
+		}	
 	}
 
 sub get_tree_order{
@@ -235,7 +240,7 @@ sub add_leaves{
 				# getting node info #
 				my $anc_node = $node->ancestor;
 				my $brlen = $node->branch_length();
-				(my $new_node_id = $node->id) =~ s/\|[^_]+$//g;
+				(my $new_node_id = $node->id) =~ s/__[^_]+$//g;
 									
 				my $new_node = new Bio::Tree::Node(
 							-id => $dna_segs_ids_r->{$loci[$i]},
@@ -300,7 +305,7 @@ sub prune_tree{
 	for my $node ($treeo->get_nodes){
 		next if $node->is_Leaf;
 		$node->id("") unless $node->id;
-		$node->id(join("|", "INTERNAL", $node->id));
+		$node->id(join("__", "INTERNAL", $node->id));
 		}
 	
 	# pruning tree #
@@ -311,12 +316,11 @@ sub prune_tree{
 			}
 		}
 		
-		
 	# pruning any non-labeled leaves #
 	while(1){
 		my $intern_cnt = 0;
 		for my $node ($treeo->get_leaf_nodes){
-			if($node->id =~ /^INTERNAL\|/){
+			if($node->id =~ /^INTERNAL__/){
 				$treeo->remove_Node($node);
 				$intern_cnt++;
 				}
@@ -327,8 +331,8 @@ sub prune_tree{
 	# editing internal node labels (names back) #
 	for my $node ($treeo->get_nodes){
 		next if $node->is_Leaf;
-		next unless $node->id =~ /^INTERNAL\|/;
-		(my $tmp = $node->id) =~ s/^INTERNAL\|//;
+		next unless $node->id =~ /^INTERNAL__/;
+		(my $tmp = $node->id) =~ s/^INTERNAL__//;
 		$node->id( $tmp );
 		}	
 
