@@ -4,25 +4,33 @@
 
 =head1 NAME
 
-CLdb_positionByScaffold.pl -- Convert positional values from merged (whole-genome) to by-scaffold
+CLdb_positionByScaffold.pl -- Convert positional values from a scaffold-merged (1 scaffold) to multi-scaffold 
 
 =head1 SYNOPSIS
 
-CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
+CLdb_positionByScaffold.pl [Flags] < loci/Loci.txt > loci/Loci_byScaf.txt
 
 =head2 Required flags
 
 =over
 
-=item -database  <char>
+=item -genbank  <char>
 
-CLdb database.
+List of genbank files (3-column; tab-delim; 'taxon_name\tgenbank_unmerged\tgenbank_merged')
 
 =back
 
 =head2 Optional flags
 
 =over
+
+=item -array  <char>
+
+Directory of the CLdb array files.
+
+=item -verbose  <bool>
+
+Verbose output. [TRUE]
 
 =item -help  <bool>	
 
@@ -37,17 +45,31 @@ perldoc CLdb_positionByScaffold.pl
 =head1 DESCRIPTION
 
 Convert merged genbank position information (merged with EMBOSS 'union')
-to scaffold-based position info. 
+to scaffold-based (multiple scaffold) position info. 
+This is designed to be used before loading the loci table, genbank files,
+and array files into CLdb.
+It is only necessary if you would like to have scaffold position information
+in CLdb.
 
 =head2 Input
 
-The input must be a 2 column tab-delimited table:
-'unmerged_genbank_file_name', 'merged_genbank_file_name'
+=head3 Loci table
+
+All of the position info will be changed to scaffold (as long as
+the corresponding merged & unmerged genbank files are provided).
+Also, the scaffold ID for the position information will be added
+to the editted loci table.
+
+=head3 genbank list
+
+3-column; tab-delim; 'taxon_name\tgenbank_unmerged\tgenbank_merged'
 
 Example of unmerged genbank file format: RAST genbank output for a draft genome.
 
-Updates not committed until all of the values have been converted
-(in case something goes wrong, you won't have a hybrid-position database)
+=head3 array directory
+
+This is used to determine where the array files listed in the loci table
+are located. The edited array files will be written to a seperate directory. 
 
 =head2 Matching unmerged and merged scaffolds
 
@@ -65,9 +87,9 @@ connections between scaffolds are determined in a number of steps:
 
 =head1 EXAMPLES
 
-=head2 Normal usage:
+=head2 Normal usage (array files editted):
 
-CLdb_positionByScaffold.pl -d CLdb.sqlite < unmerged_merged.txt
+CLdb_positionByScaffold.pl < loci.txt -genbank genbank_file_list.txt -array > loci_byScaf.txt
 
 =head1 AUTHOR
 
@@ -95,6 +117,7 @@ use Getopt::Long;
 use File::Spec;
 use Bio::SeqIO;
 use Set::IntervalTree;
+use File::Path qw/rmtree/;
 
 # CLdb #
 use FindBin;
@@ -107,10 +130,9 @@ use CLdb::utilities qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose_b, $loci_in, $array_in, $gbk_list_in);
+my ($verbose_b, $array_dir, $gbk_list_in);
 GetOptions(
-	   "loci=s" => \$loci_in,
-	   "array=s" => \$array_in,
+	   "array=s" => \$array_dir,
 	   "genbank=s" => \$gbk_list_in,
 	   "verbose_b" => \$verbose_b,
 	   "help|?" => \&pod2usage # Help
@@ -118,26 +140,43 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($gbk_list_in, "genbank list");
-file_exists($loci_in, "loci table") if $loci_in;
-file_exists($array_in, "array file list") if $array_in;
 
+# array directory #
+my $array_dir_out;
+if(defined $array_dir){
+	die "ERROR: cannot find directory of array files!\n"
+	unless -d $array_dir;
+	($array_dir_out = $array_dir) =~ s|(.+)[\/]$|$1_byScaf|;
+	die "REGEX ERROR: $!\n" if $array_dir_out eq $array_dir;
+	rmtree $array_dir_out or die $! if -d $array_dir_out;
+	mkdir $array_dir_out;
+	}
 
 #--- MAIN ---#
 # loading input lists/tables #
 my $gbk_list_r = load_genbank_list($gbk_list_in);
-my $array_list_r = load_array_list($array_in) if defined $array_in;
-my $loci_tbl_r = load_loci_table($loci_in) if defined $loci_in;
+my $loci_tbl_r = load_loci_table();
 
-foreach my $taxon_id (keys %$gbk_list_r){
+# edited loci table header #
+my @header_order = sort{$loci_tbl_r->{'header'}{$a} <=> $loci_tbl_r->{'header'}{$b}} 
+						keys %{$loci_tbl_r->{'header'}};
+print join("\t", @header_order), "\n";
+my @indices = @{$loci_tbl_r->{'header'}}{@header_order};
+
+# processing each taxon #
+foreach my $taxon_name (keys %$gbk_list_r){
 	# genbank #
+	## skipping unless present in loci file ##
+	next unless exists $loci_tbl_r->{'body'}{$taxon_name};
+	
 	## getting genbank bioperl objects #
-	my $gbk_r = load_genbank_io($gbk_list_r->{$taxon_id});
+	my $gbk_r = load_genbank_io($gbk_list_r->{$taxon_name});
 	
 	## getting scaffold lengths & sequence #
 	my $unmerged_r = parse_genbank($gbk_r->{'unmerged'}, 
-									'unmerged', $gbk_list_r->{$taxon_id}{'unmerged'});
+									'unmerged', $gbk_list_r->{$taxon_name}{'unmerged'});
 	my $merged_r = parse_genbank($gbk_r->{'merged'}, 
-									'merged', $gbk_list_r->{$taxon_id}{'merged'});
+									'merged', $gbk_list_r->{$taxon_name}{'merged'});
 
 	# position association #
 	## finding merged-unmerged contig 1-to-1 assocations in scaffold length #
@@ -156,38 +195,79 @@ foreach my $taxon_id (keys %$gbk_list_r){
 	## making an interval tree relating absolute location to scaffold-based location #
 	my $itree = make_loc_itree($scaf_index_r, $merged_r, $unmerged_r);
 
-
 	# location editing #
-	## loci table ##
-	if(defined $loci_tbl_r){
-		#edit_loci_table_loc($itree, $loci_tbl_r);
-		
-		foreach my $taxon_name ( keys %{$loci_tbl_r->{'body'}} ){
-			foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row
-				# loci #
-				edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus, 
+	## loci table ##	
+	foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row
+		# loci #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus, 
 							$taxon_name, 'locus_start', 'locus_end', 'scaffold');
-				# array #
-				edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+		# array #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
 							$taxon_name, 'array_start', 'array_end', '');
-				# CAS #
-				edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+		# CAS #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
 							$taxon_name, 'CAS_start', 'CAS_end', '');
-				# leader #
-				edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+		# leader #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
 							 $taxon_name, 'leader_start', 'leader_end', '');
-				}
-			}
-
-		
+				
+		# writing out new loci file #
+		print join("\t", @$locus[ @indices ] ), "\n";
+						 
+		# array file #
+		edit_array_file($array_dir, $array_dir_out, $locus, $loci_tbl_r->{'header'}, $itree, $taxon_name)
+				if defined $array_dir;
 		}
 	
-
-	print Dumper $loci_tbl_r; exit;
 	}
 
 
 ### Subroutines
+sub edit_array_file{
+# editing array file (changing positions to scaffold-relative positions) #
+	my ($array_dir, $array_dir_out, $locus, $header_r, $itree, $taxon_name) = @_;
+	
+	# cannot edit array file unless file exists #
+	return 0 unless exists $header_r->{'array_file'};
+	my $array_i = $header_r->{'array_file'};
+	
+	# check for array file value #
+	unless (defined $$locus[$array_i]){
+		warn "WARNING: cannot find array file value for $taxon_name loci\n";
+		return 0;
+		}
+		
+	# making an array file edit #
+	my @parts = File::Spec->splitpath($$locus[$array_i]);
+	
+	open IN, "$array_dir/$parts[2]" or die $!;
+	open OUT, ">$array_dir_out/$parts[2]" or die $!;
+	while(<IN>){
+		chomp;
+		next if /^\s*$/;
+		my @l = split /\t/;			# start, DR, spacer, end 
+		
+		# getting by-scaffold position #
+		my $ret = $itree->fetch($l[0], $l[3]);		# ret = scaffold that positions span
+		die "ERROR: could not find position info for: $taxon_name, ", join(", ", @l), "\n"
+			unless defined $ret;
+		
+		# updating position info #
+		## new start = scaf_start + (current_pos - scaf_gw_pos)
+		## new end = scaf_end - (scaf_gw_pos - current_pos)
+		$l[0] = $$ret[0]->{"start"} + ($l[0] - $$ret[0]->{"gw_start"});
+		$l[3] = $$ret[0]->{"end"} - ($$ret[0]->{"gw_end"} - $l[3]);
+					
+		print OUT join("\t", @l), "\n";
+		}
+	close IN;
+	close OUT;
+	
+	# status #
+	print STDERR "Edited array file for written: '$array_dir_out/$parts[2]'\n"
+		unless $verbose_b;
+	}
+
 sub edit_loci_tbl_loc{
 
 	my ($header, $itree, $locus, $taxon_name, $start_cat, $end_cat, $scaf_cat) = @_;
@@ -208,7 +288,7 @@ sub edit_loci_tbl_loc{
 		my $start = $$locus[ $start_i ];
 		my $end = $$locus[ $end_i ];
 	
-		if( defined $scaf_i && defined $$locus[ $scaf_i] ){			# scaffold info
+		if( defined $scaf_i ){			# scaffold info
 			($$locus[ $start_i ], 	
  			 $$locus[ $end_i ],
  			 $$locus[ $scaf_i ]) = 
@@ -224,91 +304,6 @@ sub edit_loci_tbl_loc{
  							);	
  			}
  		}
-		#print Dumper $loci_tbl_r; exit;
-	}
-
-sub edit_loci_table_loc_OLD{
-	my ($itree, $loci_tbl_r) = @_;
-		
-	foreach my $taxon_name ( keys %{$loci_tbl_r->{'body'}} ){
-		foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row
-			
-			# locus start-end #
-			## index #
-			my $start_i = $loci_tbl_r->{'header'}{'locus_start'};
-			my $end_i = $loci_tbl_r->{'header'}{'locus_end'};
-			my $scaf_i = $loci_tbl_r->{'header'}{'scaffold'};
-			
-			## start-end values #
-			if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ]){
-				my $start = $$locus[ $start_i ];
-				my $end = $$locus[ $end_i ];
-			
-				## locus start-end #
-	 			($$locus[ $start_i ], 
- 				 $$locus[ $end_i ],
- 				 $$locus[ $scaf_i ]) = 
- 						edit_loc($itree, $taxon_name, $locus,
- 								$start, $end
- 								);
- 				}
- 					
- 			# array start-end #
-			## index #
-			$start_i = $loci_tbl_r->{'header'}{'array_start'};
-			$end_i = $loci_tbl_r->{'header'}{'array_end'};
-			
-			## start-end values #
-			if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ]){
-				my $start = $$locus[ $start_i ];
-				my $end = $$locus[ $end_i ];
-			
-				## locus start-end #
-	 			($$locus[ $start_i ], 
- 				 $$locus[ $end_i ]) = 
- 						edit_loc($itree, $taxon_name, $locus,
- 								$start, $end
- 								);
- 				}
- 			
- 			# CAS start-end #
-			## index #
-			$start_i = $loci_tbl_r->{'header'}{'cas_start'};
-			$end_i = $loci_tbl_r->{'header'}{'cas_end'};
-			
-			## start-end values #
-			if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ]){
-				my $start = $$locus[ $start_i ];
-				my $end = $$locus[ $end_i ];
-			
-				## locus start-end #
-	 			($$locus[ $start_i ], 
- 				 $$locus[ $end_i ]) = 
- 						edit_loc($itree, $taxon_name, $locus,
- 								$start, $end
- 								);
- 				}
- 				
- 			# Leader start-end #
-			## index #
-			$start_i = $loci_tbl_r->{'header'}{'leader_start'};
-			$end_i = $loci_tbl_r->{'header'}{'leader_end'};
-			
-			## start-end values #
-			if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ]){
-				my $start = $$locus[ $start_i ];
-				my $end = $$locus[ $end_i ];
-			
-				## locus start-end #
-	 			($$locus[ $start_i ], 
- 				 $$locus[ $end_i ]) = 
- 						edit_loc($itree, $taxon_name, $locus,
- 								$start, $end
- 								);
- 				}
- 			
-			}
-		}
 		#print Dumper $loci_tbl_r; exit;
 	}
 
@@ -606,7 +601,7 @@ sub load_array_list{
 		next if /^\s*$/;
 		
 		my @l = split /\t/;
-		die "ERROR: array list file must be in 2-column format: ('taxon_id\\tarray_file')\n"
+		die "ERROR: array list file must be in 2-column format: ('taxon_name\\tarray_file')\n"
 			unless scalar @l == 2;
 		
 		$array_list{$l[0]} = $l[1];
@@ -618,12 +613,9 @@ sub load_array_list{
 	}
 
 sub load_loci_table{
-# loci loci table file used for CLdb #
-	my ($loci_in) = @_;
-	
-	open IN, $loci_in or die $!;
+# loci loci table file used for CLdb #	
 	my %loci;
-	while(<IN>){
+	while(<>){
 		chomp;
 		next if /^\s*$/;
 		my @l = split /\t/;
@@ -633,16 +625,24 @@ sub load_loci_table{
 			for my $i (0..$#l){
 				$loci{'header'}{$l[$i]} = $i;
 				}
-			die "ERROR: cannot find taxon_id column in header of loci table!\n"
+			die "ERROR: cannot find taxon_name column in header of loci table!\n"
 				unless exists $loci{'header'}{'taxon_name'};
 			}
 		else{		# body 
-			die "ERROR: no taxon_id value for: $_\n"
+			die "ERROR: no taxon_name value for: $_\n"
 				unless defined $l[ $loci{'header'}{'taxon_name'} ];
 			my $taxon_name = $l[ $loci{'header'}{'taxon_name'} ];
 			push @{$loci{'body'}{$taxon_name}}, \@l;
 			}
 		}
+
+	# checking for genbank file #
+	die "ERROR: no 'genbank_file' column found in loci table! Possitions in array files will not be editted!\n"
+		unless exists $loci{'header'}{'genbank_file'};
+
+	# checking for array file #
+	warn "WARNING: no 'array_file' column found in loci table! Possitions in array files will not be editted!\n"
+		unless exists $loci{'header'}{'array_file'};
 		
 	# adding scaffold column if not present #
 	$loci{'header'}{'scaffold'} = scalar keys %{$loci{'header'}}
@@ -654,7 +654,7 @@ sub load_loci_table{
 
 sub load_genbank_list{
 # getting list of genbanks #
-## 3 column: taxon_id\tunmerged\tmerged ##
+## 3 column: taxon_name\tunmerged\tmerged ##
 	my ($gbk_list_in) = @_;
 	
 	open IN, $gbk_list_in or die $!;
@@ -665,7 +665,7 @@ sub load_genbank_list{
 		next if /^\s*$/;
 		
 		my @tmp = split /\t/;
-		die "ERROR: the genbank list must have 3 columns (taxon_id\\tunmerged\\tmerged)!\n"
+		die "ERROR: the genbank list must have 3 columns (taxon_name\\tunmerged\\tmerged)!\n"
 			unless scalar @tmp == 3;
 		map{ die "ERROR: cannot find file '$_'\n" unless -e $_ } @tmp[1..2];
 		

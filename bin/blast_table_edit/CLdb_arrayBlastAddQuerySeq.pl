@@ -114,14 +114,8 @@ use CLdb::seq qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
-my ($subtype_b, $taxon_id_b, $taxon_name_b, $pos_b, $order_b);
 GetOptions(
 	   "database=s" => \$database_file,
-	   "subtype" => \$subtype_b,
-	   "taxon_id" => \$taxon_id_b,
-	   "taxon_name" => \$taxon_name_b,
-	   "position" => \$pos_b,
-	   "order" => \$order_b,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -135,20 +129,22 @@ my $dbh = connect2db($database_file);
 
 # checking table existence #
 table_exists($dbh, "loci"); 
-#table_exists($dbh, "leaders") if $leader_b;
+table_exists($dbh, "DRs"); 
 
 # loading file #
-my ($lines_r) = read_blast_file();
+my ($blast_r) = read_blast_file();
+
+print Dumper $blast_r; exit;
 
 # querying CLdb #
 ## adding to query ##
-my $query = add_query_opts($subtype_b, $taxon_id_b, $taxon_name_b);
+#my $query = add_query_opts($subtype_b, $taxon_id_b, $taxon_name_b);
 
 ## querying ##
-my $index_r = get_CLdb_info($dbh, $lines_r, $query);
+#my $index_r = get_CLdb_info($dbh, $lines_r, $query);
 
 # writing edited fasta #
-write_blast_file($index_r, $lines_r);
+#write_blast_file($index_r, $lines_r);
 
 
 #--- disconnect ---#
@@ -226,11 +222,11 @@ sub get_CLdb_info{
 
 		# adding other query options #
 		$cmd .= ", $query" if $query;
-		if($pos_b){
-			$cmd .= ", loci.Scaffold";
-			$cmd .= ", $tbl_oi.$prefix\_start";
-			$cmd .= ", $tbl_oi.$prefix\_end";
-			}	
+		#if($pos_b){
+		#	$cmd .= ", loci.Scaffold";
+		#	$cmd .= ", $tbl_oi.$prefix\_start";
+		#	$cmd .= ", $tbl_oi.$prefix\_end";
+		#	}	
 			
 		# WHERE statement #
 		$cmd .= "
@@ -281,18 +277,26 @@ sub read_blast_file{
 	my $blast;
 	my $query;
 	my $db;
+	my @fields;
 	while(<>){
 		chomp;
 		
 		if(/^# BLAST/i){
+			s/# BLAST://;
 			$blast = $_;
 			}
 		elsif(/^# Query/i){
+			s/# Query://;
 			$query = $_;
 			}
 		elsif(/^# Database/i){
+			s/# Database://;
 			$db = $_;
-			}	
+			}
+		elsif(/^# Fields:/i){
+			s/# Fields//;
+			$db = $_;
+			}
 		elsif(/^# /){
 			push @{$lines{$query}{$db}{$blast}{'comments'}}, $_;
 			}
