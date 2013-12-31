@@ -24,6 +24,10 @@ CLdb database.
 
 =over
 
+=item -threads  <int>
+
+Number of threads used by cd-hit-est. [1]
+
 =item -verbose  <bool>
 
 Verbose output. [TRUE]

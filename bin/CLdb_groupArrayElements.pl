@@ -66,6 +66,8 @@ are written to '$CLdb_HOME/grouping/' by default.
 Sequences must be the same length to be in the same group
 (cd-hit-est -s 1).
 
+Array elements only clustered if same strand (+/+ or -/-)!
+
 =head2 Requires:
 
 cd-hit-est, CLdb_array2fasta.pl
@@ -124,12 +126,14 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $spacer_bool, $dr_bool, $path, $debug);
 my $cluster = 1;
+my $threads = 1;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "spacer" => \$spacer_bool,
 	   "repeat" => \$dr_bool,
 	   "cluster=f" => \$cluster,
 	   "path=s" => \$path,
+	   "threads=i" => \$threads,
 	   "verbose" => \$verbose,
 	   "z" => \$debug,
 	   "help|?" => \&pod2usage # Help
@@ -185,8 +189,8 @@ if($dr_bool){
 
 # call cd-hit-est #
 chdir $dir or die $!;
-my $spacer_cdhit_out = call_cdhit("spacers.fna", $cluster) if $spacer_bool;
-my $dr_cdhit_out = call_cdhit("DRs.fna", $cluster) if $dr_bool;
+my $spacer_cdhit_out = call_cdhit("spacers.fna", $cluster, $threads) if $spacer_bool;
+my $dr_cdhit_out = call_cdhit("DRs.fna", $cluster, $threads) if $dr_bool;
 
 # parse cd-hit-est output #
 my $spacer_clust_r = parse_cdhit($spacer_cdhit_out, $cluster, \%aliases, 'spacers') if $spacer_bool;
@@ -288,10 +292,10 @@ sub parse_cdhit{
 
 sub call_cdhit{
 # calling cd-hit-est on spacers #
-	my ($fasta, $cluster) = @_;
+	my ($fasta, $cluster, $threads) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1";
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
 	if($verbose){ system("$cmd"); }
 	else{ `$cmd`; }
 

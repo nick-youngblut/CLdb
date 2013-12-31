@@ -40,6 +40,10 @@ CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
 
 Directory where intermediate files are written. [$CLdb_HOME/grouping/]
 
+=item -threads <int>
+
+Number of threads used by CD-HIT-EST. [1]
+
 =item -verbose  <char>
 
 Verbose output. [TRUE]
@@ -68,7 +72,9 @@ Temporary spacer and DR fasta files and CD-HIT-EST files
 are written to '$CLdb_HOME/grouping/' by default.
 
 Sequences must be the same length to be in the same group
-(cd-hit-est -s 1).
+(cd-hit-est -s 1). 
+
+Array elements only clustered if same strand (+/+ or -/-)!
 
 =head2 Requires:
 
@@ -131,6 +137,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $spacer_bool, $dr_bool, $path);
 my $cluster = 1;
+my $threads = 1;
 my @cluster = (0.8, 1.0, 0.01);
 GetOptions(
 	   "database=s" => \$database_file,
@@ -138,6 +145,7 @@ GetOptions(
 	   "repeat" => \$dr_bool,
 	   "cluster=f{,}" => \@cluster,
 	   "path=s" => \$path,
+	   "threads=i" => \$threads,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -200,8 +208,8 @@ for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[
 	print STDERR "...clustering at cutoff $i\n" unless $verbose;
 	
 	## call cd-hit-est ##
-	my $spacer_cdhit_out = call_cdhit($spacer_fasta, $i) if $spacer_bool;
-	my $dr_cdhit_out = call_cdhit($dr_fasta, $i) if $dr_bool;
+	my $spacer_cdhit_out = call_cdhit($spacer_fasta, $i, $threads) if $spacer_bool;
+	my $dr_cdhit_out = call_cdhit($dr_fasta, $i, $threads) if $dr_bool;
 
 	## parse cd-hit-est output ##
 	$spacer_hclust{$i} = parse_cdhit($spacer_cdhit_out, $i, \%aliases, 'spacers') if $spacer_bool;
@@ -307,10 +315,10 @@ sub parse_cdhit{
 
 sub call_cdhit{
 # calling cd-hit-est on spacers #
-	my ($fasta, $cluster) = @_;
+	my ($fasta, $cluster, $threads) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1";
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
 	if($verbose){ system("$cmd"); }
 	else{ `$cmd`; }
 
