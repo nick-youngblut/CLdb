@@ -167,7 +167,9 @@ $tbl_oi.Locus_ID,
 '$tbl_prefix', 
 $tbl_oi.$tbl_prefix\_ID,
 $tbl_oi.$tbl_prefix\_group, 
-$tbl_oi.$tbl_prefix\_sequence 
+$tbl_oi.$tbl_prefix\_sequence,
+$tbl_oi.$tbl_prefix\_start,
+$tbl_oi.$tbl_prefix\_end
 FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
 	
 	if(defined $opts_r->{"by_group"}){

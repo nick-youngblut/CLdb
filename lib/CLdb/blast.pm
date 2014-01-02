@@ -11,6 +11,8 @@ use File::Spec;
 use base 'Exporter';
 our @EXPORT_OK = qw/
 parse_blast_hits
+read_blast_file
+write_blast_file
 /;
 
 	
@@ -39,6 +41,65 @@ connect2db
 
 =cut
 
+sub write_blast_file{
+# writing a blast file read in format from read_blast_file subroutine #
+	my ($lines_r) = @_;
+	
+	foreach my $query ( sort keys %$lines_r ){
+		foreach my $db ( sort keys %{$lines_r->{$query}} ){
+			foreach my $blast ( keys %{$lines_r->{$query}{$db}} ){
+				print $blast, "\n";
+				print $query, "\n";
+				print $db, "\n";
+				print $lines_r->{$query}{$db}{$blast}{'fields'}, "\n"
+					if exists $lines_r->{$query}{$db}{$blast}{'fields'};
+				print join("\n", @{$lines_r->{$query}{$db}{$blast}{'comments'}}), "\n";
+				# printing all hits #
+				print join("\n", @{$lines_r->{$query}{$db}{$blast}{'hits'}}), "\n"
+					if exists $lines_r->{$query}{$db}{$blast}{'hits'};
+				}
+			}
+		}
+	}
+
+sub read_blast_file{
+# reading in each blast entry (-outfmt 7) & extracting names and line numbers #
+	my %lines;
+	my $blast;
+	my $query;
+	my $db;
+	while(<>){
+		chomp;
+		
+		if(/^# BLAST/i){
+			$blast = $_;
+			}
+		elsif(/^# Query/i){
+			$query = $_;
+			}
+		elsif(/^# Database/i){
+			$db = $_;
+			}
+		elsif(/# Fields/i){
+			$lines{$query}{$db}{$blast}{'fields'} = $_;
+			
+			my @l = split /[:,] /;
+			shift @l;
+			for my $i (0..$#l){
+				$lines{$query}{$db}{$blast}{'fields_sep'}{$l[$i]} = $i;
+				}
+			}
+		elsif(/^# /){
+			push @{$lines{$query}{$db}{$blast}{'comments'}}, $_;
+			}
+		else{
+			push @{$lines{$query}{$db}{$blast}{'hits'}}, $_;
+			}
+			
+		}		
+		#print Dumper %lines; exit;	
+	return \%lines;
+	}
 
 sub parse_blast_hits{
 # REQUIRED: outfmt = 7;

@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_arrayBlastGetProto.pl -- getting the protospacers for spacer blast hits (& adjacent regions)
+CLdb_arrayBlastAddProto.pl -- getting the protospacers for spacer blast hits (& adjacent regions)
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastGetProto.pl [flags] < spacerBlast.txt > spacerBlast_proto.txt
+CLdb_arrayBlastAddProto.pl [flags] < spacerBlast.txt > spacerBlast_proto.txt
 
 =head2 flags
 
@@ -44,7 +44,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_arrayBlastGetProto.pl
+perldoc CLdb_arrayBlastAddProto.pl
 
 =head1 DESCRIPTION
 
@@ -113,15 +113,15 @@ in the "# Database:" comment lines!
 
 =head2 Protospacers for all hits (by spacer group)
 
-CLdb_arrayBlastGetProto.pl < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastAddProto.pl < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head2 Protospacers for just full length spacer blast hits
 
-CLdb_arrayBlastGetProto.pl -l 1 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastAddProto.pl -l 1 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head2 Protospacers with 5 bp extensions 
 
-CLdb_arrayBlastGetProto.pl -x 5 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
+CLdb_arrayBlastAddProto.pl -x 5 < spacerBlast_DR-filtered.txt > spacerBlast_proto.txt
 
 =head1 AUTHOR
 
@@ -155,8 +155,11 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::blast qw/
-	parse_blast_hits
-	/;
+	parse_blast_hits/;
+use CLdb::seq qw/
+	revcomp/;
+
+
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -357,10 +360,10 @@ sub get_proto_seq{
 	# status #
 	map{$filter_sum{$_} = 0 unless exists $filter_sum{$_}} qw/total gaps length/;
 	print STDERR "\n### filtering summary ###\n";
-	print STDERR "Total number of hits: $filter_sum{'total'}\n";
-	print STDERR "Number removed due to gaps in alignment: $filter_sum{'gaps'}\n";
-	print STDERR "Number removed due to short hit length: $filter_sum{'length'}\n";
-	print STDERR "Number remaining: ", $filter_sum{'total'} - 
+	print STDERR "Total number of hits:\t\t\t\t$filter_sum{'total'}\n";
+	print STDERR "Number removed due to gaps in alignment: \t$filter_sum{'gaps'}\n";
+	print STDERR "Number removed due to short hit length:\t\t$filter_sum{'length'}\n";
+	print STDERR "Number remaining:\t\t\t\t", $filter_sum{'total'} - 
 						($filter_sum{'length'} + $filter_sum{'gaps'}), "\n\n";
 	
 	return \@new_fields;
@@ -468,15 +471,6 @@ sub call_blastdbcmd{
 	return $seq;
 	}
 
-sub revcomp{
-	# reverse complements DNA #
-	my $seq = shift;
-	$seq = reverse($seq);
-	#$seq =~ tr/[a-z]/[A-Z]/;
-	$seq =~ tr/ACGTNBVDHKMRYSWacgtnbvdhkmrysw\.-/TGCANVBHDMKYRSWtgcanvbhdmkyrsw\.-/;
-	return $seq;
-	}
-
 sub extend_full_len{
 # extending spacer hit to full length if needed #
 	my ($Sstart, $Send, $strand, $Qstart, $Qend, $Qlen, $Slen) = @_;
@@ -519,10 +513,13 @@ sub check_values{
 # checking values to make sure they exist #
 	my ($row, $fields_r) = @_;
 	
+	#print Dumper $row;
+	#print Dumper $fields_r; 
+	
 	my @chk = ("query id", "subject id", "s. start", "s. end",
 				"q. start", "q. end", 
 				"evalue", "query length", "subject length", "BTOP");
-	map{die " ERROR: $_ not found!\n" unless $$row[$fields_r->{$_}]} @chk;
+	map{die " ERROR: '$_' not found!\n" unless $$row[$fields_r->{$_}]} @chk;
 	}
 
 sub load_fasta{

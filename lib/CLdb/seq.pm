@@ -110,7 +110,7 @@ sub revcomp{
 # caps invariant 
 	my $seq = shift;
 	$seq = reverse($seq);
-	$seq =~ tr/[a-z]/[A-Z]/;
+	#$seq =~ tr/[a-z]/[A-Z]/;
 	$seq =~ tr/ACGTNBVDHKMRYSWacgtnbvdhkmrysw\.-/TGCANVBHDMKYRSWtgcanvbhdmkyrsw\.-/;
 	return $seq;
 	}

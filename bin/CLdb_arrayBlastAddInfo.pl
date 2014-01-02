@@ -108,6 +108,8 @@ use CLdb::utilities qw/
 	connect2db/;
 use CLdb::seq qw/
 	read_fasta/;
+use CLdb::blast qw/
+	read_blast_file/;
 
 
 #--- parsing args ---#
@@ -164,24 +166,36 @@ sub write_blast_file{
 		(my $q = $query) =~ s/^# Query:\s([^|]+\|(spacer|DR)\|[^|]+\|[^|]+).*/$1/;
 		foreach my $db (sort keys %{$lines_r->{$query}}){
 			foreach my $blast (keys %{$lines_r->{$query}{$db}}){
-				if(exists $index_r->{$q}){
+				if(exists $index_r->{$q}){		# spacer group
 					# duplicating blast hits #
 					foreach my $new_query (@{$index_r->{$q}}){
 						print $blast, "\n";
 						print "# Query: $new_query\n";						
 						print $db, "\n";
+						print $lines_r->{$query}{$db}{$blast}{'fields'}, "\n"
+							if exists $lines_r->{$query}{$db}{$blast}{'fields'};
 						print join("\n", @{$lines_r->{$query}{$db}{$blast}{'comments'}}), "\n";
+						# printing each hit #
 						foreach my $l (@{$lines_r->{$query}{$db}{$blast}{'hits'}}){
 							my @l = split /\t/, $l;
-							print join("\t", $new_query, @l[1..$#l]), "\n";
+							
+							# changing query ID column #
+							die "ERROR: cannot find 'query id' for '$l'\n"
+								unless exists $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'query id'};
+							my $query_id_i = $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'query id'};
+							$l[$query_id_i] = $new_query;	
+							print join("\t", @l), "\n";
 							}
 						}				
 					}
-				else{
+				else{		# individual spacer
 					print $blast, "\n";
 					print $query, "\n";
 					print $db, "\n";
+					print $lines_r->{$query}{$db}{$blast}{'fields'}, "\n"
+						if exists $lines_r->{$query}{$db}{$blast}{'fields'};
 					print join("\n", @{$lines_r->{$query}{$db}{$blast}{'comments'}}), "\n";
+					# printing all hits #
 					print join("\n", @{$lines_r->{$query}{$db}{$blast}{'hits'}}), "\n";
 					}
 				}
@@ -274,7 +288,7 @@ sub add_query_opts{
 	return join(",", @query);
 	}
 
-sub read_blast_file{
+sub read_blast_file_OLD{
 # reading in each blast entry & extracting names and line numbers #
 	my %lines;
 	my $blast;
