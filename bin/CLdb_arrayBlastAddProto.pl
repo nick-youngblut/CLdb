@@ -268,7 +268,7 @@ sub get_proto_seq{
 					$filter_sum{"gaps"}++;
 					next;
 					}
-				## deleling if hit_len/query_len < $len_cut ##
+				## deleting if hit_len/query_len < $len_cut ##
 				if( ($$row[$fields_r->{"q. end"}] - $$row[$fields_r->{"q. start"}]) / 
 							$$row[$fields_r->{"query length"}] < $len_cut ){
 					$filter_sum{"length"}++;
@@ -278,17 +278,15 @@ sub get_proto_seq{
 				# getting subject start-stop, strand #
 				my $Sstart = $$row[$fields_r->{"s. start"}];
 				my $Send = $$row[$fields_r->{"s. end"}];
-				my $strand = "plus";
-
-				# flipping if needed #
-				if($Sstart > $Send){
-					$strand = "minus";
-					($Sstart,$Send) = ($Send, $Sstart);		# start-stop to + strand
-					}
+				my $strand;
+				if($Sstart > $Send){ $strand = 'minus'; }
+				else{ $strand = 'plus'; }
 				
-				#$strand = "plus" unless $revcomp_b; 		# by default; protospacer oriented to subject + strand
+				# flipping Sstart-Send to + if - strand #
+				($Sstart, $Send) = ($Send, $Sstart) if $strand eq 'minus';
 					
 				# calling blastdbcmd #
+				## sequence will be - strand if $strand eq 'minus' #
 				my $proto_seq = call_blastdbcmd($$row[$fields_r->{"subject id"}],
 								$Sstart, $Send, $strand, $db, 1);			 # inverted so it is protospacer match
 				
@@ -301,6 +299,8 @@ sub get_proto_seq{
 									$$row[$fields_r->{"query length"}],
 									$$row[$fields_r->{"subject length"}]);
 
+					#print Dumper $Sstart_full, $Send_full, $Qstart_full, $Qend_full; exit;
+
 				my $proto_seq_full = call_blastdbcmd($$row[$fields_r->{"subject id"}],
 								$Sstart_full, $Send_full, $strand, $db, 1);		# not inverted; used for alignment
 				
@@ -309,6 +309,7 @@ sub get_proto_seq{
 													$$row[$fields_r->{"subject length"}], $extend);
 				
 				# calling blastdbcmd #
+				## sequence will be - strand if $strand eq 'minus' ##
 				my $proto_seq_full_x = call_blastdbcmd($$row[$fields_r->{"subject id"}],
 								$Sstart_fullx, $Send_fullx, $strand, $db, 1);				
 				
@@ -328,22 +329,22 @@ sub get_proto_seq{
 				($Sstart_full, $Send_full) = ($Send_full, $Sstart_full) if $strand eq "minus";		
 				($Sstart_fullx, $Send_fullx) = ($Send_fullx, $Sstart_fullx) if $strand eq "minus";	
 				
-				
-				# bring subject (protospacer) to + strand unless revcomp_b #
-				my $proto_seq_orig = $proto_seq;				# proto sequence relative to query (not potentially revcomp)
-				if($strand eq "minus" && ! $revcomp_b){
-					$proto_seq = revcomp($proto_seq);
-					($Sstart_full, $Send_full) = ($Send_full, $Sstart_full);
-					$proto_seq_full = revcomp($proto_seq_full);
-					($Sstart_fullx, $Send_fullx) = ($Send_fullx, $Sstart_fullx);
-					$proto_seq_full_x = revcomp($proto_seq_full_x);
-					$fiveP_pam = revcomp($fiveP_pam);
-					$threeP_pam = revcomp($threeP_pam);
-					($fiveP_pam,$threeP_pam) = ($threeP_pam, $fiveP_pam);
-					}
+
+				# flipping protospacer to blast hit strand #
+				#my $proto_seq_orig = $proto_seq;				# proto sequence relative to query (not potentially revcomp)
+				#if($strand eq "minus"){
+				#	$proto_seq = revcomp($proto_seq);
+				#	($Sstart_full, $Send_full) = ($Send_full, $Sstart_full);
+				#	$proto_seq_full = revcomp($proto_seq_full);
+				#	($Sstart_fullx, $Send_fullx) = ($Send_fullx, $Sstart_fullx);
+				#	$proto_seq_full_x = revcomp($proto_seq_full_x);
+				#	$fiveP_pam = revcomp($fiveP_pam);
+				#	$threeP_pam = revcomp($threeP_pam);
+				#	($fiveP_pam,$threeP_pam) = ($threeP_pam, $fiveP_pam);
+				#	}
 				
 				# adding to table #
-				push @$row, $proto_seq_orig, $proto_seq, $Qstart_full, $Qend_full,
+				push @$row, $proto_seq, $Qstart_full, $Qend_full,
 						$Sstart_full, $Send_full, $proto_seq_full,
 						$Sstart_fullx, $Send_fullx, $proto_seq_full_x,
 						$extend, $fiveP_pam, $threeP_pam; 
@@ -353,7 +354,7 @@ sub get_proto_seq{
 	
 		# subject_seq = aln to spacer; subject_full_seq = aln to spacer; subject_full_x_seq = revcomp (for PAMs)
 		#print Dumper %$blast_r; exit;
-	my @new_fields = ("proto_seq_rel2query", "proto_seq_rel2subject", 
+	my @new_fields = ("proto_seq", 
 						"q_start_full", "q_end_full", "s_start_full", "s_end_full", "proto_seq_full", 
 						"s_start_fullx", "s_end_fullx", "proto_seq_fullx", "x_length", "5p_pam_region", "3p_pam_region");
 	
@@ -448,13 +449,9 @@ sub extend_beyond_full{
 	}
 
 sub call_blastdbcmd{
-	my ($subject_id, $Sstart, $Send, $strand, $db, $invert) = @_;
+	my ($subject_id, $Sstart, $Send, $strand, $db) = @_;
 	
-	# flipping strand in order to get rev-comp of spacer hit (if needed) #
-	if($invert && $revcomp_b){
-		if($strand eq "plus"){ $strand = "minus"; }
-		else{ $strand = "plus"; }
-		}
+	#($Sstart, $Send) = ($Send, $Sstart) if $strand eq 'minus';
 	
 	# calling #
 	my $cmd = "blastdbcmd -db $db -entry '$subject_id' -range '$Sstart-$Send' -strand $strand |";
@@ -468,6 +465,8 @@ sub call_blastdbcmd{
 		next if /^>/;
 		$seq .= $_;
 		}
+		
+		#print Dumper $seq; exit;
 	return $seq;
 	}
 

@@ -207,7 +207,6 @@ evalue bitscore qlen slen btop/);
 	# sanity check #
 	map{die " ERROR: cannot find $_!\n" unless -e $_} @$blast_dbs_r;
 
-	#print Dumper @$blast_dbs_r; exit;
 	my %output;
 	foreach my $blast_db (@$blast_dbs_r){
 		my $job = fork{
@@ -223,6 +222,12 @@ evalue bitscore qlen slen btop/);
 			}
 		}
 	waitall;
+	
+	# status #
+	foreach my $out (sort keys %output){
+		print STDERR "Number of blast hits to $out:\t",
+			scalar @{$output{$out}}, "\n";
+		}	
 	
 	# writing output #
 	foreach my $out (sort keys %output){

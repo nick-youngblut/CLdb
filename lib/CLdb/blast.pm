@@ -188,7 +188,7 @@ sub check_fields{
 				"q. start", "q. end", 
 				"evalue", "query length", "subject length", "BTOP");
 	
-	map{die " ERROR: can't find '$_'!" unless exists $header_r->{$_}} @needed;
+	map{confess " ERROR: can't find '$_'!" unless exists $header_r->{$_}} @needed;
 	}
 
 =head1 AUTHOR

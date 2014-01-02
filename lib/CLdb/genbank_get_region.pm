@@ -32,9 +32,9 @@ sub genbank_get_region{
 	my $regions_r;
 	if(@regions){ $regions_r = \@regions; }
 	elsif($ARGV[0]){ $regions_r = load_regions($ARGV[0]); }
-	else{ die " ERROR: provide at least 1 region (scaffold,start,end). Either via '-region' or as file\n"; }
+	else{ confess " ERROR: provide at least 1 region (scaffold,start,end). Either via '-region' or as file\n"; }
 	
-	die " ERROR: you must provide: (scaffold) ,start, & end for each region!\n"
+	confess " ERROR: you must provide: (scaffold) ,start, & end for each region!\n"
 		unless scalar @$regions_r % 2 == 0 || scalar @$regions_r % 3 == 0;
 	
 	# loading features #
@@ -221,7 +221,7 @@ sub load_genbank_features{
 sub load_regions{
 # loading file w/ regions of interest #
 	my ($infile) = @_;
-	open IN, $infile or die $!;
+	open IN, $infile or confess $!;
 	my @regions;
 	while(<IN>){
 		chomp;

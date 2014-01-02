@@ -50,7 +50,7 @@ sub seq_from_genome_fasta{
 	my ($fasta_r, $coords_r) = @_;
 	
 	# IO check #
-	die "ERROR: coords must be [scaffold,start,end]\n"
+	confess "ERROR: coords must be [scaffold,start,end]\n"
 		unless scalar @$coords_r == 3;
 	
 	# getting fasta #
@@ -84,8 +84,8 @@ sub read_fasta{
 # loading fasta file as a hash #
 	my ($fasta_in) = @_;
 	if(defined $fasta_in){
-		die " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
-		open IN, $fasta_in or die $!;
+		confess " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
+		open IN, $fasta_in or confess $!;
 		}
 	else{ *IN = *STDIN; }
 

@@ -227,13 +227,13 @@ sub add_DR_x{
 		die "ERROR: '$name' is not a spacer hit (should have 'spacer' in 2nd field)\n"
 			unless $n[1] =~ /^spacer$/i;
 
-		# getting spacer start-end #
+		# getting spacer start-end (+ strand in spacers table) #
 		$sth_spacer->bind_param(1, $n[0]);		# locus_id
 		$sth_spacer->bind_param(2, $n[2]);		# spacer_id
 
 		$sth_spacer->execute();
 		my $ret = $sth_spacer->fetchrow_arrayref();
-		die "ERROR: no spacer matches matches for locus_id->$n[0], spacer_id->$n[2]!\n"
+		die "ERROR: no spacer matches for locus_id->$n[0], spacer_id->$n[2]!\n"
 			unless defined $ret;
 
 		# getting 5' DR extension (+ strand orientation) #
@@ -256,9 +256,8 @@ sub add_DR_x{
 			unless defined $ret2;
 		my $DR_seq_3p = $$ret2[0];
 
-		# lower case (for blastn masking) #
+		# lower case #
 		map{ tr/A-Z/a-z/ } ($DR_seq_5p, $DR_seq_3p);
-
 
 		# trimming DR #
 		$DR_seq_5p = trim_DR($DR_seq_5p, $DR_x, '5p');
@@ -267,13 +266,15 @@ sub add_DR_x{
 
 
 		# inverting if spacer is - strand #
-		die "ERROR: cannot find strand for $n[0]\n"
-			unless exists $strand_r->{$n[0]};
-		if ($strand_r->{$n[0]} eq '-'){
-			$DR_seq_5p = revcomp $DR_seq_5p;
-			$DR_seq_3p = revcomp $DR_seq_3p;
-			($DR_seq_5p, $DR_seq_3p) = ($DR_seq_3p, $DR_seq_5p);
-			}
+		## not needed! array file will begin inverted relative to others if on other strand in genome #
+		
+		#die "ERROR: cannot find strand for $n[0]\n"
+		#	unless exists $strand_r->{$n[0]};
+		#if ($strand_r->{$n[0]} eq '-'){
+		#	$DR_seq_5p = revcomp $DR_seq_5p;
+		#	$DR_seq_3p = revcomp $DR_seq_3p;
+		#	($DR_seq_5p, $DR_seq_3p) = ($DR_seq_3p, $DR_seq_5p);
+		#	}
 			
 
 		# adding to 'query_seq_full' #

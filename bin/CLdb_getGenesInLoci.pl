@@ -231,7 +231,7 @@ sub check_in_CAS{
 			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }		# no in operon
 			}
 		}
-		print Dumper %$loci_tbl_r; exit;
+		#print Dumper %$loci_tbl_r; exit;
 	}
 
 sub set_to_pos_strand{

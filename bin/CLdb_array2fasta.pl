@@ -148,7 +148,7 @@ use CLdb::seq qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
-my ($spacer_DR_b, $by_group, $DR_x, $strand_b);
+my ($spacer_DR_b, $by_group);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 GetOptions(
@@ -158,8 +158,6 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "group" => \$by_group,
-	   "x=f" => \$DR_x,						# add DR extension to spacers?
-	   "strand" => \$strand_b, 				# orient by loci table array_start, array_end strand? [TRUE]
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -205,13 +203,6 @@ my %opts = (
 ## querying CLdb ##
 my $arrays_r = get_array_seq($dbh,\%opts);
 
-## adding DR extension to spacers if needed ##
-#add_DR_x($dbh, $arrays_r, $DR_x) if ! $spacer_DR_b && defined $DR_x;
-
-## orienting by loci table strand ##
-my $spacer_strand_r = get_spacer_strand($dbh, $arrays_r)
-	if ! $spacer_DR_b & ! $strand_b;
-
 # writing fasta #
 write_array_seq($arrays_r, \%opts);
 
@@ -222,92 +213,6 @@ exit;
 
 
 ### Subroutines
-sub add_DR_x{
-	my ($dbh, $arrays_r, $DR_x) = @_;
-	
-	# queries #
-	my $cmd1 = "SELECT DR_sequence from DRs where locus_ID = ? 
-					AND DR_end <= ?
-					AND DR_end >= ? - 1";
-	my $sth1 = $dbh->prepare($cmd1);
-
-	my $cmd2 = "SELECT DR_sequence from DRs where locus_ID = ? 
-					AND DR_start <= ? + 1
-					AND DR_start >= ?";
-	my $sth2 = $dbh->prepare($cmd2);
-
-	foreach my $entry (@$arrays_r){
-			#print Dumper $entry; exit;
-		$sth1->bind_param(1, $$entry[0]);
-		$sth1->bind_param(2, $$entry[5]);
-		$sth1->bind_param(3, $$entry[5]);
-		$sth1->execute();
-		my $ret1 = $sth1->fetchrow_arrayref();
-		die "ERROR: no DR 3' matches for locus_id->$$entry[0]!\n"
-			unless defined $ret1;
-		my $DR_seq_5p = $$ret1[0];
-		
-		$sth2->bind_param(1, $$entry[0]);
-		$sth2->bind_param(2, $$entry[6]);
-		$sth2->bind_param(3, $$entry[6]);		
-		$sth2->execute();
-		my $ret2 = $sth2->fetchrow_arrayref();
-		die "ERROR: no DR 5' matches for locus_id->$$entry[0]!\n"
-			unless defined $ret2;
-		my $DR_seq_3p = $$ret2[0];
-
-		# lower case (for blastn masking) #
-		map{ tr/A-Z/a-z/ } ($DR_seq_5p, $DR_seq_3p);
-		
-		# trimming DR #
-		if($DR_x <= 1){						# assumed to take a fraction
-			my $len = length $DR_seq_5p;
-			$DR_seq_5p = substr($DR_seq_5p, 
-						$len - int($len * $DR_x),			
-						$len); 				# 3' end 
-			$DR_seq_3p = substr($DR_seq_3p, 
-						0,			
-						int($len * $DR_x)); 				# 3' end 
-			}
-		
-		# appending sequences to array 
-		$$entry[4] = join("", $DR_seq_5p, $$entry[4], $DR_seq_3p);
-		}
-	
-		#print Dumper @$arrays_r; exit;
-	}
-
-sub get_spacer_strand{
-	my ($dbh, $arrays_r) = @_;
-	
-	# getting loci of array elements #	
-	my %loci;
-	map {$loci{$$_[0]} = 1} @$arrays_r;
-	
-	# getting strand of loci #
-	my $cmd = "SELECT array_start, array_end from loci where locus_ID = ?";
-	my $sth = $dbh->prepare($cmd);
-	
-	# querying & getting strand #
-	foreach my $locus_id (keys %loci){
-		$sth->bind_param(1, $locus_id);
-		$sth->execute();
-		my $ret = $sth->fetchrow_arrayref();
-
-		die "ERROR: not matches for locus_id->$locus_id!\n"
-			unless defined $ret;
-		
-		# flipping orientation if needed #
-		if($$ret[0] > $$ret[1]){
-			$loci{$locus_id} = '-';
-			print STDERR "...loci '$locus_id' array is designated - strand. Reversing the orientation of all spacers in the array\n";
-			}
-		else{ $loci{$locus_id} = '+'; }
-		}
-	
-	return \%loci;
-	}
-
 sub write_array_seq{
 # writing arrays as fasta
 	my ($arrays_r, $opts_r) = @_;

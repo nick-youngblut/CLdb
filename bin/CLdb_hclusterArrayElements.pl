@@ -266,6 +266,7 @@ sub parse_cdhit{
 	my @clusters;			
 	my $cluster_id;
 	my %clust_chk;
+	my %clust_cnt;
 	while(<IN>){
 		chomp;
 		if(/^>/){
@@ -276,7 +277,6 @@ sub parse_cdhit{
 		my @line = split /[\t ]+/;		# 1=number; 2=length; 3=name; 4=[at|*]; 5=%id
 		
 		# checking cluster ID #
-		
 		if($line[4]){
 			
 			$line[4] =~ s/[\+\-%\/]*//g;
@@ -294,6 +294,8 @@ sub parse_cdhit{
 		${$aliases_r->{$cat}{$line[2]}}[3] = $cluster_id;
 		push @clusters, $aliases_r->{$cat}{$line[2]};
 		$clust_chk{$line[2]} = 1;
+		
+		$clust_cnt{$cluster_id} = 1;
 		}
 	close IN;
 
@@ -308,7 +310,9 @@ sub parse_cdhit{
 		print STDERR join(",\n", @not_found), "\n";
 		exit(1);
 		}
-		
+	
+	print STDERR "Number of clusters for $cat at cutoff '$cluster': \t", scalar keys %clust_cnt, "\n";
+	
 		#print Dumper @clusters; exit;
 	return \@clusters;
 	}
@@ -353,7 +357,7 @@ sub write_array_seq{
 		$alias_cnt++;
 			
 		$aliases_r->{$cat}{$alias_cnt} = $row;
-		print OUT join("\n", ">$alias_cnt", $$row[$#$row]), "\n";
+		print OUT join("\n", ">$alias_cnt", $$row[4]), "\n";
 		}
 	close OUT;
 	

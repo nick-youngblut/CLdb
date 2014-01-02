@@ -108,7 +108,7 @@ AND leaders.locus_id IS NOT NULL
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	confess " ERROR: no matching entries!\n"
 		unless $$ret[0];
 	
 	# making fasta #
@@ -116,7 +116,7 @@ AND leaders.locus_id IS NOT NULL
 	foreach my $row (@$ret){
 		
 		# loading fasta #
-		die " ERROR: not spacer/repeat group found!\n\tWas CLdb_groupArrayElements.pl run?\n"
+		confess " ERROR: not spacer/repeat group found!\n\tWas CLdb_groupArrayElements.pl run?\n"
 			unless $$row[1]; 
 		
 		# rev-comp if leader end > array end #
@@ -133,7 +133,7 @@ AND leaders.locus_id IS NOT NULL
 			}
 		else{
 			$$row[3] = 'NA' if ! defined $$row[3];
-			die "ERROR: no group ID found for an entry. Cannot group sequences!\n"
+			confess "ERROR: no group ID found for an entry. Cannot group sequences!\n"
 				if defined $opts_r->{"by_group"};
 			}
 		}
@@ -182,7 +182,7 @@ FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}"
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die "ERROR: no matching entries!\n"
+	confess "ERROR: no matching entries!\n"
 		unless $$ret[0];
 
 	# 'NA' for ID & locus is group defined #
@@ -194,7 +194,7 @@ FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}"
 			}
 		else{
 			$$row[3] = 'NA' if ! defined $$row[3];
-			die "ERROR: no group ID found for an entry. Cannot group sequences!\n"
+			confess "ERROR: no group ID found for an entry. Cannot group sequences!\n"
 				if defined $opts_r->{"by_group"};
 			}
 		}
@@ -256,7 +256,7 @@ sub get_leader_pos{
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
+	confess " ERROR: no matching entries!\n"
 		unless $$ret[0];
 
 	# making hash of sequences #

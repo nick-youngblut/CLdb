@@ -48,7 +48,7 @@ sub get_file_path{
 #-- input --#
 # $file = file name 
 	my ($file) = @_;
-	die "ERROR: no file provided!\n" unless defined $file;
+	confess "ERROR: no file provided!\n" unless defined $file;
 	my @parts = File::Spec->splitpath(File::Spec->rel2abs($file));
 	return $parts[1];
 	}
@@ -62,7 +62,7 @@ sub lineBreaks2unix{
 	my ($fh, $ext) = @_;
 	
 	if($ext){			# external file 
-		die "ERROR: cannot find $fh!\n" unless -e $fh || -l $fh;
+		confess "ERROR: cannot find $fh!\n" unless -e $fh || -l $fh;
 		# mac to unix #
 		my $cmd = "perl -pi -e 's/\\r/\\n/g' $fh";
 		`$cmd`;
@@ -86,7 +86,7 @@ sub connect2db{
 
 	my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
 	my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '','', \%attr) 
-		or die " Can't connect to $db_file!\n";
+		or confess " Can't connect to $db_file!\n";
 		
 	return $dbh;
 	}
@@ -99,9 +99,9 @@ sub file_exists{
 	
 	$cat = "" unless defined $cat;
 	
-	die "ERROR: provide a $cat file name!\n"
+	confess "ERROR: provide a $cat file name!\n"
 		unless defined $file;
-	die "ERROR: cannot find $cat file: '$file'\n"
+	confess "ERROR: cannot find $cat file: '$file'\n"
 		unless -e $file || -l $file;
 
 	}
