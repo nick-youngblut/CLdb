@@ -8,7 +8,7 @@ CLdb_positionByScaffold.pl -- Convert positional values from a scaffold-merged (
 
 =head1 SYNOPSIS
 
-CLdb_positionByScaffold.pl [Flags] < loci/Loci.txt > loci/Loci_byScaf.txt
+CLdb_positionByScaffold.pl [Flags] < Loci.txt > Loci_byScaf.txt
 
 =head2 Required flags
 
@@ -45,9 +45,13 @@ perldoc CLdb_positionByScaffold.pl
 =head1 DESCRIPTION
 
 Convert merged genbank position information (merged with EMBOSS 'union')
-to scaffold-based (multiple scaffold) position info. 
+to scaffold-based (multiple scaffold) position info.
+
+Possitional information changed in Loci table and array files (if -array used). 
+
 This is designed to be used before loading the loci table, genbank files,
 and array files into CLdb.
+
 It is only necessary if you would like to have scaffold position information
 in CLdb.
 
@@ -60,13 +64,13 @@ the corresponding merged & unmerged genbank files are provided).
 Also, the scaffold ID for the position information will be added
 to the editted loci table.
 
-=head3 genbank list
+=head3 genbank file table
 
 3-column; tab-delim; 'taxon_name\tgenbank_unmerged\tgenbank_merged'
 
 Example of unmerged genbank file format: RAST genbank output for a draft genome.
 
-=head3 array directory
+=head3 array directory <optional>
 
 This is used to determine where the array files listed in the loci table
 are located. The edited array files will be written to a seperate directory. 
@@ -164,7 +168,7 @@ print join("\t", @header_order), "\n";
 my @indices = @{$loci_tbl_r->{'header'}}{@header_order};
 
 # processing each taxon #
-foreach my $taxon_name (keys %$gbk_list_r){
+foreach my $taxon_name (keys %$gbk_list_r){			# each taxon/genbank
 	# genbank #
 	## skipping unless present in loci file ##
 	next unless exists $loci_tbl_r->{'body'}{$taxon_name};
@@ -210,6 +214,10 @@ foreach my $taxon_name (keys %$gbk_list_r){
 		# leader #
 		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
 							 $taxon_name, 'leader_start', 'leader_end', '');
+		
+		# genbank file name (changing to unmerged file name) #
+		edit_loci_tbl_file( $loci_tbl_r->{'header'}, $locus,
+							 $taxon_name, 'genbank_file', $gbk_list_r->{$taxon_name}{'unmerged'});
 				
 		# writing out new loci file #
 		print join("\t", @$locus[ @indices ] ), "\n";
@@ -218,7 +226,6 @@ foreach my $taxon_name (keys %$gbk_list_r){
 		edit_array_file($array_dir, $array_dir_out, $locus, $loci_tbl_r->{'header'}, $itree, $taxon_name)
 				if defined $array_dir;
 		}
-	
 	}
 
 
@@ -268,8 +275,27 @@ sub edit_array_file{
 		unless $verbose_b;
 	}
 
-sub edit_loci_tbl_loc{
+sub edit_loci_tbl_file{
+	my ($header, $locus, $taxon_name, $file_cat, $unmerged_file) = @_;
+	
+		#print Dumper $unmerged_file; exit;
+	
+	# locus start-end #
+	## loci table file index ##
+	die "ERROR: cannot find '$file_cat' in header!\n"
+		unless exists $header->{$file_cat};
+	my $file_i = $header->{$file_cat};
+	
+	## edit file name if file name already present #
+	if( defined $$locus[ $file_i ] ){
+		# striping path from file name #
+		my @parts = File::Spec->splitpath($unmerged_file);
+		
+		$$locus[ $file_i ]  = $parts[2];
+ 		}
+	}
 
+sub edit_loci_tbl_loc{
 	my ($header, $itree, $locus, $taxon_name, $start_cat, $end_cat, $scaf_cat) = @_;
 		
 	# locus start-end #
