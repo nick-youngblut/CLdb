@@ -137,15 +137,15 @@ sub check_exists_in_gene_table{
 		
 	# status #
 	print STDERR "\n### gene entry new/existing/conflicting report ###\n";
-	print STDERR "Number of already existing entries: ", $status{'existing'}, "\n"
+	print STDERR "Number of already existing entries in CLdb: ", $status{'existing'}, "\n"
 		if exists $status{'existing'};
-	print STDERR "Number of entries to be replaced: ", $status{'replacing'}, "\n"
+	print STDERR "Number of entries to be replaced (existing in CLdb but written to output table): ", $status{'replacing'}, "\n"
 		if exists $status{'replacing'};
-	print STDERR "Number of entries to keep as they were: ", $status{'keeping'}, "\n"
+	print STDERR "Number of entries to keep as they were (existing in CLdb & not written to output table): ", $status{'keeping'}, "\n"
 		if exists $status{'keeping'};
-	print STDERR "Number of already existing entries: ", $status{'adding'}, "\n"
+	print STDERR "Number of new entries (no in CLdb & written to output table): ", $status{'adding'}, "\n"
 		if exists $status{'adding'};
-	print STDERR "######\n\n";
+	print STDERR "###------------------------------------------###\n\n";
 		#print Dumper %$loci_tbl_r; exit;
 	}
 
@@ -254,19 +254,24 @@ sub call_genbank_get_region{
  
 		my $start = ${$loci_se_r->{$locus}}[0];
 		my $end = ${$loci_se_r->{$locus}}[1];
-		print STDERR "...Getting features in:\n\tfile = $genbank_file\n\tregion = $start-$end\n";
+		my $scaffold = ${$loci_se_r->{$locus}}[7];
+		print STDERR join("\n ",
+					"...Getting features in:",
+					"file =\t\t$genbank_file",
+					"scaffold =\t$scaffold",
+					"region =\t$start-$end"), "\n";
 		
 		my $ret_r;
 		if($start <= $end){
-			$ret_r = genbank_get_region($start,$end, $genbank_file);
+			$ret_r = genbank_get_region($scaffold, $start, $end, $genbank_file);
 			}
 		else{
-			$ret_r = genbank_get_region($end,$start, $genbank_file);
+			$ret_r = genbank_get_region($scaffold, $end, $start, $genbank_file);
 			}
 		
 		my %header;
 		my @col_sel = qw/start end db_xref product translation/;
-
+		my $cnt = 0;
 		foreach(@$ret_r){
 			my @line = @$_;
 		
@@ -295,8 +300,11 @@ sub call_genbank_get_region{
 			
 				# loading hash; selecting just tags of interest #
 				$loci_tbl{$locus}{$line[$header{'feature_num'}]} = [@line[@header{@col_sel}]]; 	# locusID=>feature_num = feature
+				$cnt++;
 				}
 			}	
+		# status #
+		print STDERR " Number of features found = $cnt\n";
 		}
 		
 	# sanity check #
@@ -314,8 +322,12 @@ sub get_loci_start_end{
 	my ($dbh, $query, $join_sql) = @_;
 	
 	my %loci_se;
-	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, Genbank_File, CAS_start, CAS_end, Array_Start, Array_End 
-	from loci where (CAS_start is not null or CAS_end is not null) $join_sql $query";
+	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, 
+			Genbank_File, CAS_start, CAS_end,
+			Array_Start, Array_End, scaffold
+			from loci 
+			where (CAS_start is not null or CAS_end is not null) 
+			$join_sql $query";
 	$cmd =~ s/[\t\n]+/ /g;
 
 	my $loci_se_r = $dbh->selectall_arrayref($cmd);	

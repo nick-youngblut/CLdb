@@ -199,9 +199,9 @@ foreach my $taxon_name (keys %$gbk_list_r){			# each taxon/genbank
 	## making an interval tree relating absolute location to scaffold-based location #
 	my $itree = make_loc_itree($scaf_index_r, $merged_r, $unmerged_r);
 
-	# location editing #
+	# location/file_name editing #
 	## loci table ##	
-	foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row
+	foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row				
 		# loci #
 		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus, 
 							$taxon_name, 'locus_start', 'locus_end', 'scaffold');
@@ -210,7 +210,7 @@ foreach my $taxon_name (keys %$gbk_list_r){			# each taxon/genbank
 							$taxon_name, 'array_start', 'array_end', '');
 		# CAS #
 		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
-							$taxon_name, 'CAS_start', 'CAS_end', '');
+							$taxon_name, 'cas_start', 'cas_end', '');
 		# leader #
 		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
 							 $taxon_name, 'leader_start', 'leader_end', '');
@@ -307,10 +307,11 @@ sub edit_loci_tbl_loc{
 	my $scaf_i = $header->{$scaf_cat}
 			if exists $header->{$scaf_cat};
 	
+	# skipping if no values #
 	return 0 unless exists $header->{$start_cat} && exists $header->{$end_cat};
 	
 	## edit start-end values #
-	if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ] ){
+	if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ] ){		
 		my $start = $$locus[ $start_i ];
 		my $end = $$locus[ $end_i ];
 	

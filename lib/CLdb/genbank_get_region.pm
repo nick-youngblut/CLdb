@@ -26,29 +26,28 @@ sub genbank_get_region{
 # $genbank_file = genbank file
 # $tRNA = include tRNAs? [false]
 # $strand_b = all on + strand? [false]
-	my @regions = @_[0..1];
-	my ($genbank_file, $tRNA, $strand_b, $verbose) = @_[2..$#_];
+	my @regions = @_[0..2];		# start, end, scaffold
+	my ($genbank_file, $tRNA, $strand_b, $verbose) = @_[3..$#_];
 	
+	# I/O check #
 	my $regions_r;
 	if(@regions){ $regions_r = \@regions; }
-	elsif($ARGV[0]){ $regions_r = load_regions($ARGV[0]); }
-	else{ confess " ERROR: provide at least 1 region (scaffold,start,end). Either via '-region' or as file\n"; }
-	
-	confess " ERROR: you must provide: (scaffold) ,start, & end for each region!\n"
-		unless scalar @$regions_r % 2 == 0 || scalar @$regions_r % 3 == 0;
+	else{ confess " ERROR: provide a region (scaffold,start,end)\n"; }
+	confess " ERROR: you must provide: scaffold ,start, & end for the region!\n"
+		unless scalar @$regions_r == 3;
 	
 	# loading features #
 	my $feats_r = load_genbank_features($genbank_file,$tRNA);
 	
-	my $ret_r;
-	if(scalar @$regions_r % 2 == 0){  # without scaffolding #
-		my $itree = load_itree($feats_r);
-		$ret_r = get_regions($itree, $regions_r, $strand_b);
-		}
-	else{			# by-scaffold #
-		my $itrees_r = load_itrees($feats_r);
-		$ret_r = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
-		}
+	#my $ret_r;
+	#if(scalar @$regions_r % 2 == 0){  # without scaffolding #
+	#	my $itree = load_itree($feats_r);
+	#	$ret_r = get_regions($itree, $regions_r, $strand_b);
+	#	}
+	#else{			# by-scaffold #
+	my $itrees_r = load_itrees($feats_r);
+	my $ret_r = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
+
 	return $ret_r;
 	}
 
@@ -60,30 +59,28 @@ sub get_regions_scaffold{
 	
 	my %feat_tags;
 	my %tags;
-	for(my $i=0; $i<=$#$regions_r; $i+=3){
-		my $res;
-		if( exists $itrees_r->{$$regions_r[$i]} ){
-			if($$regions_r[$i+1] <= $$regions_r[$i+2]){			# if 'start' is <= 'end'
-				$res = $itrees_r->{$$regions_r[$i]}->fetch($$regions_r[$i+1], $$regions_r[$i + 2]);
-				}
-			else{			# flippng start and end
-				$res = $itrees_r->{$$regions_r[$i]}->fetch($$regions_r[$i+2], $$regions_r[$i+1]);
-				}
+	my $res;
+	if( exists $itrees_r->{$$regions_r[0]} ){
+		if($$regions_r[1] <= $$regions_r[2]){			# if 'start' is <= 'end'
+			$res = $itrees_r->{$$regions_r[0]}->fetch($$regions_r[1], $$regions_r[2]);
 			}
-		else{ print STDERR " WARNING: $$regions_r[$i] not found in genbank!\n"; }
-		
-		my $feat_id = 0;
-		foreach my $feat (@$res){
-			$feat_id++;
-			foreach my $tag ($feat->get_all_tags){
-				$feat_tags{$feat_id}{$tag} = [$feat->get_tag_values($tag)];
-				$tags{$tag} = 1;
-				}
-			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
-			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
-			$feat_tags{$feat_id}{"contig"} = [($feat->location->seq_id)];
-			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
+		else{			# flippng start and end
+			$res = $itrees_r->{$$regions_r[0]}->fetch($$regions_r[2], $$regions_r[1]);
 			}
+		}
+	else{ print STDERR " WARNING: $$regions_r[0] not found in genbank!\n"; }
+	
+	my $feat_id = 0;
+	foreach my $feat (@$res){
+		$feat_id++;
+		foreach my $tag ($feat->get_all_tags){
+			$feat_tags{$feat_id}{$tag} = [$feat->get_tag_values($tag)];
+			$tags{$tag} = 1;
+			}
+		$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
+		$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
+		$feat_tags{$feat_id}{"contig"} = [($feat->location->seq_id)];
+		$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 		}
 
 	# flipping start-end if strand = -1 #
@@ -115,6 +112,7 @@ sub get_regions_scaffold{
 		push @ret, [$feat, @line];
 		}
 		
+		#print Dumper @ret; exit;
 	return \@ret;
 	}
 	
