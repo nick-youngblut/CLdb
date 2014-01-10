@@ -3,6 +3,7 @@ library(genoPlotR)
 
 #--- functions ---#
 nwk2phylog <- function(file){
+# loading a newick tree and converting to phylog format #
 	nwk.str <- scan(file, what="complex", nmax=1, sep="\r")
 	nwk.str <- gsub(" ", "_", nwk.str)
 	tree <- newick2phylog(nwk.str)
@@ -10,6 +11,7 @@ nwk2phylog <- function(file){
 	}
 
 edit.phylog.names <- function(phylog){
+# phylog conversion edits names; this function edits back #
 	## editing phylog names ##
 	phylog$tre <- gsub("\\(X([0-9])", "(\\1", phylog$tre)
 	phylog$tre <- gsub(",X([0-9])", ",\\1", phylog$tre)
@@ -39,6 +41,7 @@ edit.phylog.names <- function(phylog){
 	}
 
 format.dna.segs.xlims <- function(x){
+# formating the xlims table #
 	x$dna_segs_id <- gsub(" ", "_", x$dna_segs_id)
 	x$dna_segs_id <- gsub("\\.", "_", x$dna_segs_id)
 	x$dna_segs_id <- gsub("-", "_", x$dna_segs_id)
@@ -48,6 +51,7 @@ format.dna.segs.xlims <- function(x){
 	}
 
 df2list.dna_segs <- function(x){
+# converting dna_segs to a list by dna_segs_id #
 	## convert to list ##
 	x.l <- list()
 
@@ -62,6 +66,7 @@ df2list.dna_segs <- function(x){
 	}
 	
 df2list.xlims <- function(x){
+# converting dna_segs to a list by dna_segs_id #
 	## convert to list ##
 	x.l <- list()
 
@@ -76,6 +81,7 @@ df2list.xlims <- function(x){
 	}
 	
 edit.compare.names <- function(x){
+# editing names in comparison table #
 	x$dna_segs_id1 <- gsub(" ", "_", x$dna_segs_id1)
 	x$dna_segs_id1 <- gsub("\\.", "_", x$dna_segs_id1)
 	x$dna_segs_id1 <- gsub("-", "_", x$dna_segs_id1)
@@ -83,6 +89,7 @@ edit.compare.names <- function(x){
 	}
 
 df2list.compare <- function(compare, dna_segs.tbl, color_scheme="grey"){
+# converting dna_segs to a list by dna_segs_id #
 		# dna_segs.tbl <- DNAsegs.tbl
 		# compare <- compare.tbl
 	u.dna_segs_id <- unique(dna_segs.tbl$dna_segs_id)
@@ -105,6 +112,7 @@ df2list.compare <- function(compare, dna_segs.tbl, color_scheme="grey"){
 	
 
 set.plot.size <- function(xlims, dna_segs){
+# setting total plot size based on number of loci to plot #
 	xlim.diff <- vector();
 	for (i in names(xlims)){
 		for (ii in seq(1,length(xlims[[i]]), 2)){
@@ -120,22 +128,27 @@ set.plot.size <- function(xlims, dna_segs){
 
 
 #--- main ---#
-# loading the tree #
-tree <- nwk2phylog("tree_editted.nwk")
-tree <- edit.phylog.names(tree)
+# loading the pruned tree output by CLdb_dna_segs_orderByTree.pl #
+## will be plotted with loci
+## do not provide if no tree needed
+tree <- nwk2phylog("tree_prn.nwk")			# newick tree 
+tree <- edit.phylog.names(tree)				
 
 # loading the dna_segs & xlims tables #
+## both should be ordered by the tree if providing a tree
 DNAsegs.tbl <- read.delim("segs_order_col.txt")
 xlims.tbl <- read.delim("xlims_order.txt")
 
 # formatting the dna_segs & xlims tables for genoPlotR #
+## editing names
 DNAsegs.tbl <- format.dna.segs.xlims(DNAsegs.tbl)
 xlims.tbl <- format.dna.segs.xlims(xlims.tbl)
-
+## converint to lists
 dna_segs <- df2list.dna_segs(DNAsegs.tbl)
 xlims <- df2list.xlims(xlims.tbl)
 
 # loading and formatting the comparisons table #
+## not needed if no comparisions necessary 
 compare.tbl <- read.delim("comparisons.txt")
 compare.tbl <- edit.compare.names(compare.tbl)
 compare <- df2list.compare(compare.tbl, DNAsegs.tbl)
@@ -145,7 +158,8 @@ p.dim <- set.plot.size(xlims, dna_segs)
 
 
 # plotting #
-quartz(width=p.dim[["width"]], height=p.dim[["height"]])
+## comment out any portions that were not provided (e.g. 'tree' or 'compare')
+quartz(width=p.dim[["width"]], height=p.dim[["height"]])		# plot size
 plot_gene_map(dna_segs=dna_segs,
 		xlims=xlims,
 		tree=tree,

@@ -205,7 +205,7 @@ chdir $dir or die $!;
 my %spacer_hclust;
 my %DR_hclust;
 for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[2]){
-	print STDERR "...clustering at cutoff $i\n" unless $verbose;
+	print STDERR "...clustering at cutoff: $i\n" unless $verbose;
 	
 	## call cd-hit-est ##
 	my $spacer_cdhit_out = call_cdhit($spacer_fasta, $i, $threads) if $spacer_bool;
@@ -311,7 +311,7 @@ sub parse_cdhit{
 		exit(1);
 		}
 	
-	print STDERR "Number of clusters for $cat at cutoff '$cluster': \t", scalar keys %clust_cnt, "\n";
+	print STDERR "Number of clusters for $cat at cutoff '$cluster': ", scalar keys %clust_cnt, "\n";
 	
 		#print Dumper @clusters; exit;
 	return \@clusters;

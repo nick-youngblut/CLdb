@@ -194,7 +194,6 @@ if( exists $dna_segs_r->{"gene"} && $dbh_ITEP ){
 	get_CLdb_gene_start_end($dbh, $dna_segs_r, $dna_segs_order_r, $blastp_res_r, \%compare);
 	}
 
-
 # writing out compare table #
 write_compare(\%compare, $dna_segs_order_r);
 
@@ -233,10 +232,12 @@ sub get_CLdb_gene_start_end{
 	my ($dbh, $dna_segs_r, $dna_segs_order_r, $blastp_res_r, $compare_r) = @_;
 	
 	# preparing query for query gene #
+	## 'AND locus_id = ?' newly added; not sure if needed 
 	my $query = "
 SELECT gene_start, gene_end
 FROM genes
 WHERE gene_id = ?
+AND locus_id = ?				
 ";
 	print STDERR "$query\n" if $verbose;
 	$query =~ s/\r|\n/ /g;
@@ -266,16 +267,25 @@ AND locus_id = ?
 		foreach my $locus_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id2}}){
 			$locus_id2 = $locus_id;
 			}
+			
+		my %keep_cnt;
 		foreach my $feat_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id1}{$locus_id1}}){
 			# seeing if feat_d is in blast res #
 			next unless exists $blastp_res_r->{$feat_id};
 			
 			# getting start-end of query gene #
 			$sth1->bind_param(1, $feat_id);
+			$sth1->bind_param(2, $locus_id1);			# newly added; not sure if needed 
 			$sth1->execute();
 			my $res_q = $sth1->fetchall_arrayref();
 			
-			next unless @$res_q;
+			if (! @$res_q){
+				#print STDERR " WARNING: no gene start-end found for $feat_id. Skipping\n";
+				next;
+				}
+			else{ 
+				$keep_cnt{'query'}++; 
+				}
 			
 			# getting start-end of subject gene #
 				#print Dumper "q $feat_id";
@@ -285,8 +295,13 @@ AND locus_id = ?
 				$sth2->bind_param(2, $locus_id2);
 				$sth2->execute();
 				my $res_s = $sth2->fetchall_arrayref();
-			
-				next unless @$res_s;
+
+				if(! @$res_s){
+					next;
+					}
+				else{
+					$keep_cnt{'subject'}++;
+					}
 			
 				# loading hash #
 				$compare_r->{"gene"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$subject_gene_id} =
@@ -296,6 +311,16 @@ AND locus_id = ?
 					 ];
 				}
 			}
+		
+		# status #
+		print STDERR "Number of features for locus '$locus_id1':\t\t", 
+			scalar keys %{$dna_segs_r->{"gene"}{$dna_seg_id1}{$locus_id1}}, "\n";
+		$keep_cnt{'query'}  = 0 unless exists $keep_cnt{'query'};
+		print STDERR "Number of query features with CLdb entry:\t",
+					$keep_cnt{'query'}, "\n";
+		$keep_cnt{'subject'}  = 0 unless exists $keep_cnt{'subject'};
+		print STDERR "Number of subject features with CLdb entry:\t",
+					$keep_cnt{'subject'}, "\n\n";
 		}
 		#print Dumper "here", %{$compare_r->{"gene"}}; exit;
 	}
@@ -303,6 +328,9 @@ AND locus_id = ?
 sub get_ITEP_blastp{
 # getting blastp info from ITEP #
 	my ($dbh_ITEP, $dna_segs_r, $dna_segs_order_r, $blastp_cutoff) = @_;
+	
+	# status #
+	print STDERR "### Querying ITEP ###\n";
 	
 	# preparing query #
 	my $query = "
@@ -356,6 +384,9 @@ AND pctid >= $blastp_cutoff
 sub get_spacer_pairwise_blast{
 # querying CLdb for spacer_hclust info #
 	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r) = @_;
+	
+	# status #
+	print STDERR "### Getting spacer pairwise blast results ###\n";
 	
 	# preparing query #
 	my $query = "
@@ -422,6 +453,9 @@ AND a.pident >= ?
 sub get_spacer_group{
 # querying CLdb for spacer_group info #
 	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r) = @_;
+	
+	# status #
+	print STDERR "### Getting spacer groups ###\n";
 	
 	# preparing query #
 	my $query = "
@@ -491,6 +525,9 @@ WHERE c.spacer_group = d.spacer_group
 sub get_spacer_hclust{
 # querying CLdb for spacer_hclust info #
 	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r, $spacer_cutoff) = @_;
+	
+	# status #
+	print STDERR "### Getting spacer hclust groups ###\n";
 	
 	# preparing query #
 	my $query = "
