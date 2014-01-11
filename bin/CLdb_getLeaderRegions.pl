@@ -26,7 +26,7 @@ CLdb database.
 
 =item -location  <char>
 
-Location file specifying leader region start-end.
+Location file specifying known leader region locations.
 
 =item -subtype  <char>
 
@@ -84,7 +84,7 @@ that region (unless -overlap used).
 
 The default leader region length is 1000bp from the CRISPR array.
 
-=head2 Selecting leader regions
+=head2 Selecting leader regions (-location)
 
 Leader regions can be selected by providing a query such as 
 "-sub I-A" for all leader regions adjacent to the I-A arrays.
@@ -380,15 +380,18 @@ sub get_leader_seq{
 		# loading genbank #
 		my $seqio = Bio::SeqIO->new(-format => "genbank", 
 								-file => "$genbank_path/$fasta_genbank{$fasta}");
-										
+		
+		#print Dumper %fasta_locus; exit;
+		#print Dumper $fasta_r; exit;
+							
 		# just by scaffold #
-		#foreach my $scaf (keys %{$fasta_locus{$fasta}}){
 		while (my $seq = $seqio->next_seq){
 			my $scaf = $seq->display_id;
-			die " ERROR: cannot find $scaf in genome fasta!\n"
+			die " ERROR: cannot find scaffold '$scaf' in '$fasta_dir/$fasta'!\n"
 				unless exists $fasta_r->{$scaf};
-			die " ERROR: cannot find $scaf in genome fasta!\n"
-				unless exists $fasta_locus{$fasta}{$scaf};
+			#die " ERROR: cannot find scaffold: '$scaf' in '$fasta_dir/$fasta'!\n"
+			#	unless exists $fasta_locus{$fasta}{$scaf};			# not sure if needed
+			next unless exists $fasta_locus{$fasta}{$scaf};
 				
 			
 			foreach my $locus (@{$fasta_locus{$fasta}{$scaf}}){				
