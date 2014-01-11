@@ -141,7 +141,7 @@ sub check_exists_in_gene_table{
 		if exists $status{'existing'};
 	print STDERR "Number of entries to be replaced (existing in CLdb but written to output table): ", $status{'replacing'}, "\n"
 		if exists $status{'replacing'};
-	print STDERR "Number of entries to keep as they were (existing in CLdb & not written to output table): ", $status{'keeping'}, "\n"
+	print STDERR "Number of entries to keep as they were (existing in CLdb & NOT written to output table): ", $status{'keeping'}, "\n"
 		if exists $status{'keeping'};
 	print STDERR "Number of new entries (no in CLdb & written to output table): ", $status{'adding'}, "\n"
 		if exists $status{'adding'};
@@ -191,8 +191,6 @@ sub check_in_CAS{
 # checing whether CDS features are in the designated operon locations #
 	my ($loci_se_r, $loci_tbl_r) = @_;
 	
-	#print Dumper $loci_tbl_r; exit;
-	
 	foreach my $locus (keys %$loci_tbl_r){
 		foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
 			die " LOGIC ERROR: $!\n" unless 
@@ -208,8 +206,6 @@ sub check_in_CAS{
 			
 			my $c_start = ${$loci_se_r->{$locus}}[5];
 			my $c_end = ${$loci_se_r->{$locus}}[6];
-			
-				#print Dumper $f_start, $f_end, $o_start, $o_end, $c_start, $c_end; 
 
 			# making all on the + strand #
 			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
@@ -237,6 +233,7 @@ sub check_in_CAS{
 sub set_to_pos_strand{
 # setting all start-end so start is <= end #
 	my ($start, $end) = @_;
+	return $start, $end if $start !~ /^\d+$/ || $end !~ /^\d+$/;
 	if ($start > $end){ return $end, $start; }
 	else{ return $start, $end; }
 	}

@@ -39,12 +39,6 @@ sub genbank_get_region{
 	# loading features #
 	my $feats_r = load_genbank_features($genbank_file,$tRNA);
 	
-	#my $ret_r;
-	#if(scalar @$regions_r % 2 == 0){  # without scaffolding #
-	#	my $itree = load_itree($feats_r);
-	#	$ret_r = get_regions($itree, $regions_r, $strand_b);
-	#	}
-	#else{			# by-scaffold #
 	my $itrees_r = load_itrees($feats_r);
 	my $ret_r = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
 
@@ -68,7 +62,7 @@ sub get_regions_scaffold{
 			$res = $itrees_r->{$$regions_r[0]}->fetch($$regions_r[2], $$regions_r[1]);
 			}
 		}
-	else{ print STDERR " WARNING: $$regions_r[0] not found in genbank!\n"; }
+	else{ warn "WARNING: '$$regions_r[0]' not found in genbank or no features for that scaffold in genbank!\n"; }
 	
 	my $feat_id = 0;
 	foreach my $feat (@$res){

@@ -62,7 +62,7 @@ in CLdb.
 All of the position info will be changed to scaffold (as long as
 the corresponding merged & unmerged genbank files are provided).
 Also, the scaffold ID for the position information will be added
-to the editted loci table.
+to the edited loci table.
 
 =head3 genbank file table
 
@@ -91,7 +91,7 @@ connections between scaffolds are determined in a number of steps:
 
 =head1 EXAMPLES
 
-=head2 Normal usage (array files editted):
+=head2 Normal usage (array files edited):
 
 CLdb_positionByScaffold.pl < loci.txt -genbank genbank_file_list.txt -array > loci_byScaf.txt
 
@@ -167,11 +167,40 @@ my @header_order = sort{$loci_tbl_r->{'header'}{$a} <=> $loci_tbl_r->{'header'}{
 print join("\t", @header_order), "\n";
 my @indices = @{$loci_tbl_r->{'header'}}{@header_order};
 
+
+# writing out loci entries w/out genbank_file value #
+my $genbank_i = $loci_tbl_r->{'header'}{'genbank_file'};
+my $locus_id_i = $loci_tbl_r->{'header'}{'locus_id'};
+foreach my $taxon_name (sort keys %{$loci_tbl_r->{'body'}} ){
+	foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){
+		unless(defined $$locus[$genbank_i] && $$locus[$genbank_i] ne ""){
+			# writing out new loci file (enties that do not have a genbank file value #
+			warn "WARNING: $taxon_name -> $$locus[$locus_id_i] does not have a genbank_file value! Positions not changed!\n";
+			map{ $$locus[$_] = "" unless defined $$locus[$_] } @indices;
+			print join("\t", @$locus[ @indices ] ), "\n";
+			}
+		}
+	}
+
+# writing all loci not found in genbank_unmerged_merged file #
+foreach my $taxon_name (sort keys %{$loci_tbl_r->{'body'}} ){
+	unless(exists $gbk_list_r->{$taxon_name}){			# taxon must be found in genbank_unmerged_merged file
+		foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){
+			warn "WARNING: $taxon_name -> $$locus[$locus_id_i] not found in genbank_unmerged_merged file! Positions not changed!\n";
+			map{ $$locus[$_] = "" unless defined $$locus[$_] } @indices;
+			print join("\t", @$locus[ @indices ] ), "\n";
+			}
+		}
+	}
+
 # processing each taxon #
-foreach my $taxon_name (keys %$gbk_list_r){			# each taxon/genbank
+foreach my $taxon_name (sort keys %$gbk_list_r){			# each taxon/genbank
 	# genbank #
 	## skipping unless present in loci file ##
-	next unless exists $loci_tbl_r->{'body'}{$taxon_name};
+	unless (exists $loci_tbl_r->{'body'}{$taxon_name}){
+		warn "Skipping position change for '$taxon_name'. Not found in loci file!\n";
+		next;
+		}
 	
 	## getting genbank bioperl objects #
 	my $gbk_r = load_genbank_io($gbk_list_r->{$taxon_name});
@@ -201,7 +230,7 @@ foreach my $taxon_name (keys %$gbk_list_r){			# each taxon/genbank
 
 	# location/file_name editing #
 	## loci table ##	
-	foreach my $locus ( @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row				
+	foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row				
 		# loci #
 		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus, 
 							$taxon_name, 'locus_start', 'locus_end', 'scaffold');
@@ -252,7 +281,11 @@ sub edit_array_file{
 	while(<IN>){
 		chomp;
 		next if /^\s*$/;
+		s/\t{3}/\t\t/g;				# any instances of '\t' instead of no value (due to 1st placed in excel)
 		my @l = split /\t/;			# start, DR, spacer, end 
+		
+		die "ERROR: no start-end position found for line $. of $array_dir/$parts[2]: '$_'\n"
+			unless $l[0] =~ /^\d+$/ && $l[3] =~ /^\d+$/;
 		
 		# getting by-scaffold position #
 		my $ret = $itree->fetch($l[0], $l[3]);		# ret = scaffold that positions span
@@ -271,7 +304,7 @@ sub edit_array_file{
 	close OUT;
 	
 	# status #
-	print STDERR "Edited array file for written: '$array_dir_out/$parts[2]'\n"
+	print STDERR "Edited array file written: '$array_dir_out/$parts[2]'\n"
 		unless $verbose_b;
 	}
 
@@ -311,7 +344,8 @@ sub edit_loci_tbl_loc{
 	return 0 unless exists $header->{$start_cat} && exists $header->{$end_cat};
 	
 	## edit start-end values #
-	if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ] ){		
+	if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ] 
+		&& $$locus[ $start_i ] ne "" && $$locus[ $end_i ] ne "" ){		# must be defined & not ""	
 		my $start = $$locus[ $start_i ];
 		my $end = $$locus[ $end_i ];
 	
@@ -664,11 +698,11 @@ sub load_loci_table{
 		}
 
 	# checking for genbank file #
-	die "ERROR: no 'genbank_file' column found in loci table! Possitions in array files will not be editted!\n"
+	die "ERROR: no 'genbank_file' column found in loci table! Possitions in array files will not be edited!\n"
 		unless exists $loci{'header'}{'genbank_file'};
 
 	# checking for array file #
-	warn "WARNING: no 'array_file' column found in loci table! Possitions in array files will not be editted!\n"
+	warn "WARNING: no 'array_file' column found in loci table! Possitions in array files will not be edited!\n"
 		unless exists $loci{'header'}{'array_file'};
 		
 	# adding scaffold column if not present #
