@@ -180,17 +180,16 @@ if(defined $opts_r->{"by_cluster"}){		# by group
 	
 	$query = "SELECT 
 'NA',
-'$tbl_prefix', 
-'NA',
-'NA',
+'$tbl_prefix',
 'NA',
 $tbl_prefix\_clusters.cluster_ID,
 $tbl_oi.$tbl_prefix\_sequence
 FROM $tbl_oi, $tbl_prefix\_clusters, loci 
 WHERE loci.locus_id = $tbl_oi.locus_id 
+AND $tbl_prefix\_clusters.locus_ID = $tbl_oi.locus_ID
 AND $tbl_prefix\_clusters.$tbl_prefix\_ID = $tbl_oi.$tbl_prefix\_ID
 AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
-AND $tbl_prefix\_clusters.strand_spec = $opts_r->{'cutoff'}
+AND $tbl_prefix\_clusters.strand_spec = $opts_r->{'strand_spec'}
 GROUP BY $tbl_prefix\_clusters.cluster_ID
 ORDER BY $tbl_prefix\_clusters.cluster_ID
 $opts_r->{'join_sql'}";
@@ -200,40 +199,19 @@ else{		# not by clusters
 $tbl_oi.Locus_ID, 
 '$tbl_prefix', 
 $tbl_oi.$tbl_prefix\_ID,
-$tbl_oi.$tbl_prefix\_start,
-$tbl_oi.$tbl_prefix\_end,
 'NA',
 $tbl_oi.$tbl_prefix\_sequence
 FROM $tbl_oi, loci 
 WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
 	}
-	
 
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
 	
-		#print Dumper $query;
-	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
-	confess "ERROR: no matching entries!\n"
+	confess "ERROR: no matching $tbl_prefix entries!\n"
 		unless $$ret[0];
-
-		#print Dumper $ret; exit;
-
-	# 'NA' for ID & locus if cluster defined #
-	#foreach my $row (@$ret){
-		# @$row = locus,spacer/DR,ID,groupID,seq
-	#	if(defined $$row[3] && defined $opts_r->{"by_cluster"}){		# cluster found 
-	#		$$row[0] = 'NA';
-	#		$$row[2] = 'NA';
-	#		}
-	#	else{
-	#		$$row[3] = 'NA' if ! defined $$row[3];
-	#		confess "ERROR: no group ID found for an entry. Cannot group sequences!\n"
-	#			if defined $opts_r->{"by_cluster"};
-	#		}
-	#	}
 
 		#print Dumper @$ret; exit;
 	return $ret;

@@ -40,9 +40,17 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -group  <bool>
+=item -cluster  <bool>
 
-Get array elements de-replicated by group (ie. all unique sequences). [FALSE]
+Get array elements de-replicated by spacer/DR cluster. [FALSE]
+
+=item -cutoff  <float>
+
+Get array elements at the specified sequence identity cutoff. [1]
+
+=item -strand  <bool>
+
+Strand-specific array element clusters? [TRUE]
 
 =item -query  <char>
 
@@ -68,12 +76,7 @@ The query can be refined with many of the flags.
 
 =head2 Output
 
-If not using grouping: ">locus_ID|spacer/DR|elementID|groupID"
-
-=head2 WARNING
-
-Using '-leader' will only write out sequences from arrays with
-identified leaders!
+If not using grouping: ">locus_ID|spacer/DR|elementID|clusterID"
 
 =head1 EXAMPLES
 
@@ -85,9 +88,13 @@ CLdb_array2fasta.pl -d CLdb.sqlite
 
 CLdb_array2fasta.pl -d CLdb.sqlite -r
 
-=head2 Write all unique spacers
+=head2 Write all unique spacers (strand-specific clustering)
 
 CLdb_array2fasta.pl -d CLdb.sqlite -g
+
+=head2 Write all unique spacers (strand-agnostirc clustering)
+
+CLdb_array2fasta.pl -d CLdb.sqlite -g -strand
 
 =head2 Refine spacer sequence query:
 
@@ -96,10 +103,6 @@ CLdb_array2fasta.pl -d CLdb.sqlite -q "AND loci.Locus_ID=1"
 =head2 Refine spacer query to a specific subtype & 2 taxon_id's
 
 CLdb_array2fasta.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
-
-=head2 Orienting sequence by leaders
-
-CLdb_array2fasta.pl -d CLdb.sqlite -l 
 
 =head1 AUTHOR
 
@@ -148,16 +151,20 @@ use CLdb::seq qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
-my ($spacer_DR_b, $by_group);
+my ($spacer_DR_b, $by_cluster);
 my (@subtype, @taxon_id, @taxon_name);
+my $strand_spec;
 my $extra_query = "";
+my $cluster_cutoff = 1;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "repeat" => \$spacer_DR_b,			 # spacers or repeats? [spacers]
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "group" => \$by_group,
+	   "group" => \$by_cluster,
+	   "strand" => \$strand_spec, 			# strand-specific grouping? [TRUE]
+	   "cutoff=f" => \$cluster_cutoff, 		# clustering cutoff [1.00]
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -165,6 +172,8 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
+if(defined $strand_spec){ $strand_spec = 0; }	# strand-agnostic
+else{ $strand_spec = 1; }						# strand-specific
 
 #--- MAIN ---#
 # connect 2 db #
@@ -196,8 +205,10 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my %opts = (
 	extra_query => $extra_query,
 	join_sql => $join_sql,
-	by_group => $by_group,
-	spacer_DR_b => $spacer_DR_b
+	by_cluster => $by_cluster,
+	spacer_DR_b => $spacer_DR_b,
+	cutoff => $cluster_cutoff,
+	strand_spec => $strand_spec
 	);
 
 ## querying CLdb ##
@@ -219,8 +230,8 @@ sub write_array_seq{
 	
 	foreach (@$arrays_r){
 		print join("\n", 
-			join("|", ">$$_[0]", @$_[1..3]), 
-			$$_[4]), "\n";
+			join("|", ">$$_[0]", @$_[1..($#$_-1)]), 
+			$$_[$#$_]), "\n";
 		}
 	}
 
