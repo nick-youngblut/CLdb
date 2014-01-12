@@ -229,7 +229,7 @@ apply_rainbow(\%color_mod, $descrim_cnt_r);
 ## applying default color to repeats ##
 apply_DR_color(\%color_mod);
 
-# writing editted table #
+# writing edited table #
 write_dna_segs($dna_segs_r, $header_r, $dna_segs_order_r, \%color_mod);
 
 
