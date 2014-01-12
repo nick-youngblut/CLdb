@@ -169,11 +169,11 @@ write_selected_loci($loci_r) unless $verbose;
 my $tables_r = list_tables($dbh);
 
 # need to join; get unique IDs and delete on unique IDs #
-## hclust tables ##
-delete_hclust($dbh, $loci_r, "spacers", "spacer_id", "spacer_hclust") 
-	if exists $tables_r->{"spacers_hclust"};
-delete_hclust($dbh, $loci_r, "DRs", "DR_id", "DR_hclust")
-	if exists $tables_r->{"DR_hclust"};
+## cluster tables ##
+delete_clusters($dbh, $loci_r, "spacers", "spacer_id", "spacer_clusters") 
+	if exists $tables_r->{"spacer_clusters"};
+delete_clusters($dbh, $loci_r, "DRs", "DR_id", "DR_clusters")
+	if exists $tables_r->{"DR_clusters"};
 
 ## blast tables ##
 delete_spacer_pairwise_blast($dbh, $loci_r) if exists $tables_r->{"spacer_pairwise_blast"};
@@ -186,8 +186,8 @@ simple_delete($dbh, $loci_r, "dr_consensus") if exists $tables_r->{"dr_consensus
 simple_delete($dbh, $loci_r, "leaders") if exists $tables_r->{"leaders"};
 simple_delete($dbh, $loci_r, "genes") if exists $tables_r->{"genes"};
 simple_delete($dbh, $loci_r, "loci") if exists $tables_r->{"loci"};
-simple_delete($dbh, $loci_r, "spacer_hclust") if exists $tables_r->{"spacer_hclust"};
-
+simple_delete($dbh, $loci_r, "spacer_clusters") if exists $tables_r->{"spacer_clusters"};
+simple_delete($dbh, $loci_r, "DR_clusters") if exists $tables_r->{"DR_clusters"};
 
 $dbh->commit();
 exit;
@@ -230,7 +230,7 @@ sub delete_spacer_pairwise_blast{
 		}	
 	}
 
-sub delete_hclust{
+sub delete_clusters{
 # deleting spacer hclust entries #
 	my ($dbh, $loci_r, $table, $id, $del_table) = @_;
 	

@@ -165,26 +165,23 @@ if($ITEP_sqlite){
 		or die " Can't connect to $ITEP_sqlite!\n";	
 	}
 
-# if cluster cutoff < 1; check for spacer_hclust entries #
-die "ERROR: no entries in spacer_hclust table! Cannnot use a spacer clustering cutoff < 1!\n"
-	if $spacer_cutoff < 1 && ! n_entries($dbh, "spacer_hclust");
-
 # loading dna_segs table #
 my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
 my %compare;
 
+# check for spacer_cluster entries #
+die "ERROR: no entries in spacer_cluster table!\n"
+	if exists $dna_segs_r->{"spacer"} && ! n_entries($dbh, "spacer_clusters");
+
 # querying CLdb for spacer comparisons #
 if( exists $dna_segs_r->{"spacer"} ){
 	if($spacer_opt =~ /cluster/i){
-		if($spacer_cutoff < 1){
-			get_spacer_hclust($dbh, $dna_segs_r, $dna_segs_order_r, \%compare);
-			}
-		else{
-			get_spacer_group($dbh, $dna_segs_r, $dna_segs_order_r, \%compare, $spacer_cutoff)
-			}
+		get_spacer_cluster($dbh, $dna_segs_r, $dna_segs_order_r, 
+						\%compare, $spacer_cutoff);
 		}
 	elsif($spacer_opt =~ /blast/i){
-		get_spacer_pairwise_blast($dbh, $dna_segs_r, $dna_segs_order_r, \%compare);
+		get_spacer_pairwise_blast($dbh, $dna_segs_r, $dna_segs_order_r, 
+						\%compare, $spacer_cutoff);
 		}
 	}
 
@@ -383,7 +380,7 @@ AND pctid >= $blastp_cutoff
 
 sub get_spacer_pairwise_blast{
 # querying CLdb for spacer_hclust info #
-	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r) = @_;
+	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r, $spacer_cutoff) = @_;
 	
 	# status #
 	print STDERR "### Getting spacer pairwise blast results ###\n";
@@ -450,84 +447,12 @@ AND a.pident >= ?
 		#print Dumper %$compare_r; exit;
 	}
 
-sub get_spacer_group{
-# querying CLdb for spacer_group info #
-	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r) = @_;
-	
-	# status #
-	print STDERR "### Getting spacer groups ###\n";
-	
-	# preparing query #
-	my $query = "
-SELECT 
-c.spacer_start, c.spacer_end,
-d.spacer_start, d.spacer_end,
-c.spacer_id, d.spacer_id
-FROM
-(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
-FROM loci a, spacers b
-WHERE a.locus_id = b.locus_id
-AND b.spacer_id= ?
-AND a.locus_id = ?) c,
-(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
-FROM loci a, spacers b
-WHERE a.locus_id = b.locus_id
-AND a.locus_id = ?) d
-WHERE c.spacer_group = d.spacer_group
-";
-	print STDERR "$query\n" if $verbose;
-	
-	$query =~ s/\r|\n/ /g;
-
-	my $sth = $dbh->prepare($query);
-	
-	# querying each spacer ID for matches against adjacent locus #
-	for my $i (0..($#$dna_segs_order_r-1)){
-		my $dna_seg_id1 = $$dna_segs_order_r[$i];
-		my $dna_seg_id2 = $$dna_segs_order_r[$i+1];
-		# getting loci to compare #
-		my ($locus_id1, $locus_id2);
-		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}}){
-			$locus_id1 = $locus_id;
-			}
-		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id2}}){
-			$locus_id2 = $locus_id;
-			}
-		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
-				#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2
-				#		unless exists 
-			
-			$sth->bind_param(1, $feat_id);		
-				#$sth->bind_param(2, $spacer_cutoff);
-			$sth->bind_param(2, $locus_id1);
-				#$sth->bind_param(3, $spacer_cutoff);
-			$sth->bind_param(3, $locus_id2);
-			$sth->execute();
-			my $res = $sth->fetchall_arrayref();
-			
-			# skipping any spacers not in both loci #
-			next unless @$res;
-			
-			# adding seqID #
-			map{ push(@$_, $spacer_cutoff * 100) } @$res;
-			
-			# loading hash #
-			foreach my $row (@$res){
-				my $sfeat_id = $$row[5];
-				$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$sfeat_id} = [@$row[0..3,$#$row]];
-				}
-			}
-		}
-		#print Dumper %$compare_r; exit;
-		#print "exit\n"; exit;
-	}
-
-sub get_spacer_hclust{
-# querying CLdb for spacer_hclust info #
+sub get_spacer_cluster{
+# querying CLdb for spacer_cluster info #
 	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r, $spacer_cutoff) = @_;
 	
 	# status #
-	print STDERR "### Getting spacer hclust groups ###\n";
+	print STDERR "### Getting spacer clusters ###\n";
 	
 	# preparing query #
 	my $query = "
@@ -537,16 +462,16 @@ d.spacer_start, d.spacer_end,
 c.spacer_id, d.spacer_id
 FROM
 (SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
-FROM spacer_hclust a, spacers b
-WHERE a.locus_id=b.locus_id
+FROM spacer_clusters a, spacers b
+WHERE a.locus_id = b.locus_id
 AND a.spacer_id = b.spacer_id
 AND a.spacer_id= ?
 AND a.cutoff = ?
 AND a.locus_id = ?) c,
 (SELECT a.locus_id, a.spacer_id, b.spacer_start, b.spacer_end, a.cluster_id
-FROM spacer_hclust a, spacers b
-WHERE a.locus_id=b.locus_id
-AND a.spacer_id=b.spacer_id
+FROM spacer_clusters a, spacers b
+WHERE a.locus_id = b.locus_id
+AND a.spacer_id = b.spacer_id
 AND a.cutoff = ?
 AND a.locus_id = ?) d
 WHERE c.cluster_id = d.cluster_id
@@ -570,7 +495,7 @@ WHERE c.cluster_id = d.cluster_id
 			$locus_id2 = $locus_id;
 			}
 		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
-			#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2; exit;
+				#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2; exit;
 			$sth->bind_param(1, $feat_id);		
 			$sth->bind_param(2, $spacer_cutoff);
 			$sth->bind_param(3, $locus_id1);
@@ -645,4 +570,74 @@ sub load_dna_segs{
 	return \%dna_segs, \@dna_segs_order, \%header;
 	}
 
+sub get_spacer_group_OLD{
+# querying CLdb for spacer_group info #
+	my ($dbh, $dna_segs_r, $dna_segs_order_r, $compare_r) = @_;
+	
+	# status #
+	print STDERR "### Getting spacer groups ###\n";
+	
+	# preparing query #
+	my $query = "
+SELECT 
+c.spacer_start, c.spacer_end,
+d.spacer_start, d.spacer_end,
+c.spacer_id, d.spacer_id
+FROM
+(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
+FROM loci a, spacers b
+WHERE a.locus_id = b.locus_id
+AND b.spacer_id= ?
+AND a.locus_id = ?) c,
+(SELECT a.locus_id, b.spacer_id, b.spacer_start, b.spacer_end, b.spacer_group
+FROM loci a, spacers b
+WHERE a.locus_id = b.locus_id
+AND a.locus_id = ?) d
+WHERE c.spacer_group = d.spacer_group
+";
+	print STDERR "$query\n" if $verbose;
+	
+	$query =~ s/\r|\n/ /g;
 
+	my $sth = $dbh->prepare($query);
+	
+	# querying each spacer ID for matches against adjacent locus #
+	for my $i (0..($#$dna_segs_order_r-1)){
+		my $dna_seg_id1 = $$dna_segs_order_r[$i];
+		my $dna_seg_id2 = $$dna_segs_order_r[$i+1];
+		# getting loci to compare #
+		my ($locus_id1, $locus_id2);
+		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}}){
+			$locus_id1 = $locus_id;
+			}
+		foreach my $locus_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id2}}){
+			$locus_id2 = $locus_id;
+			}
+		foreach my $feat_id (keys %{$dna_segs_r->{"spacer"}{$dna_seg_id1}{$locus_id1}}){
+				#print Dumper $feat_id, $spacer_cutoff, $locus_id1, $locus_id2
+				#		unless exists 
+			
+			$sth->bind_param(1, $feat_id);		
+				#$sth->bind_param(2, $spacer_cutoff);
+			$sth->bind_param(2, $locus_id1);
+				#$sth->bind_param(3, $spacer_cutoff);
+			$sth->bind_param(3, $locus_id2);
+			$sth->execute();
+			my $res = $sth->fetchall_arrayref();
+			
+			# skipping any spacers not in both loci #
+			next unless @$res;
+			
+			# adding seqID #
+			map{ push(@$_, $spacer_cutoff * 100) } @$res;
+			
+			# loading hash #
+			foreach my $row (@$res){
+				my $sfeat_id = $$row[5];
+				$compare_r->{"spacer"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$sfeat_id} = [@$row[0..3,$#$row]];
+				}
+			}
+		}
+		#print Dumper %$compare_r; exit;
+		#print "exit\n"; exit;
+	}

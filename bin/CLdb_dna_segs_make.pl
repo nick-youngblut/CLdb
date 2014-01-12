@@ -163,8 +163,8 @@ else{
 my $dbh = connect2db($CLdb_sqlite);
 
 # if cluster cutoff < 1; check for spacer_hclust entries #
-die "ERROR: no entries in spacer_hclust table! Cannnot use a spacer clustering cutoff < 1!\n"
-	if $spacer_cutoff < 1 && ! n_entries($dbh, "spacer_hclust");
+die "ERROR: no entries in spacer_cluster table! Cannnot use a spacer clustering cutoff < 1!\n"
+	unless n_entries($dbh, "spacer_clusters");
 
 # connect to ITEP #
 my $dbh_ITEP;
@@ -199,7 +199,6 @@ if (@ITEP_sqlite){
 else{	# gene cluster = 1 for all  
 	gene_cluster_same(\%dna_segs);
 	}
-						
 
 # mutli-loci / multi-subtype problem
 ## determining if multiple loci/subtypes per taxon_name ##
@@ -580,52 +579,36 @@ sub get_spacer_info{
 # getting spacer info from CLdb #
 	my ($dbh, $dna_segs_r, $join_sql, $extra_query, $spacer_cutoff) = @_;
 	
-	# checking for spacer_hclust #
-	my $q = "SELECT count(*) FROM spacer_hclust";
+	# checking for spacer_clusters #
+	my $q = "SELECT count(*) FROM spacer_clusters";
 	my $chk = $dbh->selectall_arrayref($q);
-	die " ERROR! no entries in spacer_hclust table!  Run CLdb_hclusterArrays.pl prior to this script!\n"
+	die " ERROR! no entries in spacer_cluster table!  Run CLdb_clusterArrayElements.pl prior to this script!\n"
 		unless @$chk;
 	
 	# query of spacers #
-	my $query;
-	if($spacer_cutoff < 1){		# if hclust used 
-		$query = "
+	## strand-agnostic clusters ##
+	my $query = "
 SELECT 
 loci.taxon_name,
 loci.locus_id, 
 spacers.spacer_id, 
 spacers.spacer_start, 
 spacers.spacer_end, 
-spacer_hclust.cluster_id
-FROM Loci, Spacers, Spacer_hclust
+spacer_clusters.cluster_id
+FROM Loci, Spacers, Spacer_clusters
 WHERE Loci.locus_id = Spacers.locus_id
-AND Spacers.locus_id = Spacer_hclust.locus_id
-AND Spacers.spacer_id = Spacer_hclust.spacer_id
-AND Spacer_hclust.cutoff = $spacer_cutoff
+AND Spacers.locus_id = Spacer_clusters.locus_id
+AND Spacers.spacer_id = Spacer_clusters.spacer_id
+AND Spacer_clusters.cutoff = $spacer_cutoff
+AND Spacer_clusters.strand_spec = 0
 $join_sql
 $extra_query
 ";
-		}
-	else{			# if hclust no used 
-		$query = "
-SELECT 
-loci.taxon_name,
-loci.locus_id, 
-spacers.spacer_id, 
-spacers.spacer_start, 
-spacers.spacer_end, 
-spacers.spacer_group
-FROM Loci, Spacers
-WHERE Loci.locus_id = Spacers.locus_id
-$join_sql
-$extra_query
-";		
-		}
 
 	$query =~ s/\n|\r/ /g;
 	
 	# status #
-	print STDERR "$query\n" if $verbose;
+	warn "$query\n" if $verbose;
 
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
@@ -635,8 +618,12 @@ $extra_query
 	my %spacer_clusters; 
 	foreach my $row (@$ret){
 		# sanity check #
-		die " ERROR: multiple entries for $$row[0], $$row[1], $$row[2]!\n"
+		## should only have 1 taxon_name->locus_id->spacer_id ##
+		die " ERROR: multiple entries for taxon_name->$$row[0], locus_id->$$row[1], spacer_id->$$row[2]!\n"
 			if exists $dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]};
+		
+		# converting clusterID to just cluster number #
+		$$row[5] =~ s/.+_//;
 		
 		# loading dna_segs_r #
 		$dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]} = [@$row[3..$#$row]];
@@ -682,15 +669,6 @@ GROUP BY loci.locus_id
 	return \%subtypes;
 	}
 
-sub join_query_opts_OLD{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
-	}
 
 
 
