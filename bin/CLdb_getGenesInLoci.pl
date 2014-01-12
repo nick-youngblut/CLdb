@@ -195,7 +195,7 @@ sub check_in_CAS{
 		foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
 			die " LOGIC ERROR: $!\n" unless 
 				exists $loci_se_r->{$locus};
-			
+						
 			# defining start - end #
 			## f = feature; o = operion; c = crispr array ##
 			my $f_start = int ${$loci_tbl_r->{$locus}{$feature}}[0];
@@ -207,6 +207,10 @@ sub check_in_CAS{
 			my $c_start = ${$loci_se_r->{$locus}}[5];
 			my $c_end = ${$loci_se_r->{$locus}}[6];
 
+			# skipping if no CAS_start || CAS_end #
+			next if ! defined $o_start || $o_start ne ""
+				|| ! defined $o_end || $o_end ne "";
+
 			# making all on the + strand #
 			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
 			($o_start, $o_end) = set_to_pos_strand($o_start, $o_end);
@@ -214,7 +218,7 @@ sub check_in_CAS{
 			
 			# determining location #
 			## gene must fall in operon, without falling into crispr array ##
-			if($f_start >= $o_start && $f_end <= $o_end){	# gene in operon
+			if($f_start >= $o_start && $f_end <= $o_end){	# gene in CAS
 				if($c_start && $c_end){					# check for overlap w/ CRISPR array if present
 					if( ($f_start < $c_start && $f_end < $c_end) ||
 						($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
