@@ -14,6 +14,10 @@ CLdb_dna_segs_formatColor.pl [flags] < dna_segs_order.txt > dna_segs_order_color
 
 =over
 
+=item -compare  <char>
+
+Comparison file made with CLdb_comparisons_make.pl
+
 =item -tree  <char>
 
 Tree file name (nexus or newick).
@@ -61,6 +65,7 @@ perldoc CLdb_dna_segs_formatColor.pl
 Add descriminatory coloring to genes and spacers.
 Genes and/or spacers that do not need coloring
 because: 
+
 =over 
 
 =item i) the gene/spacer always adjacent
@@ -212,11 +217,14 @@ if($tree_in){
 	}
 
 # adjacency-based color formatting #	
-check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer", $header_r)
-	if $spacer_color_opt == 2 || $spacer_color_opt == 3;
-check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "gene", $header_r)
-	if $gene_color_opt == 2 || $gene_color_opt == 3;
+#if($compare_in){
+#	my $compare_r = load_compare($compare_in);
+	check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer", $header_r)
+		if $spacer_color_opt == 2 || $spacer_color_opt == 3;
+	check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "gene", $header_r)
+		if $gene_color_opt == 2 || $gene_color_opt == 3;
 #	}
+
 
 # editting colors #
 ## finding colors that need descriminating hexadecimal coloring ##
