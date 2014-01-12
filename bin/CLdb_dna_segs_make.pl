@@ -66,7 +66,7 @@ perldoc CLdb_dna_segs_make.pl
 
 Make a basic dna_segs object needed for plotting.
 
-=head2 Coloring genes by gene cluster
+=head2 Coloring genes by gene cluster (via ITEP)
 
 Provide and ITEP sqlite file name and cluster run ID
 to add cluster info to the table (used for coloring)
@@ -153,6 +153,9 @@ if(@ITEP_sqlite){
 	die " ERROR: cannot find ITEP database file!\n"
 		unless -e $ITEP_sqlite[0];
 	}
+else{
+	warn "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
+	}
 
 
 #--- MAIN ---#
@@ -189,9 +192,14 @@ get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
 get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
 
 # getting gene cluster info if ITEP provided #
-my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
+if (@ITEP_sqlite){
+	my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
 						$ITEP_sqlite[1], \%dna_segs)
-						if @ITEP_sqlite;
+	}
+else{	# gene cluster = 1 for all  
+	gene_cluster_same(\%dna_segs);
+	}
+						
 
 # mutli-loci / multi-subtype problem
 ## determining if multiple loci/subtypes per taxon_name ##
@@ -412,6 +420,19 @@ sub get_strand{
 	else{ return -1; }					# - strand
 	}
 
+sub gene_cluster_same{
+# gene cluster = 1 for all if ITEP not provided #
+	my ($dna_segs_r) = @_;
+	
+	foreach my $taxon_id (keys %$dna_segs_r){
+		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_id}}){
+			foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
+				push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, 1;
+				}
+			}
+		}
+	}
+
 sub get_gene_cluster_info{
 # getting gene cluster info from ITEP #
 	my ($dbh_ITEP, $ITEP_file, $runID, $dna_segs_r) = @_;
@@ -476,10 +497,9 @@ $extra_query
 	die " ERROR: no matching entries for CAS gene query!\n"
 		unless $$ret[0];
 	
-	#my %gene_ids;
+	# loading hash #
 	foreach my $row (@$ret){
 		$dna_segs_r->{$$row[0]}{$$row[1]}{"gene"}{$$row[2]} = [@$row[3..$#$row]];
-		
 		}
 	
 		#print Dumper %$dna_segs_r; exit;
@@ -517,7 +537,7 @@ $extra_query
 			}	
 		}
 	else{
-		print STDERR " WARNING: no matching entries in leaders table! Leaders not added to dna_segs table!\n";
+		warn "WARNING: no matching entries in leaders table! Leaders not added to dna_segs table!\n";
 		}
 
 	#print Dumper %$dna_segs_r; exit;
