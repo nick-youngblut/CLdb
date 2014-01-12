@@ -80,17 +80,15 @@ Discrimantory coloring can be based on:
 
 =over 
 
-=item Continuous adjacency in the plot: [1]
+=item Continuous adjacency in the plot (not colored if adjacent): [1]
 
 =item Max branch length (not colored below cutoff): [2]
 
 =item Both: [3]
 
-=item Group/cluster (same group get same coloring): [4] 
-
 =back
 
-By default: genes = 4, spacers = 3
+By default: genes = 1, spacers = 3
 
 The default non-descriminatory colors are:
 
@@ -171,7 +169,7 @@ my @default_colors = ("#666666", "#CCCCCC", "#000000");		# gene, spacer, DR
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
-	   "itep=s" => \$compare_in,
+	  # "compare=s" => \$compare_in,
 	   "spacer=i" => \$spacer_color_opt, 		# 0 = none, 1 = tree, 2 = adjacency, 3 = both
 	   "gene=i" => \$gene_color_opt,			# 0 = none, 1 = tree, 2 = adjacency, 3 = both
 	   "branch=f" => \$brlen_cutoff,			# branch-length cutoff (>= max branch length)	   
@@ -340,8 +338,6 @@ sub check_adjacency{
 			if(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1} &&		# adjacent taxa found in same color
 				exists $dna_segs_r->{$feat}{$col}{$dna_segs_id2}){
 				$adjlist{$dna_segs_id1} = $dna_segs_id2;				# color must be found in adjacent 
-				#print Dumper $dna_segs_id1, $dna_segs_id2
-				#	if $dna_segs_id1 eq "3.F.A.2.12__cli74" || $dna_segs_id2 eq "3.F.A.2.12__cli74";
 				}
 			elsif(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1}){	# if 'loner'
 				$adjlist{$dna_segs_id1} = 0;
