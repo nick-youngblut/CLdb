@@ -184,7 +184,6 @@ Spacer_ID	TEXT	NOT NULL,
 Spacer_Start	INTEGER	NOT NULL,
 Spacer_End	INTEGER	NOT NULL,
 Spacer_Sequence	TEXT	NOT NULL,
-Spacer_Group	TEXT,
 UNIQUE (Locus_ID, Spacer_ID)
 ON CONFLICT REPLACE
 );
@@ -201,7 +200,6 @@ DR_ID	INTEGER	NOT NULL,
 DR_Start	INTEGER	NOT NULL,
 DR_End	INTEGER	NOT NULL,
 DR_Sequence	TEXT	NOT NULL,
-DR_Group	INTEGER,
 UNIQUE (LOCUS_ID, DR_ID)
 ON CONFLICT REPLACE
 );
@@ -257,30 +255,32 @@ ON CONFLICT REPLACE
 HERE
 
 
-	$sql{"spacer_hclust"} = <<HERE;
-DROP TABLE IF EXISTS spacer_hclust;
+	$sql{"spacer_clusters"} = <<HERE;
+DROP TABLE IF EXISTS spacer_clusters;
 
-CREATE TABLE spacer_hclust (
+CREATE TABLE spacer_clusters (
 Locus_ID	TEXT	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
+Strand_spec	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, Spacer_ID, Cutoff)
+UNIQUE (Locus_ID, Spacer_ID, Strand_spec, Cutoff)
 ON CONFLICT REPLACE
 );
 
 HERE
 
 
-	$sql{"DR_hclust"} = <<HERE;
-DROP TABLE IF EXISTS DR_hclust;
+	$sql{"DR_clusters"} = <<HERE;
+DROP TABLE IF EXISTS DR_clusters;
 
-CREATE TABLE DR_hclust (
+CREATE TABLE DR_clusters (
 Locus_ID	TEXT	NOT NULL,
 DR_ID	TEXT	NOT NULL,
+Strand_spec	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, DR_ID, Cutoff)
+UNIQUE (Locus_ID, DR_ID, Strand_spec, Cutoff)
 ON CONFLICT REPLACE
 );
 

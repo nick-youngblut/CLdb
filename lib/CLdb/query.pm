@@ -91,7 +91,6 @@ sub get_arrays_seq_byLeader{
 $tbl_oi.Locus_ID, 
 '$tbl_prefix', 
 $tbl_oi.$tbl_prefix\_ID,
-$tbl_oi.$tbl_prefix\_group, 
 $tbl_oi.$tbl_prefix\_sequence,
 loci.array_end,
 leaders.leader_end
@@ -149,7 +148,9 @@ sub get_array_seq{
 #-- options --#
 # spacer_DR_b = spacer or DR [spacer]
 # extra_query = extra sql
-# by_group	= spacer/DR group? [undef]
+# by_cluster	= spacer/DR group (undef|1)? [undef]
+# 	cutoff = sequenceID cutoff [1]
+# 	strand_spec = strand specific (0|1)? [0]
 # join_sql = "AND" statements 
 	
 	my ($dbh, $opts_r) = @_;
@@ -161,43 +162,78 @@ sub get_array_seq{
 	# getting table info #
 	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
 	($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+
+# columns:
+#	locus_ID
+#	spacer|DR
+#	spacer/DR_ID
+#	start
+#	end
+# 	clusterID
+# 	sequence
+
+my $query;
+if(defined $opts_r->{"by_cluster"}){		# by group
+	# by group default options #
+	$opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
+	$opts_r->{"strand_spec"} = 1 unless exists $opts_r->{'strand_spec'}; 
 	
-	my $query = "SELECT 
+	$query = "SELECT 
+'NA',
+'$tbl_prefix', 
+'NA',
+'NA',
+'NA',
+$tbl_prefix\_clusters.cluster_ID,
+$tbl_oi.$tbl_prefix\_sequence
+FROM $tbl_oi, $tbl_prefix\_clusters, loci 
+WHERE loci.locus_id = $tbl_oi.locus_id 
+AND $tbl_prefix\_clusters.$tbl_prefix\_ID = $tbl_oi.$tbl_prefix\_ID
+AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
+AND $tbl_prefix\_clusters.strand_spec = $opts_r->{'cutoff'}
+GROUP BY $tbl_prefix\_clusters.cluster_ID
+ORDER BY $tbl_prefix\_clusters.cluster_ID
+$opts_r->{'join_sql'}";
+	}
+else{		# not by clusters
+	$query = "SELECT
 $tbl_oi.Locus_ID, 
 '$tbl_prefix', 
 $tbl_oi.$tbl_prefix\_ID,
-$tbl_oi.$tbl_prefix\_group, 
-$tbl_oi.$tbl_prefix\_sequence,
 $tbl_oi.$tbl_prefix\_start,
-$tbl_oi.$tbl_prefix\_end
-FROM $tbl_oi, loci WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
+$tbl_oi.$tbl_prefix\_end,
+'NA',
+$tbl_oi.$tbl_prefix\_sequence
+FROM $tbl_oi, loci 
+WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
+	}
 	
-	if(defined $opts_r->{"by_group"}){
-		$query .= " GROUP BY $tbl_oi.$tbl_prefix\_group";
-		$query .= " ORDER BY $tbl_oi.$tbl_prefix\_group";
-		}
-	
+
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
+	
+		#print Dumper $query;
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
 	confess "ERROR: no matching entries!\n"
 		unless $$ret[0];
 
-	# 'NA' for ID & locus is group defined #
-	foreach my $row (@$ret){
+		#print Dumper $ret; exit;
+
+	# 'NA' for ID & locus if cluster defined #
+	#foreach my $row (@$ret){
 		# @$row = locus,spacer/DR,ID,groupID,seq
-		if(defined $$row[3] && defined $opts_r->{"by_group"}){		# group found 
-			$$row[0] = 'NA';
-			$$row[2] = 'NA';
-			}
-		else{
-			$$row[3] = 'NA' if ! defined $$row[3];
-			confess "ERROR: no group ID found for an entry. Cannot group sequences!\n"
-				if defined $opts_r->{"by_group"};
-			}
-		}
+	#	if(defined $$row[3] && defined $opts_r->{"by_cluster"}){		# cluster found 
+	#		$$row[0] = 'NA';
+	#		$$row[2] = 'NA';
+	#		}
+	#	else{
+	#		$$row[3] = 'NA' if ! defined $$row[3];
+	#		confess "ERROR: no group ID found for an entry. Cannot group sequences!\n"
+	#			if defined $opts_r->{"by_cluster"};
+	#		}
+	#	}
 
 		#print Dumper @$ret; exit;
 	return $ret;

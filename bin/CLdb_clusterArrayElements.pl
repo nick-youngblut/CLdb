@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_hclusterArrayElements.pl -- group spacers and DRs by 100% sequence ID; add to database
+CLdb_clusterArrayElements.pl -- cluster spacers and DRs at various sequence identity cutoffs
 
 =head1 SYNOPSIS
 
-CLdb_hclusterArrayElements.pl [flags] 
+CLdb_clusterArrayElements.pl [flags] 
 
 =head2 Required flags
 
@@ -34,11 +34,11 @@ Cluster direct repeats. [FALSE]
 
 =item -cluster  <float>
 
-CD-HIT-EST cluster cutoff range. [0.8 1 0.01]
+CD-HIT-EST cluster cutoff range. [0.80 1.00 0.01]
 
 =item -path  <char>
 
-Directory where intermediate files are written. [$CLdb_HOME/grouping/]
+Directory where intermediate files are written. [$CLdb_HOME/clustering/]
 
 =item -threads <int>
 
@@ -56,7 +56,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_hclusterArrayElements.pl
+perldoc CLdb_clusterArrayElements.pl
 
 =head1 DESCRIPTION
 
@@ -66,33 +66,46 @@ CD-HIT-EST is used to cluster the array elements
 at different similarity cutoffs (default: 0.8 to 1 by 0.01 steps).
 
 The spacer/DR cluster IDs are added to
-the spacer_hclust & directrepeat_hclust tables in CLdb.
+the spacer_cluster & DR_cluster tables in CLdb.
 
 Temporary spacer and DR fasta files and CD-HIT-EST files
-are written to '$CLdb_HOME/grouping/' by default.
+are written to '$CLdb_HOME/clustering/' by default.
 
-Sequences must be the same length to be in the same group
+Sequences must be the same length to be in the same cluster
 (cd-hit-est -s 1). 
 
-Array elements only clustered if same strand (+/+ or -/-)!
+=head2 Array elements will be clustered in 2 ways:
+
+=over 
+
+=item Strand-specific: 
+
+elements must be on the same strand (+/+ or -/-) to fall into a cluster
+
+=item Strand-agnostric: 
+
+elements must be different strands (+/+ or -/- or +/- or -/+) and still
+fall into the same cluster
+
+=back
 
 =head2 Requires:
 
-cd-hit-est, CLdb_array2fasta.pl
+cd-hit-est
 
 =head1 EXAMPLES
 
 =head2 Clustering spacers
 
-CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s
+CLdb_clusterArrayElements.pl -d CLdb.sqlite -s
 
 =head2 Clustering spacers & DRs
 
-CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s -r
+CLdb_clusterArrayElements.pl -d CLdb.sqlite -s -r
 
 =head2 Clustering spacers & DRs (only at 0.9 & 1 cutoffs)
 
-CLdb_hclusterArrayElements.pl -d CRISPR.sqlite -s -r -c 0.9 1 0.1
+CLdb_clusterArrayElements.pl -d CLdb.sqlite -s -r -c 0.9 1 0.1
 
 
 =head1 AUTHOR
@@ -135,15 +148,14 @@ use CLdb::utilities qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $spacer_bool, $dr_bool, $path);
+my ($verbose, $database_file, $spacer_bool, $dr_bool, $path, @cluster_cut);
 my $cluster = 1;
 my $threads = 1;
-my @cluster = (0.8, 1.0, 0.01);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "spacer" => \$spacer_bool,
 	   "repeat" => \$dr_bool,
-	   "cluster=f{,}" => \@cluster,
+	   "cluster=f{,}" => \@cluster_cut,
 	   "path=s" => \$path,
 	   "threads=i" => \$threads,
 	   "verbose" => \$verbose,
@@ -152,7 +164,7 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
-print STDERR " WARNING: neither '-s' nor '-r' flags used. No grouping will be performed!\n"
+print STDERR " WARNING: neither '-s' nor '-r' flags used. No clustering will be performed!\n"
 	unless $spacer_bool || $dr_bool;
 
 # path #
@@ -161,15 +173,14 @@ $path = File::Spec->rel2abs($path) if $path;
 my $curdir = File::Spec->rel2abs(File::Spec->curdir());
 
 # cluster #
-my $cluster_r = check_cluster(\@cluster);
-
+my $cluster_cut_r = check_cluster(\@cluster_cut);
 
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
 
-# making a grouping directory #
-my $dir = make_group_dir($database_file, $path); 
+# making a clustering directory #
+my $dir = make_cluster_dir($database_file, $path); 
 
 # making fastas of array sequences #
 ## spacers ##
@@ -199,53 +210,101 @@ if($dr_bool){
 	chdir $curdir or die $!;
 	$dr_fasta = "DRs.fna";
 	}
-	
-# 'hcluster' #
-chdir $dir or die $!;
-my %spacer_hclust;
-my %DR_hclust;
-for (my $i=$$cluster_r[0]; $i<=$$cluster_r[1] + $$cluster_r[2]; $i+=$$cluster_r[2]){
-	print STDERR "...clustering at cutoff: $i\n" unless $verbose;
-	
-	## call cd-hit-est ##
-	my $spacer_cdhit_out = call_cdhit($spacer_fasta, $i, $threads) if $spacer_bool;
-	my $dr_cdhit_out = call_cdhit($dr_fasta, $i, $threads) if $dr_bool;
 
-	## parse cd-hit-est output ##
-	$spacer_hclust{$i} = parse_cdhit($spacer_cdhit_out, $i, \%aliases, 'spacers') if $spacer_bool;
-	$DR_hclust{$i} = parse_cdhit($dr_cdhit_out, $i, \%aliases, 'DRs') if $dr_bool;
-	}
-		
-# updating db #
-add_entry($dbh, \%spacer_hclust, "spacer") if $spacer_bool;
-add_entry($dbh, \%DR_hclust, "DR") if $dr_bool;
+# strand specific #	
+## clustering at each cutoff ##
+chdir $dir or die $!;
+my $spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases, 
+		'spacers', 'strand_spec', $threads)
+		if $spacer_bool;
+my $DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 
+		'DRs', 'strand_spec', $threads)
+		if $dr_bool;		
+chdir $curdir or die $!;
+
+## updating db ##
+add_entry($dbh, $spacer_cluster_r, "spacer", 'strand_spec') if $spacer_bool;
+add_entry($dbh, $DR_cluster_r, "DR", 'strand_spec') if $dr_bool;
+
+
+# strand invariant #
+## clustering at each cutoff ##
+chdir $dir or die $!;
+$spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases, 
+		'spacers', 'no_strand_spec', $threads)
+		if $spacer_bool;
+$DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 
+		'DRs', 'no_strand_spec', $threads)
+		if $dr_bool;		
+chdir $curdir or die $!;
+
+## updating db ##
+add_entry($dbh, $spacer_cluster_r, "spacer", 'no_strand_spec') if $spacer_bool;
+add_entry($dbh, $DR_cluster_r, "DR", 'no_strand_spec') if $dr_bool;
 
 
 # disconnect #
 $dbh->disconnect();
 exit;
 
+
 ### Subroutines
+sub cluster_cutoffs{
+# clustering at each cutoff #
+	my ($cluster_cut_r, $fasta, $aliases_r, $cat, $strand_spec, $threads) = @_;
+	
+	if($strand_spec eq 'strand_spec'){
+		warn "\n### strand-specific clustering ###\n";
+		}
+	else{ warn "\n### strand-agnositic clustering ###\n"; }
+	
+	my %cluster;
+	for (my $i=$$cluster_cut_r[0]; 
+			$i<=$$cluster_cut_r[1]; 		# rounding issues
+			$i+=$$cluster_cut_r[2]){
+		$i = sprintf('%.2f', $i);
+		warn "...clustering $cat at cutoff: $i\n" unless $verbose;
+	
+		## call cd-hit-est ##
+		my $cdhit_out = call_cdhit($fasta, $i, $threads, $strand_spec);
+
+		## parse cd-hit-est output ##
+		$cluster{$i} = parse_cdhit($cdhit_out, $i, $aliases_r, $cat, $strand_spec);
+		}
+		
+		#print Dumper %cluster; exit;
+	return \%cluster;
+	}
+
 sub check_cluster{
+# setting defaults for clustering if not provided #
 	my $cluster_r = shift;
 	
-	$$cluster_r[1] = 1 unless $$cluster_r[1];
-	$$cluster_r[2] = 0.1 unless $$cluster_r[2];
+	$$cluster_r[0] = 0.8 unless defined $$cluster_r[0];
+	$$cluster_r[1] = 1.0 unless defined $$cluster_r[1];
+	$$cluster_r[2] = 0.01 unless defined $$cluster_r[2];
 	
 	return $cluster_r;
 	}
 
 sub add_entry{
-# add_entry to *_hcluster #
-	my ($dbh, $clust_r, $cat) = @_;
+# add_entry to *_cluster #
+	my ($dbh, $clust_r, $cat, $strand_spec) = @_;
+
+	# strand-specificity #	
+	my $spec;
+	if($strand_spec eq 'strand_spec'){ $spec = 1; }
+	else{ $spec = 0; }
 	
-	my $cmd = "INSERT into $cat\_hclust(locus_id, $cat\_id, cutoff, cluster_id) values(?,?,?,?)";
+	# sql #
+	my $cmd = "INSERT into $cat\_clusters(locus_id, $cat\_id, strand_spec, cutoff, cluster_id) values(?,?,?,?,?)";
 	my $sql = $dbh->prepare($cmd);
 	
 	my $entry_cnt = 0;
 	foreach my $cutoff (keys %$clust_r){
 		foreach my $entry ( @{$clust_r->{$cutoff}}){
-			$sql->execute($$entry[0], $$entry[2], $cutoff, $$entry[3] );
+			
+			$sql->execute($$entry[0], $$entry[2], $spec, $cutoff, $$entry[5] );
 			if($DBI::err){
 				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$entry ), "\n";
 				}
@@ -259,7 +318,7 @@ sub add_entry{
  
 sub parse_cdhit{
 # parsing the cdhit results #
-	my ($cdhit_out, $cluster, $aliases_r, $cat) = @_;
+	my ($cdhit_out, $cluster, $aliases_r, $cat, $strand_spec) = @_;
 
 	open IN, "$cdhit_out.clstr" or die $!;
 	
@@ -290,9 +349,21 @@ sub parse_cdhit{
 		$line[2] =~ s/^>|\.{3}$//g;	
 		die "ERROR: cannot find '$line[2]' in alias list!\n"
 			unless exists $aliases_r->{$cat}{$line[2]};
+		my @entry = @{$aliases_r->{$cat}{$line[2]}};
 		
-		${$aliases_r->{$cat}{$line[2]}}[3] = $cluster_id;
-		push @clusters, $aliases_r->{$cat}{$line[2]};
+		# editing clusterID #
+		## strand_spec _ cutoff _ clusterID ##
+		my $cluster_id2 = $cluster_id;
+		if($strand_spec eq "strand_spec"){
+			$cluster_id2 = join("_", 1, $cluster, $cluster_id);
+			}
+		else{ $cluster_id2 = join("_", 0, $cluster, $cluster_id); }
+		
+		# assigning cluster ID
+		$entry[5] = $cluster_id2;
+		
+		# loading & checking #
+		push @clusters, \@entry;
 		$clust_chk{$line[2]} = 1;
 		
 		$clust_cnt{$cluster_id} = 1;
@@ -313,32 +384,43 @@ sub parse_cdhit{
 	
 	print STDERR "Number of clusters for $cat at cutoff '$cluster': ", scalar keys %clust_cnt, "\n";
 	
-		#print Dumper @clusters; exit;
+		#print Dumper @clusters; 
 	return \@clusters;
 	}
 
 sub call_cdhit{
-# calling cd-hit-est on spacers #
-	my ($fasta, $cluster, $threads) = @_;
+# calling cd-hit-est on spacers/DRs #
+	my ($fasta, $cluster, $threads, $strand_spec) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
-	if($verbose){ system("$cmd"); }
-	else{ `$cmd`; }
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads";
+	$cmd .= " -r 0" if $strand_spec eq 'strand_spec'; 			# strand-specific clustering 
+		
+	`$cmd`;
+	if ($? == -1) {
+    	die "ERROR: failed to execute: $!\n";
+		}
+	elsif ($? & 127) {
+    	die "ERROR: child died with signal %d, %s coredump\n",
+        	($? & 127),  ($? & 128) ? 'with' : 'without';
+		}
+	else {
+    	#die "ERROR: child exited with value %d\n", $? >> 8;
+		}
 
 	return $cdhit_out;
 	}
 
-sub make_group_dir{
+sub make_cluster_dir{
 # making a directory for grouping files	#
 	my ($database_file, $path) = @_;
 	my $dir;
 	if($path){
-		$dir = $path . "grouping/";
+		$dir = $path . "clustering/";
 		}
 	else{
 		my @parts = File::Spec->splitpath($database_file);
-		$dir = $parts[1] . "grouping/";
+		$dir = $parts[1] . "clustering/";
 		}
 	
 	mkdir $dir unless -d $dir;
@@ -357,7 +439,7 @@ sub write_array_seq{
 		$alias_cnt++;
 			
 		$aliases_r->{$cat}{$alias_cnt} = $row;
-		print OUT join("\n", ">$alias_cnt", $$row[4]), "\n";
+		print OUT join("\n", ">$alias_cnt", $$row[$#$row]), "\n";	# sequence & alias
 		}
 	close OUT;
 	
