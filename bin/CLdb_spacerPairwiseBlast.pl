@@ -128,6 +128,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $spacer_bool, $by_group);
 my (@subtype, @taxon_id, @taxon_name);
 my @subject_in;
+my $debug;
 my $blast_params = "-evalue 0.00001";
 my $extra_query = "";
 GetOptions(
@@ -138,6 +139,7 @@ GetOptions(
 	   "query=s" => \$extra_query, 
 	   "blast=s" => \$blast_params,
 	   "verbose" => \$verbose,
+	   "x" => \$debug, 
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -191,9 +193,7 @@ sub add_entry{
 	foreach my $query (keys %$blast_res_r){
 		foreach my $subject (keys %{$blast_res_r->{$query}}){
 			my @query = split /__/, $query;
-			#$query[0] =~ s/cli\.//;
 			my @subject = split /__/, $subject;
-			#$subject[0] =~ s/cli\.//;
 			push(my @total, @query, @subject, @{$blast_res_r->{$query}{$subject}});
 			die " ERROR: not enough values in entry!\n"
 				unless scalar @cols == scalar @total;

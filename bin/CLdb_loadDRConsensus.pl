@@ -189,6 +189,7 @@ else{				# simple query of all spacers/DR
 # getting consensus of sequences #
 my %DR_con;
 foreach my $locus (keys %arrays){
+	warn "...Processing locus '$locus'\n";
 	my $outfile = write_DR_fasta($arrays{$locus}, $dir, $locus);
 	call_mafft($outfile, \%DR_con, $locus, $consensus_cutoff);
 	}

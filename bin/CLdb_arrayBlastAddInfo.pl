@@ -210,6 +210,118 @@ sub get_CLdb_info{
 ## query is sequence-dependent ##
 	my ($dbh, $lines_r, $query) = @_;
 	
+	my %res;
+	foreach my $l (keys %$lines_r){
+
+		next unless ($l =~ /^# Query:\s[^|]+\|(spacer|DR)\|[^|]+\|[^|]+.*/i);
+
+		# processing line w/ name #
+		(my $name = $l) =~ s/^# Query:\s([^|]+\|(spacer|DR)\|[^|]+\|[^|]+).*/$1/;
+		my @name = split /\|/, $name;
+		
+		# sanity check #
+		die "ERROR: '$name' does not have 4 components separated by '|'\n"
+			unless scalar @name == 4;
+		
+		# making sql #
+		my $cmd;
+		if($name[3] eq 'NA'){			# if no clusterID
+			$cmd = query_noGroup(\@name, $query);
+			}
+		else{							# groupID present 
+			$cmd = query_byGroup(\@name, $query);
+			}
+	
+		$cmd =~ s/[\n\t]+/ /g;
+		$cmd =~ s/ +/ /g;
+	
+		my $ret = $dbh->selectall_arrayref($cmd);
+		die "ERROR: no matching entries!\n"
+			unless $$ret[0];
+		
+		# loading hash #
+		#$res{$seq}{"data"} = $ret;
+		#$res{$seq}{"seq"} = $fasta_r->{$seq};
+		
+		# loading hash #
+		foreach my $x (@$ret){
+			my $new_name = join("|", @$x);
+			push @{$res{$name}}, $new_name;
+			}
+		}
+
+		#print Dumper %res; exit;
+	return \%res;
+	}
+	
+sub query_noGroup{
+	my ($seq_r, $query) = @_;
+	
+	# table #
+	my $tbl_oi = "Spacers";
+	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
+		
+	my $prefix = $$seq_r[1];			# "spacer|DR"
+	my $cmd = "SELECT 
+$tbl_oi.Locus_ID,
+'$prefix',
+$tbl_oi.$prefix\_ID,
+'NA'";
+	
+	# adding other query options #
+	$cmd .= ", $query" if $query;
+	if($pos_b){
+		$cmd .= ", loci.Scaffold";
+		$cmd .= ", $tbl_oi.$prefix\_start";
+		$cmd .= ", $tbl_oi.$prefix\_end";
+		}	
+	
+	# where statement #
+	$cmd .= "
+FROM $tbl_oi, loci
+WHERE loci.locus_id = $tbl_oi.locus_id";
+	
+	return $cmd;
+	}
+	
+sub query_byGroup{
+	my ($seq_r, $query) = @_;
+	
+	# table #
+	my $tbl_oi = "Spacers";
+	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
+		
+	my $prefix = $$seq_r[1];			# "spacer|DR"
+	my $cmd = "SELECT 
+$tbl_oi.Locus_ID,
+'$prefix',
+$tbl_oi.$prefix\_ID,
+$prefix\_clusters.cluster_id";
+	
+	# adding other query options #
+	$cmd .= ", $query" if $query;
+	if($pos_b){
+		$cmd .= ", loci.Scaffold";
+		$cmd .= ", $tbl_oi.$prefix\_start";
+		$cmd .= ", $tbl_oi.$prefix\_end";
+		}
+	
+	# where statement #
+	$cmd .= "
+FROM $tbl_oi, loci, $prefix\_clusters
+WHERE loci.locus_id = $tbl_oi.locus_id 
+AND $prefix\_clusters.locus_ID = $tbl_oi.locus_ID
+AND $prefix\_clusters.$prefix\_ID = $tbl_oi.$prefix\_ID
+AND $prefix\_clusters.cluster_id = '$$seq_r[3]'";
+	
+	return $cmd;
+	}
+
+sub get_CLdb_info_OLD{
+# getting necessary info from CLdb #
+## query is sequence-dependent ##
+	my ($dbh, $lines_r, $query) = @_;
+	
 	my %index;
 	foreach my $l (keys %$lines_r){
 
@@ -247,12 +359,17 @@ sub get_CLdb_info{
 			
 		# WHERE statement #
 		$cmd .= "
-			FROM $tbl_oi, loci 
-			WHERE loci.locus_id = $tbl_oi.locus_id";
+			FROM $tbl_oi, loci, $prefix\_clusters
+			WHERE loci.locus_id = $tbl_oi.locus_id
+			AND $prefix\_clusters.locus_ID = $tbl_oi.locus_ID
+			AND $prefix\_clusters.$prefix\_ID = $tbl_oi.$prefix\_ID
+			AND $prefix\_clusters.cluster_id = '$name[3]'";
 		$cmd =~ s/\t+//g;
 	
+
+	
 		# group or element ID #
-		if( $name[2] eq "NA" ){
+		if( $name[2] eq "NA" ){		# if no cluster_ID
 			$cmd .= " AND $tbl_oi.$prefix\_group == $name[3]";
 			}
 		else{

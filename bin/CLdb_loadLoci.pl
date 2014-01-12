@@ -172,6 +172,7 @@ table_exists($dbh, "loci");
 my ($loci_r, $header_r) = get_loci_table();
 
 # checks#
+check_locus_id($loci_r);
 make_external_file_dirs($loci_r, $header_r, $db_path);	 # copying array files & genbanks if not in ./genbank & ./array #
 unix_line_breaks($loci_r, $db_path);						# line breaks of all copied files to unix
 
@@ -200,13 +201,24 @@ my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
 $pam_header_r->{"pam_sequence"} = 1;
 load_db_table($dbh, "pam", $pam_header_r, $pam_loci_r);
 
-
 # disconnect to db #
 $dbh->disconnect();
 exit;
 
 
 ### Subroutines
+sub check_locus_id{
+# no '|' in locus_ID #
+	my ($loci_r) = @_;
+	
+	warn "### checking locus_ID values ###\n";
+	
+	foreach my $locus_id (keys %$loci_r){
+		die "ERROR: locus_id '$locus_id' contains '|', which is not allowed!\n"
+			if $locus_id =~ /\|/;
+		}
+	}
+
 sub get_pam_seq{
 # getting pam seq if needed #
 	my ($loci_r, $db_path, $pam_header_r) = @_;
