@@ -139,7 +139,6 @@ my $dbh = connect2db($database_file);
 
 # checking table existence #
 table_exists($dbh, "loci"); 
-#table_exists($dbh, "leaders") if $leader_b;
 
 # loading fasta #
 my $fasta_r = read_fasta();
@@ -186,39 +185,15 @@ sub get_CLdb_info{
 		die "ERROR: '$seq[1]' must be 'spacer' or 'DR'\n"
 			unless $seq[1] =~ /^(spacer|DR)$/i;
 		
-		# table #
-		my $tbl_oi = "Spacers";
-		$tbl_oi = "DRs" if $seq[1] =~ /DR/i;
-		
-		my $prefix = $seq[1];			# "spacer|DR"
-		my $cmd = "SELECT 
-$tbl_oi.Locus_ID,
-'$prefix',
-$tbl_oi.$prefix\_ID,
-$tbl_oi.$prefix\_group";
-	
-		# adding other query options #
-		$cmd .= ", $query" if $query;
-		if($pos_b){
-			$cmd .= ", loci.Scaffold";
-			$cmd .= ", $tbl_oi.$prefix\_start";
-			$cmd .= ", $tbl_oi.$prefix\_end";
-			}	
-
-		# where statement #
-		$cmd .= "
-FROM $tbl_oi, loci 
-WHERE loci.locus_id = $tbl_oi.locus_id";
-		
-		# group or element ID #
-		if( $seq[2] eq "NA" ){
-			$cmd .= " AND $tbl_oi.$prefix\_group == $seq[3]";
+		# if no group 
+		my $cmd;
+		if($seq[3] eq 'NA'){
+			$cmd = query_noGroup(\@seq, $query,);
 			}
 		else{
-			$cmd .= " AND $tbl_oi.locus_ID == '$seq[0]'";				# locus id
-			$cmd .= " AND $tbl_oi.$prefix\_ID == $seq[2]";		# elementID
+			$cmd = query_byGroup(\@seq, $query);
 			}
-		
+	
 		$cmd =~ s/[\n\t]+/ /g;
 		$cmd =~ s/ +/ /g;
 	
@@ -234,6 +209,69 @@ WHERE loci.locus_id = $tbl_oi.locus_id";
 
 		#print Dumper %res; exit;
 	return \%res;
+	}
+	
+sub query_noGroup{
+	my ($seq_r, $query) = @_;
+	
+	# table #
+	my $tbl_oi = "Spacers";
+	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
+		
+	my $prefix = $$seq_r[1];			# "spacer|DR"
+	my $cmd = "SELECT 
+$tbl_oi.Locus_ID,
+'$prefix',
+$tbl_oi.$prefix\_ID,
+'NA'";
+	
+	# adding other query options #
+	$cmd .= ", $query" if $query;
+	if($pos_b){
+		$cmd .= ", loci.Scaffold";
+		$cmd .= ", $tbl_oi.$prefix\_start";
+		$cmd .= ", $tbl_oi.$prefix\_end";
+		}	
+	
+	# where statement #
+	$cmd .= "
+FROM $tbl_oi, loci
+WHERE loci.locus_id = $tbl_oi.locus_id";
+	
+	return $cmd;
+	}
+	
+sub query_byGroup{
+	my ($seq_r, $query) = @_;
+	
+	# table #
+	my $tbl_oi = "Spacers";
+	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
+		
+	my $prefix = $$seq_r[1];			# "spacer|DR"
+	my $cmd = "SELECT 
+$tbl_oi.Locus_ID,
+'$prefix',
+$tbl_oi.$prefix\_ID,
+$prefix\_clusters.cluster_id";
+	
+	# adding other query options #
+	$cmd .= ", $query" if $query;
+	if($pos_b){
+		$cmd .= ", loci.Scaffold";
+		$cmd .= ", $tbl_oi.$prefix\_start";
+		$cmd .= ", $tbl_oi.$prefix\_end";
+		}
+	
+	# where statement #
+	$cmd .= "
+FROM $tbl_oi, loci, $prefix\_clusters
+WHERE loci.locus_id = $tbl_oi.locus_id 
+AND $prefix\_clusters.locus_ID = $tbl_oi.locus_ID
+AND $prefix\_clusters.$prefix\_ID = $tbl_oi.$prefix\_ID
+AND $prefix\_clusters.cluster_id = '$$seq_r[3]'";
+	
+	return $cmd;
 	}
 	
 sub add_query_opts{
