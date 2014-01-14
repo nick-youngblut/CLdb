@@ -298,7 +298,6 @@ sub add_DR_x{
 					scalar keys %{$lines_r->{$query}{$db}{$blast}{'fields_sep'}};
 				$lines_r->{$query}{$db}{$blast}{'fields'} .= ', DRx_5p';
 
-				
 				# adding 'DRx_3p' to fields #
 				$lines_r->{$query}{$db}{$blast}{'fields_sep'}{'DRx_3p'} = 
 					scalar keys %{$lines_r->{$query}{$db}{$blast}{'fields_sep'}};
@@ -307,7 +306,7 @@ sub add_DR_x{
 				# adding values to each hit #
 				foreach my $hit ( @{$lines_r->{$query}{$db}{$blast}{'hits'}} ){
 					my @h = split /\t/, $hit;
-					push @h, join("", "\t", $DR_seq_5p, $h[$query_seq_full_i], $DR_seq_3p),
+					push @h, join("", $DR_seq_5p, $h[$query_seq_full_i], $DR_seq_3p),
 								$DR_seq_5p, $DR_seq_3p;
 					$hit = join("\t", @h);
 					}

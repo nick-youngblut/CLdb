@@ -81,6 +81,13 @@ sub read_blast_file{
 			$db = $_;
 			}
 		elsif(/# Fields/i){
+			confess "ERROR: no '# Query' comment found for an entry in the blast table!\n"
+				unless defined $query;
+			confess "ERROR: no '# Database' comment found for an entry in the blast table!\n"
+				unless defined $db;
+			confess "ERROR: no '# BLAST' comment found for an entry in the blast table!\n"
+				unless defined $blast;
+			
 			$lines{$query}{$db}{$blast}{'fields'} = $_;
 			
 			my @l = split /[:,] /;

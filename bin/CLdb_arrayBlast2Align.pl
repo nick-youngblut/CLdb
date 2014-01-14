@@ -4,49 +4,27 @@
 
 =head1 NAME
 
-CLdb_arrayBlast.pl -- BLASTn-short of spacers and/or DRs against >=1 genome in CLdb
+CLdb_arrayBlast2Align.pl -- align query (crDNA) vs protospacer (full length)
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlast.pl [flags]
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=item -query  <char>
-
-A fasta of either spacer and/or DR group sequences (use: CLdb_array2fasta.pl -g -l)
-
-=back
+CLdb_arrayBlast2Align.pl [flags] < spacer_blast_proto-DRx.txt
 
 =head2 Optional flags
 
 =over
 
-=item -subtype  <char>
+=item -directory  <char>
 
-Refine query to specific a subtype(s) (>1 argument allowed).
+Output directory. [./arrayBlastAlign/]
 
-=item -taxon_id  <char>
+=item -query  <bool>
 
-Refine query to specific a taxon_id(s) (>1 argument allowed).
+Parse output by blast query? [FALSE]
 
-=item -taxon_name  <char>
+=item -database  <bool>
 
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -extra  <char>
-
-Extra sql to refine which sequences are returned.
-
-=item -blast  <char>
-
-BLASTn parameters (besides required flags). [-evalue 0.1]
+Parse output by blast database? [FALSE]
 
 =item -v  <bool>
 
@@ -60,31 +38,36 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_arrayBlast.pl
+perldoc CLdb_arrayBlast2Align.pl
 
 =head1 DESCRIPTION
 
+Make an alignment of spacers (crDNA) and protospacers (full length).
 
+=head3 CANNOT run this script until:
+
+The full length spacer with direct-repeat extensions must be added to
+the blast table via CLdb_arrayBlastAddFullQuery.pl & CLdb_arrayBlastAddDRx.pl
+
+The full length protospacer & extensions must be added to the blast table
+via CLdb_arrayBlastAddProto.pl 
+
+=head2 Output
+
+If no -directory provided, output written to ./arrayBlastAlign/
+
+The output can be parsed into separate alignment fastas using 
+-query and -database.
 
 =head1 EXAMPLES
 
-=head2 Blasting all spacers against all genomes in CLdb
+=head2 Basic usage
 
-CLdb_array2fasta.pl -g > all_spacer_groups.fna
+$ CLdb_arrayBlast2Align.pl < spacer_blast_proto-DRx.txt
 
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna
+=head2 Output alignment file for each spacer query
 
-=head2 Blasting all DRs against all genomes in CLdb
-
-CLdb_array2fasta.pl -r -g > all_DR_groups.fna
-
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_DR_groups.fna
-
-=head2 Blasting all spacers against 1 genome
-
-CLdb_array2fasta.pl -g > all_spacer_groups.fna
-
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna -taxon_name "e.coli"
+$ CLdb_arrayBlast2Align.pl -query < spacer_blast_proto-DRx.txt
 
 =head1 AUTHOR
 
@@ -157,6 +140,8 @@ sub blast_2_align{
 # writing a fasta for each query #
 	my ($blast_r, $out_dir) = @_;
 	
+		#print Dumper $blast_r; exit;
+	
 	open OUT, ">$out_dir/all.fna" or die $!
 		if ! defined $by_query && ! defined $by_db;		# output all together	
 	
@@ -181,18 +166,39 @@ sub blast_2_align{
 				if $by_query && $by_db;
 			
 			foreach my $blast ( keys %{$blast_r->{$query}{$db}} ){
+				
 				# checking for 'proto_seq_fullx' & 'query_seq_full_DRx' #
-				unless exists $blast_r->{$query}{$db}{$blast}{
+				die "ERROR: cannot find 'proto_seq_fullx' & 'query_seq_full_DRx' for $query -> $db -> $blast\n" 
+					unless exists $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'proto_seq_fullx'}
+						&& exists $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'query_seq_full_DRx'};
 				
-				foreach my $hit ( @{$blast_r->{$query}{$db}{$blast}}){
+				foreach my $hit ( @{$blast_r->{$query}{$db}{$blast}{'hits'}} ){
+					
+					# indices of for output #
+					my $query_id_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'query id'};
+					my $query_seq_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'query_seq_full_DRx'};
+					
+					my $proto_seq_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'proto_seq_fullx'};
+					my $proto_start_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'s_start_full'};
+					my $proto_end_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'s_end_full'};
+					my $proto_id_index = $blast_r->{$query}{$db}{$blast}{'fields_sep'}{'subject id'};
+					
+					my @row = split /\t/, $hit;
 				
+					# trimming query & proto to same length #
+					my ($query_seq, $proto_seq) = trim_seqs($row[$query_seq_index], $row[$proto_seq_index]);
+				
+					# proto ID #
+					(my $db_e = $db) =~ s/.+\///;
+					my $proto_name = join("|", $db_e, $row[$proto_id_index], 
+											$row[$proto_start_index],
+											$row[$proto_end_index]);
 					
-					
-					
+					# writing alignment #
+					print OUT join("\n", ">$row[$query_id_index]", $query_seq), "\n";
+					print OUT join("\n", ">$proto_name", $proto_seq), "\n";
 					}
 				}
-			
-			
 			close OUT if $by_query && $by_db;
 			}
 		close OUT if $by_query && ! defined $by_db;
@@ -200,4 +206,42 @@ sub blast_2_align{
 	close OUT if ! defined $by_query && ! defined $by_db;		# output all together	
 	}
 
+sub trim_seqs{
+# trimming sequences so that query & proto are same length #
+	my ($query_seq, $proto_seq) = @_;
+	
+	# determine extension lengths #
+	sub ext_len{
+		my $seq = shift;
+		my @seq = split /[A-Z]+/, $seq;				# just lower-case extensions remaining
+		map{ $seq[$_] = "" unless defined $seq[$_] } 0..1;
+		my @x_len = (length $seq[0], length $seq[1] );
+		return @x_len;
+		}
+	my @q_x_lens = ext_len($query_seq);
+	my @p_x_lens = ext_len($proto_seq);
+	
+	# trimming extensions if needed #
+	## left side ##
+	if($q_x_lens[0] > $p_x_lens[0]){
+		my $extra_len = $q_x_lens[0] - $p_x_lens[0];
+		$query_seq = substr($query_seq, $extra_len, length($query_seq) - $extra_len);
+		}
+	elsif($q_x_lens[0] < $p_x_lens[0]){
+		my $extra_len = $p_x_lens[0] - $q_x_lens[0];
+		$proto_seq = substr($proto_seq, $extra_len, length($proto_seq) - $extra_len);
+		}
+	
+	## right side ##
+	if($q_x_lens[1] > $p_x_lens[1]){
+		my $extra_len = $q_x_lens[1] - $p_x_lens[1];
+		$query_seq = substr($query_seq, 0, length($query_seq) - $extra_len );
+		}
+	elsif($q_x_lens[1] < $p_x_lens[1]){
+		my $extra_len = $p_x_lens[1] - $q_x_lens[1];
+		$proto_seq = substr($proto_seq, 0, length($proto_seq) - $extra_len );
+		}	
+	
+	return $query_seq, $proto_seq;
+	}
 
