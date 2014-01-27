@@ -128,7 +128,7 @@ The output values are: 'degeracies', locus_id',
 
 =head2 Output
 Leader regions in the output fasta are named as: 
-"cli.ID"___"start|end"___"region_start"___"region_end"___"strand"
+"LocusID"|"start/end"|"scaffold"|"region_start"|"region_end"|"strand"
 
 Leader region start & end are according to the + strand. 
 
@@ -537,7 +537,14 @@ sub check_gene_overlap{
 sub get_DR_seq{
 	my ($dbh, $array_se_r) = @_;
 
-	my $cmd = "SELECT DR_id, DR_start, DR_end, DR_group from DRs where Locus_ID = ?";
+	#my $cmd = "SELECT DR_id, DR_start, DR_end, DR_group from DRs where Locus_ID = ?";
+	my $cmd = "SELECT a.DR_id, a.DR_start, a.DR_end, b.Cluster_ID 
+				FROM DRs a, DR_clusters b
+				WHERE a.Locus_id = b.Locus_id
+				AND a.DR_id = b.DR_id
+				AND b.Cutoff = 1
+				AND a.locus_ID = ?";	
+	$cmd =~ s/\s+/ /g;
 	my $sql = $dbh->prepare($cmd);
 	
 	my %leader_loc;

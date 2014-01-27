@@ -183,7 +183,7 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 # getting subtype #
 my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
-# getting spacer, DR, leader, & gene info from CLdb #
+# getting spacer, DR, leader, gene from CLdb #
 my %dna_segs; 
 my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs, 
 							$join_sql, $extra_query, $spacer_cutoff);
@@ -194,7 +194,9 @@ get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
 # getting gene cluster info if ITEP provided #
 if (@ITEP_sqlite){
 	my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
-						$ITEP_sqlite[1], \%dna_segs)
+						$ITEP_sqlite[1], \%dna_segs);
+	my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
+		#flip_genes_on_neg_strand(\%dna_segs, $strand_r);
 	}
 else{	# gene cluster = 1 for all  
 	gene_cluster_same(\%dna_segs);
@@ -217,6 +219,58 @@ exit;
 
 
 ### Subroutines
+sub flip_genes_on_neg_strand{
+# flipping start-end of genes on neg strand for plotting reasons #
+# all gene features flipped for genes on - strand
+	my ($dna_segs_r, $strand_r) = @_;
+	
+	foreach my $taxon (keys %$dna_segs_r){
+		foreach my $locus_id (keys %{$dna_segs_r->{$taxon}}){
+			next unless exists $dna_segs_r->{$taxon}{$locus_id}{'gene'};	# only genes 
+			next unless exists $strand_r->{$locus_id} && $strand_r->{$locus_id} == -1;
+			
+			# flipping s-e for all genes on neg CAS strand #
+			foreach my $peg (keys %{$dna_segs_r->{$taxon}{$locus_id}{'gene'}}){
+				my $x_r = $dna_segs_r->{$taxon}{$locus_id}{'gene'}{$peg};
+				($$x_r[0], $$x_r[1]) = ($$x_r[1], $$x_r[0]); 		# flipping all gene features
+					#print Dumper "flipped: $taxon, $locus_id, $peg";
+				}	
+			}
+		}
+		#exit;
+	}
+
+sub get_cas_strand{
+	my ($dbh, $dna_segs_r) = @_;
+	
+	# getting all loci #
+	my @loci;
+	map{ push @loci, keys %{$dna_segs_r->{$_}} } keys %$dna_segs_r;
+	
+	# querying db for CAS start-end #
+	my $cmd = "SELECT CAS_start, CAS_end FROM loci WHERE locus_id = ?";
+	my $sth = $dbh->prepare($cmd);
+	
+	my %strand;
+	foreach my $locus_id (@loci){
+		$sth->bind_param(1, $locus_id);
+		$sth->execute;
+		my $ret =$sth->fetchrow_arrayref();	
+		die " ERROR: no CAS_start, CAS_end for locus: '$locus_id'!\n"
+			unless $$ret[0];
+
+		if($$ret[0] <= $$ret[1]){		# start < end; + strand
+			$strand{$locus_id} = 1;
+			}
+		else{	# end > start; - strand
+			$strand{$locus_id} = -1;
+			}
+		}
+		
+		#print Dumper %strand; exit;
+	return \%strand;
+	}
+
 sub write_dna_segs{
 # writing dna_segs precursor table #
 ## required columns ##
@@ -327,8 +381,12 @@ sub write_dna_segs{
 				# start-end, color #			
 				my $start = $$row[0];
 				my $end = $$row[1];
+				my $strand = get_strand($start, $end); 		# getting strand before possible flip of start-end; needed for plotting genes in correct orientation
+				($start, $end) = flip_se($start, $end);		# all start-end to + strand
+				
 				my $alias = $$row[2];
 				my $dna_segs_id = $$row[$#$row];
+				
 				
 				# color #
 				my $col = 1;
@@ -339,7 +397,7 @@ sub write_dna_segs{
 					$alias,
 					$start,
 					$end,
-					get_strand($start, $end), 		# strand 
+					$strand,				# strand 
 					$col,
 					1, 1, 8, 1,				# plot formatting
 					"arrows", 				# end of required columns
@@ -353,6 +411,12 @@ sub write_dna_segs{
 				}				
 			}
 		}
+	}
+	
+sub flip_se{
+	my ($start, $end) = @_;
+	if($start <= $end){ return $start, $end; }
+	else{ return $end, $start; }
 	}
 
 sub edit_dna_segs_taxon_name{

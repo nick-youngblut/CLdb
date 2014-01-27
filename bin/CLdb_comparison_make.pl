@@ -302,8 +302,8 @@ AND locus_id = ?
 			
 				# all + strand #
 				## needed to inversions in blast connections for genoPlotR ##
-				($$res_q[0][0], $$res_q[0][1]) = to_pos_strand($$res_q[0][0], $$res_q[0][1]);
-				($$res_s[0][0], $$res_s[0][1]) = to_pos_strand($$res_s[0][0], $$res_s[0][1]);
+				#($$res_q[0][0], $$res_q[0][1]) = to_pos_strand($$res_q[0][0], $$res_q[0][1]);
+				#($$res_s[0][0], $$res_s[0][1]) = to_pos_strand($$res_s[0][0], $$res_s[0][1]);
 			
 				# loading hash #
 				$compare_r->{"gene"}{$dna_seg_id1}{$dna_seg_id2}{$feat_id}{$subject_gene_id} =

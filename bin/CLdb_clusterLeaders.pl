@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_groupLeaders.pl -- group leader sequences at 100% sequence ID; add to database
+CLdb_clusterLeaders.pl -- cluster leader sequences & adding to CLdb
 
 =head1 SYNOPSIS
 
-CLdb_groupLeaders.pl [flags] 
+CLdb_clusterLeaders.pl [flags] 
 
 =head2 Required flags
 
@@ -44,17 +44,17 @@ This help message.
 
 =head2 For more information:
 
-perldoc CLdb_groupLeaders.pl
+perldoc CLdb_clusterLeaders.pl
 
 =head1 DESCRIPTION
 
-Group the leader sequences in the CRISPR
+Cluster the leader sequences in the CRISPR
 database using CD-HIT-EST and add the group ID of
 each leader sequence to the CRISPR database.
 
-All leader sequences are grouped by default.
+All leader sequences are clustered by default.
 
-Sequences must be the same length to be in the same group
+Sequences must be the same length to be in the same cluster
 (cd-hit-est -s 1).
 
 Leader sequence fasta files and CD-HIT-EST files
@@ -68,7 +68,7 @@ cd-hit-est, CLdb_leader2fasta.pl
 
 =head2 Grouping all leaders
 
-CLdb_groupLeaders.pl -d CRISPR.sqlite -s
+CLdb_clusterLeaders.pl -d CRISPR.sqlite -s
 
 =head1 AUTHOR
 
@@ -169,7 +169,7 @@ sub update_db{
 		else{ $cnt++; }
 		}
 	$dbh->commit;
-	print STDERR "...$cnt groups added\n" unless $verbose;
+	print STDERR "...$cnt cluster IDs added\n" unless $verbose;
 	}
  
 sub parse_cdhit{

@@ -532,6 +532,7 @@ sub load_fasta{
  			die "ERROR: leader sequence name: '$_' does not have CLdb_getLeaderRegions.pl formatting!\n"
  				unless />[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+/;
 
+			s/>_R_/>/;				# if reversed alignment (mafft add '_R_' if reversed)
  			my @line = split /[>|]/;
  			
  			# loading metadata
