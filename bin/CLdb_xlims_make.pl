@@ -24,6 +24,10 @@ CLdb database.
 
 =over
 
+=item -locus_id  <char>
+
+Refine query to specific a locus_id(s) (>1 argument allowed).
+
 =item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
@@ -109,13 +113,14 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
-my (@subtype, @taxon_id, @taxon_name);
+my (@locus_id, @subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
 my $xlim_out = "xlims.txt";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
+	   "locus_id=s{,}" => \@locus_id,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
@@ -135,6 +140,7 @@ my $dbh = connect2db($CLdb_sqlite);
 
 # joining query options (for table join) #
 my $join_sql = "";
+$join_sql .= join_query_opts(\@locus_id, "locus_id");
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");

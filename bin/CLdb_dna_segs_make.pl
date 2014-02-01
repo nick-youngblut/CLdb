@@ -32,6 +32,10 @@ Get gene cluster info from ITEP. 2 arguments required: (ITEP_sqlite_file, cluste
 
 Spacer clustering cutoff for spacer coloring (0.8 - 1). [1]
 
+=item -locus_id  <char>
+
+Refine query to specific a locus_id(s) (>1 argument allowed).
+
 =item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
@@ -127,12 +131,13 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
 my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
-my (@subtype, @taxon_id, @taxon_name);
+my (@locus_id, @subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
+	   "locus_id=s{,}" => \@locus_id,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
@@ -176,6 +181,7 @@ if(@ITEP_sqlite){
 
 # joining query options (for table join) #
 my $join_sql = "";
+$join_sql .= join_query_opts(\@locus_id, "locus_id");
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");

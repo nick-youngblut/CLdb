@@ -42,7 +42,7 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 =item -cluster  <bool>
 
-Get array elements de-replicated by spacer/DR cluster. [FALSE]
+Get just cluster representatives of array elements? [FALSE]
 
 =item -cutoff  <float>
 
@@ -162,7 +162,7 @@ GetOptions(
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "group" => \$by_cluster,
+	   "cluster" => \$by_cluster,
 	   "strand" => \$strand_spec, 			# strand-specific grouping? [TRUE]
 	   "cutoff=f" => \$cluster_cutoff, 		# clustering cutoff [1.00]
 	   "query=s" => \$extra_query, 
