@@ -1,5 +1,163 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_getGenesInLoci.pl -- getting all genes in CRISPR Loci; output is a table of gene information
+
+=head1 SYNOPSIS
+
+CLdb_getGenesInLoci.pl [flags] 
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine which sequences are returned.
+
+=item -exist  <bool>
+
+Do not write any genes already existing in the Genes table (unless '-a' used). [TRUE]
+
+=item -all  <bool>
+
+All genes defined by the Loci table are written. 
+Any existing entries written in place of new entry.
+Not compatible with '-c' [FALSE]
+
+=item -conflict  <bool>
+
+Just write out genes that are conflicting
+(new and old versions). Not compatible with '-a' [FALSE]
+
+=item -quiet  <bool>
+
+Turn off all warnings. [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message.
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_getGenesInLoci.pl
+
+=head1 DESCRIPTION
+
+Get all CDS features from >= genbanks that fall
+into CRISPR loci. 
+
+The output can be piped directly into
+CLdb_loadGenes.pl or the aliases (or other values)
+can be edited first.
+
+Genbank files must be in $CLdb_HOME/genbank/
+
+=head2 Existing genes in Genes table ('-e', '-a', '-c')
+
+By default, only new genes (ie. not found already in
+Genes table) are written. This is to
+preserve the existing alias values, which may 
+have been manually editted. 
+
+All gene entries (new & existing) can be written
+using '-a'. To view conflicting gene entries,
+use '-c'. For '-c', existing entries will have 'existing_entry'
+in the 'Sequence' column.
+
+=head2 In_CAS
+
+Genes are designated as falling in the CAS operon
+('In_CAS' field in DB) if they fall inside
+the designated operon range (designated in Loci table)
+but not inside the CRISPR array range (also 
+designated in Loci table).
+
+=head2 WARNING:
+
+CDS features in genbanks must have db_xref tags with 
+the fig|peg ID (example: "fig|6666666.40253.peg.2362");
+otherwise, the CDS will not be written to the output table.
+Extra information can come before 'fig' (eg. 'ITEP:' or 'SEED:'),
+but it must end with a colon.
+
+=head2 Requires:
+
+genbank_get_region.pl
+
+=head1 EXAMPLES
+
+=head2 Basic usage:
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite > gene_info.txt
+
+=head2 Direct loading to CRISPR database
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite | CLdb_loadGenes.pl -d CLdb.sqlite
+
+=head2 Refining query to just the 'I-B' subtype
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite -sub I-B
+
+=head2 Refining query to just taxon '6666666.40253'
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite -taxon_id 6666666.40253
+
+=head2 Write out all entries (new & old; on conflict: old entry is written)
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite -a
+
+=head2 Write out all conflicting entries 
+
+CLdb_getGenesInLoci.pl -d CLdb.sqlite -c
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -36,7 +194,7 @@ GetOptions(
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "sql=s" => \$query,
+	   "query=s" => \$query,
 	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
 	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
 	   "conflicting" => \$conflicting, 		# write out both entries for conflicts? [FALSE]
@@ -175,12 +333,14 @@ sub write_loci_tbl{
 				}
 			
 			# writing line #
+			map{ $_ = "" unless defined $_ } @{$loci_tbl_r->{$loci}{$feature}}[0..5];
+			
 			print join("\t", "$loci", 
 				${$loci_tbl_r->{$loci}{$feature}}[2], 			# Gene_id (db_xref)
 				@{$loci_tbl_r->{$loci}{$feature}}[(0..1)], 		# start, end 
 				$len_AA, 										# length (AA)
-				${$loci_tbl_r->{$loci}{$feature}}[5], 			# In Operon	
-				${$loci_tbl_r->{$loci}{$feature}}[3],
+				${$loci_tbl_r->{$loci}{$feature}}[5], 			# In CAS?	
+				${$loci_tbl_r->{$loci}{$feature}}[3],			# annotation
 				$seq											# sequence
 				), "\n";
 			}
@@ -193,9 +353,10 @@ sub check_in_CAS{
 	
 	foreach my $locus (keys %$loci_tbl_r){
 		foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
+			#print Dumper "$locus -> $feature";
 			die " LOGIC ERROR: $!\n" unless 
 				exists $loci_se_r->{$locus};
-						
+								
 			# defining start - end #
 			## f = feature; o = operion; c = crispr array ##
 			my $f_start = int ${$loci_tbl_r->{$locus}{$feature}}[0];
@@ -208,8 +369,8 @@ sub check_in_CAS{
 			my $c_end = ${$loci_se_r->{$locus}}[6];
 
 			# skipping if no CAS_start || CAS_end #
-			next if ! defined $o_start || $o_start ne ""
-				|| ! defined $o_end || $o_end ne "";
+			next if ! defined $o_start || $o_start =~ /^$/
+				|| ! defined $o_end || $o_end =~ /^$/;
 
 			# making all on the + strand #
 			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
@@ -256,11 +417,15 @@ sub call_genbank_get_region{
 		my $start = ${$loci_se_r->{$locus}}[0];
 		my $end = ${$loci_se_r->{$locus}}[1];
 		my $scaffold = ${$loci_se_r->{$locus}}[7];
+		my $CAS_status = ${$loci_se_r->{$locus}}[8];
+		my $array_status = ${$loci_se_r->{$locus}}[9];
 		print STDERR join("\n ",
 					"...Getting features in:",
 					"file =\t\t$genbank_file",
 					"scaffold =\t$scaffold",
-					"region =\t$start-$end"), "\n";
+					"region =\t$start-$end",
+					"CAS_status =\t$CAS_status",
+					"Array_status =\t$array_status"), "\n";
 		
 		my $ret_r;
 		if($start <= $end){
@@ -325,7 +490,8 @@ sub get_loci_start_end{
 	my %loci_se;
 	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, 
 			Genbank_File, CAS_start, CAS_end,
-			Array_Start, Array_End, scaffold
+			Array_Start, Array_End, scaffold,
+			CAS_Status, Array_Status
 			from loci 
 			where (CAS_start is not null or CAS_end is not null) 
 			$join_sql $query";
@@ -343,150 +509,4 @@ sub get_loci_start_end{
 	}
 
 
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_getGenesInLoci.pl -- getting all genes in CRISPR Loci; output is a table of gene information
-
-=head1 SYNOPSIS
-
-CLdb_getGenesInLoci.pl [flags] 
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -exist  <bool>
-
-Do not write any genes already existing in the Genes table (unless '-a' used). [TRUE]
-
-=item -all  <bool>
-
-All genes defined by the Loci table are written. 
-Any existing entries written in place of new entry.
-Not compatible with '-c' [FALSE]
-
-=item -conflict  <bool>
-
-Just write out genes that are conflicting
-(new and old versions). Not compatible with '-a' [FALSE]
-
-=item -sql  <char>
-
-sql to refine loci table query (see EXAMPLES). 
-
-=item -quiet  <bool>
-
-Turn off all warnings. [FALSE]
-
-=item -verbose  <bool>
-
-Verbose output. [TRUE]
-
-=item -help  <bool>
-
-This help message.
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_getGenesInLoci.pl
-
-=head1 DESCRIPTION
-
-Get all CDS features from >= genbanks that fall
-into CRISPR loci. 
-
-The output can be piped directly into
-CLdb_loadGenes.pl or the aliases (or other values)
-can be edited first.
-
-Genbank files must be in $CLdb_HOME/genbank/
-
-=head2 Existing genes in Genes table ('-e', '-a', '-c')
-
-By default, only new genes (ie. not found already in
-Genes table) are written. This is to
-preserve the existing alias values, which may 
-have been manually editted. 
-
-All gene entries (new & existing) can be written
-using '-a'. To view conflicting gene entries,
-use '-c'. For '-c', existing entries will have 'existing_entry'
-in the 'Sequence' column.
-
-=head2 In_CAS
-
-Genes are designated as falling in the CAS operon
-('In_CAS' field in DB) if they fall inside
-the designated operon range (designated in Loci table)
-but not inside the CRISPR array range (also 
-designated in Loci table).
-
-=head2 WARNING:
-
-CDS features in genbanks must have db_xref tags with 
-the fig|peg ID (example: "fig|6666666.40253.peg.2362");
-otherwise, the CDS will not be written to the output table.
-Extra information can come before 'fig' (eg. 'ITEP:' or 'SEED:'),
-but it must end with a colon.
-
-=head2 Requires:
-
-genbank_get_region.pl
-
-=head1 EXAMPLES
-
-=head2 Basic usage:
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite > gene_info.txt
-
-=head2 Direct loading to CRISPR database
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite | CLdb_loadGenes.pl -d CRISPR.sqlite
-
-=head2 Refining query to just the 'I-B' subtype
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE subtype='I-B'"
-
-=head2 Refining query to just taxon '6666666.40253'
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite -s "WHERE taxon_id='6666666.40253'"
-
-=head2 Write out all entries (new & old; on conflict: old entry is written)
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite -a
-
-=head2 Write out all conflicting entries 
-
-CLdb_getGenesInLoci.pl -d CRISPR.sqlite -c
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

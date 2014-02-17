@@ -22,9 +22,17 @@ NONE
 
 =over
 
-=item -p	Output file(s) prefix. [array]
+=item -prefix  <char>
 
-=item -v	Verbose output
+Output file(s) prefix. [array]
+
+=item -coord  <bool>
+
+Array start-end coords added to each array file name? [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output
 
 =item -h	This help message
 
@@ -42,7 +50,7 @@ and convert to CRISPRFinder format.
 
 Each array will be written to a separate file.
 
-File naming: 'prefix'_'CRISPR#'_'start'_'end'
+Default file naming: 'prefix'_'CRISPR#'_'scaffold_name'
 
 start-end is in relation to the positive strand.
 
@@ -79,10 +87,11 @@ use File::Spec;
 #--- args/flags ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose_b);
+my ($verbose_b, $coords_b);
 my $prefix = "array";
 GetOptions(
 	"prefix=s" => \$prefix, 
+	"coords" => \$coords_b,
 	"verbose" => \$verbose_b,
 	"help|?" => \&pod2usage # Help
 	);
@@ -92,15 +101,17 @@ GetOptions(
 
 #--- MAIN ---#
 my $res_r = parse_crt();
-write_array_files($res_r, $prefix);
+write_array_files($res_r, $prefix, $coords_b);
 
 #--- Subroutines ---#
 sub write_array_files{
-	my ($res_r, $prefix) = @_;
+	my ($res_r, $prefix, $coords_b) = @_;
 	
 	foreach my $array (keys %$res_r){
-		my $outname = join("_", $prefix, $array, 
-					$res_r->{$array}{'start'}, $res_r->{$array}{'end'});
+		my $outname = join("_", $prefix, $array, $res_r->{$array}{'organism'});
+		$outname = join("_", $outname, $res_r->{$array}{'start'}, $res_r->{$array}{'end'})
+					if $coords_b;
+		
 		open OUT, ">$outname.txt" or die $!;
 		foreach my $line (@{$res_r->{$array}{'array'}}){
 			print OUT join("\t", @$line), "\n";
@@ -114,14 +125,18 @@ sub write_array_files{
 sub parse_crt{
 # parsing CRT output 
 	my %res;
+	my $org;
 	while(<>){
 		chomp;
-			
+
+		($org = $_) =~ s/.+ // if /^ORGANISM/;
+		
 		if(/^CRISPR \d+/){
 			my @head = split / +/;	# 1=num; 3=start; 5=end
 			die "ERROR: line $. is not formatted correctly!\n"
 				unless scalar @head == 6;
 			
+			$res{$head[1]}{'organism'} = $org if defined $org;
 			$res{$head[1]}{'start'} = $head[3];
 			$res{$head[1]}{'end'} = $head[5];
 			die "ERROR: start > end at line $.\n"
