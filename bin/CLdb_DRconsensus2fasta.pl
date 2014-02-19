@@ -72,6 +72,7 @@ otherwise a 'N' will be used.
 
 Base ambiguity letters are used.
 
+Output sequence names: ">locus_ID|subtype"
 
 DR consensus must be calculated prior!
 
@@ -177,7 +178,9 @@ sub write_DR_fasta{
 # writing arrays as fasta
 	my ($arrays_r) = @_;
 	foreach my $locus_id (keys %$arrays_r){
-		print join("\n", ">$locus_id", $arrays_r->{$locus_id}), "\n";
+		print join("\n", 
+					join('|', ">$locus_id", $arrays_r->{$locus_id}{'subtype'}),
+					$arrays_r->{$locus_id}{'seq'}), "\n";
 		}
 	}
 	
@@ -187,12 +190,14 @@ sub get_consensus{
 	# make query #
 	my $query;
 	if($iupac_consensus){
-		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_IUPAC
-FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
+		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_IUPAC,
+				loci.subtype
+			FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
 		}
 	else{			# consensus threshold
-		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_Threshold
-FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
+		$query = "SELECT DR_consensus.Locus_ID, DR_consensus.Consensus_Sequence_Threshold,
+				loci.subtype
+			FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
 		}
 
 	$query = join(" ", $query, $extra_query);
@@ -207,7 +212,8 @@ FROM DR_consensus, Loci WHERE DR_consensus.locus_id = Loci.locus_id $join_sql";
 	
 	my %DRs;
 	foreach my $row (@$ret){
-		$DRs{$$row[0]} = $$row[1];
+		$DRs{$$row[0]}{'seq'} = $$row[1];
+		$DRs{$$row[0]}{'subtype'} = $$row[2];		
 		}
 	
 		#print Dumper %DRs; exit;

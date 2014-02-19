@@ -180,7 +180,7 @@ unix_line_breaks($loci_r, $db_path);						# line breaks of all copied files to u
 ## getting genome fasta from genbank ##
 genbank2fasta($loci_r, $db_path, $header_r); 	
 ## getting scaffold name 
-get_scaffold_name($loci_r, $db_path);
+get_scaffold_name($loci_r, $db_path, $header_r);
 
 
 # updating / loading_db #
@@ -356,7 +356,7 @@ sub just_table_columns{
 	die "ERROR: '$table' not found in column lists!\n"
 		unless exists $col_lists{$table};
 	
-	map{ $_ =~ tr/A-Z/a-z/ } @{$col_lists{$table}};
+	map{ $_ =~ tr/A-Z/a-z/ } @{$col_lists{$table}};		# table of interest
 	
 	my %header_parse;
 	map{$header_parse{$_} = $header_r->{$_} if exists $header_r->{$_}} @{$col_lists{$table}};
@@ -367,21 +367,24 @@ sub just_table_columns{
 
 sub get_scaffold_name{
 # if no scaffold value, try to get from fasta #
-	my ($loci_r, $db_path) = @_;
+	my ($loci_r, $db_path, $header_r) = @_;
 	
 	print STDERR "### checking for genome fasta for scaffold names ###\n";
 	
 	# getting all fasta files needed #
-	my @fasta_need;
+	my %fasta_need;
 	foreach my $locus_id (keys %$loci_r){
 		next unless exists $loci_r->{$locus_id}{'fasta_file'};		# cannot do w/out genome fasta
-		push @fasta_need, $loci_r->{$locus_id}{'fasta_file'}
-			unless $loci_r->{$locus_id}{'scaffold'};
+		$fasta_need{$loci_r->{$locus_id}{'fasta_file'}} = 1
+			unless $loci_r->{$locus_id}{'scaffold'};				# scaffold already exists
 		}
-		
+	
+	# if needed fastas, add 'scaffold' to header #
+	$header_r->{'scaffold'} = 'X';			# fake column index
+	
 	# extracting scaffolds #
 	my %fasta_scaf;
-	foreach my $file (@fasta_need){
+	foreach my $file (keys %fasta_need){
 		my $path_file = "$db_path/fasta/$file";
 		die " ERROR: cannot find $path_file!\n" unless -e $path_file;
 		
@@ -392,13 +395,14 @@ sub get_scaffold_name{
 				s/^>//;
 				die " ERROR: multiple scaffolds in $file! You must designate the scaffold name yourself!\n"
 					if exists $fasta_scaf{$file};
-				$fasta_scaf{$file} = $_; 
+				$fasta_scaf{$file} = $_; 	# file => scaffold_name
 				}
 			die " ERROR: count not find a scaffold name in the genome fasta: $file! You must designate the scaffold name yourself!\n"
 				unless exists $fasta_scaf{$file};
 			}
 		close IN;
 		}
+		
 	# adding scaffold values #
 	foreach my $locus_id (keys %$loci_r){
 		$loci_r->{$locus_id}{'scaffold'} = $fasta_scaf{$loci_r->{$locus_id}{'fasta_file'}}
@@ -407,14 +411,14 @@ sub get_scaffold_name{
 			unless exists $loci_r->{$locus_id}{'scaffold'};
 		}
 
-	#print Dumper %$loci_r; exit;
-	#print Dumper @fasta_need; exit;
+		#print Dumper %$loci_r; exit;
+		#print Dumper @fasta_need; exit;
 	}
 
 sub unix_line_breaks{
 	my ($loci_r, $db_path) = @_;
 	
-	print STDERR "### checking line breaks for all external files ###\n";
+	print STDERR "### checking line breaks for all external files (converting to unix) ###\n";
 	
 	#my @file_columns = qw/genbank_file fasta_file array_file/;
 	my %file_cols = (
@@ -425,8 +429,11 @@ sub unix_line_breaks{
 	foreach my $locus_id (keys %$loci_r){
 		foreach my $file_col (keys %file_cols){
 			if(exists $loci_r->{$locus_id}{$file_col}){
+				next unless $loci_r->{$locus_id}{$file_col};				# if no file; nothing to check
 				my $file_path = join("/", $db_path, $file_cols{$file_col}, 
 									$loci_r->{$locus_id}{$file_col});
+				
+				print STDERR " processing: $file_path\n";
 				lineBreaks2unix($file_path, 1);
 				}
 			}
@@ -482,14 +489,16 @@ sub genbank2fasta{
 	foreach my $locus_id (keys %$loci_r){
 		next unless exists $loci_r->{$locus_id}{'genbank_file'};		# cannot do w/out genbank
 		
+		print STDERR "# Processing locus: \"$locus_id\"\n";
+		
 		if(! exists $loci_r->{$locus_id}{'fasta_file'} ){
-			print STDERR "No genome fasta for locus_id: $locus_id! Trying to extract sequence from genbank...\n";
+			print STDERR "  No genome fasta for locus_id: \"$locus_id\"! Trying to extract sequence from genbank...\n";
 			$loci_r->{$locus_id}{'fasta_file'} = 
 				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");
 			}
 		elsif( ! -e "$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}"){
 			my $fasta_name = $loci_r->{$locus_id}{'fasta_file'};
-			print STDERR "WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
+			print STDERR "  WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
 			$loci_r->{$locus_id}{'fasta_file'} = 
 				genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");			
 			}
@@ -510,7 +519,7 @@ sub genbank2fasta_extract{
 	$parts[2] =~ s/\.[^.]+$|$/.fasta/;
 	my $fasta_out = "$fasta_dir/$parts[2]";
 	if(-e $fasta_out){
-		print STDERR "\t'$fasta_out' does exist, but not in loci table. Adding to loci table.\n";
+		print STDERR " '$fasta_out' does exist, but not in loci table. Adding to loci table.\n";
 		return $parts[2]; 
 		}
 
