@@ -489,7 +489,7 @@ sub genbank2fasta{
 	foreach my $locus_id (keys %$loci_r){
 		next unless exists $loci_r->{$locus_id}{'genbank_file'};		# cannot do w/out genbank
 		
-		print STDERR "# Processing locus: \"$locus_id\"\n";
+		print STDERR "### Processing locus: \"$locus_id\" ###\n";
 		
 		if(! exists $loci_r->{$locus_id}{'fasta_file'} ){
 			print STDERR "  No genome fasta for locus_id: \"$locus_id\"! Trying to extract sequence from genbank...\n";
@@ -549,7 +549,7 @@ sub genbank2fasta_extract{
 		return 0;
 		}
 	else{ 
-		print STDERR "\tFasta file extracted from $genbank_file, written: $fasta_out\n";
+		print STDERR " Fasta file extracted from $genbank_file, written: $fasta_out\n";
 		return $parts[2]; 			# just fasta name
 		}
 	}
@@ -735,8 +735,5 @@ sub check_headers{
 		
 	
 	}
-
-
-
 
 

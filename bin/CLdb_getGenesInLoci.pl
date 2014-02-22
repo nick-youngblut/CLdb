@@ -447,13 +447,7 @@ sub call_genbank_get_region{
 					$header{$line[$i]} = $i;
 					}
 				}
-			else{		
-				# parsing & scrubing fig/peg # (eg. 'ITEP:') #
-				my $fig_peg;
-				my @fig_peg = split /::/, $line[$header{"db_xref"}];
-				map{ $line[$header{"db_xref"}] = $_ if /fig\|.+peg\.\d+/ } @fig_peg;		# should only be 1 fig-peg
-				$line[$header{"db_xref"}] =~ s/^[^:]+://;
-			
+			else{					
 				# checking for existence of columns of interest #
 				my $next_bool;
 				foreach my $col (@col_sel){
@@ -463,6 +457,12 @@ sub call_genbank_get_region{
 						}
 					}
 				next if $next_bool;
+				
+				# parsing & scrubing fig/peg # (eg. 'ITEP:') #
+				my $fig_peg;
+				my @fig_peg = split /::/, $line[$header{"db_xref"}];
+				map{ $line[$header{"db_xref"}] = $_ if /fig\|.+peg\.\d+/ } @fig_peg;		# should only be 1 fig-peg
+				$line[$header{"db_xref"}] =~ s/^[^:]+://;
 			
 				# loading hash; selecting just tags of interest #
 				$loci_tbl{$locus}{$line[$header{'feature_num'}]} = [@line[@header{@col_sel}]]; 	# locusID=>feature_num = feature

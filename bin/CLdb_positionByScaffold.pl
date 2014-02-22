@@ -268,8 +268,8 @@ sub edit_array_file{
 	my $array_i = $header_r->{'array_file'};
 	
 	# check for array file value #
-	unless (defined $$locus[$array_i]){
-		warn "WARNING: cannot find array file value for $taxon_name loci\n";
+	if (! defined $$locus[$array_i] || $$locus[$array_i] eq ""){
+		warn "WARNING: cannot find array file value for \"$taxon_name\" loci\n";
 		return 0;
 		}
 		
@@ -383,8 +383,8 @@ sub edit_loc{
 	my $ret = $itree->fetch($start, $end);				# ret = scaffold that positions span
 	die "ERROR: no scaffold span for taxon_name->$taxon_name, start->$start, end->$end\n"
 		unless defined $ret;
-	die "ERROR: >1 scaffold spanned for taxon_name->$taxon_name, start->$start, end->$end\n"
-		if scalar @$ret > 1;
+	die "## ERROR ##\n>1 scaffold spanned for taxon_name->$taxon_name, start->$start, end->$end\n",
+		Dumper @$ret if scalar @$ret > 1;
 
 	# updating position info #
 	## new start = scaf_start + (current_pos - scaf_gw_pos)
