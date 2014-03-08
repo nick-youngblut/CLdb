@@ -132,17 +132,16 @@ sub orient_byleader{
 }
 
 
-sub get_array_seq_OLD{
-# getting spacer or DR sequence from either table #
+sub get_array_seq{
+#-- description --#
+# Getting spacer or DR cluster repesentative sequence from either table
 #-- input --#
 # $dbh = DBI database object
 # $opts_r = hash of options 
 #-- options --#
 # spacer_DR_b = spacer or DR [spacer]
 # extra_query = extra sql
-# by_cluster	= spacer/DR group (undef|1)? [undef]
-# 	cutoff = sequenceID cutoff [1]
-# 	strand_spec = strand specific (0|1)? [0]
+# cutoff = cluster sequenceID cutoff [1]
 # join_sql = "AND" statements 
 	
 	my ($dbh, $opts_r) = @_;
@@ -164,37 +163,35 @@ sub get_array_seq_OLD{
 # 	clusterID
 # 	sequence
 
-my $query;
-if(defined $opts_r->{"by_cluster"}){		# by group
-	# by group default options #
-	$opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
-	$opts_r->{"strand_spec"} = 1 unless exists $opts_r->{'strand_spec'}; 
+	my $query; 
+	if(defined $opts_r->{by_cluster}){
 	
-	$query = "SELECT 
+	  # by group default options #
+	  $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
+	
+	  $query = "SELECT 
 'NA',
 '$tbl_prefix',
 'NA',
 $tbl_prefix\_clusters.cluster_ID,
-$tbl_oi.$tbl_prefix\_sequence
-FROM $tbl_oi, $tbl_prefix\_clusters, loci 
-WHERE loci.locus_id = $tbl_oi.locus_id 
-AND $tbl_prefix\_clusters.locus_ID = $tbl_oi.locus_ID
-AND $tbl_prefix\_clusters.$tbl_prefix\_ID = $tbl_oi.$tbl_prefix\_ID
+$tbl_prefix\_clusters.Rep_sequence
+FROM $tbl_prefix\_clusters, loci 
+WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
 AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
-AND $tbl_prefix\_clusters.strand_spec = $opts_r->{'strand_spec'}
 GROUP BY $tbl_prefix\_clusters.cluster_ID
 ORDER BY $tbl_prefix\_clusters.cluster_ID
 $opts_r->{'join_sql'}";
-	}
-else{		# not by clusters
+      }
+	else{
 	$query = "SELECT
-$tbl_oi.Locus_ID, 
-'$tbl_prefix', 
-$tbl_oi.$tbl_prefix\_ID,
+$tbl_prefix\_clusters.Locus_ID,
+'$tbl_prefix',
+$tbl_prefix\_clusters.$tbl_prefix\_ID,
 'NA',
-$tbl_oi.$tbl_prefix\_sequence
-FROM $tbl_oi, loci 
-WHERE loci.locus_id = $tbl_oi.locus_id $opts_r->{'join_sql'}";
+$tbl_prefix\_clusters.Rep_sequence
+FROM $tbl_prefix\_clusters, loci
+WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
+$opts_r->{'join_sql'}";
 	}
 
 	$query =~ s/[\n\t]+/ /g;

@@ -401,10 +401,12 @@ sub parse_cdhit_seq{
 
 sub call_cdhit{
 # calling cd-hit-est on spacers/DRs #
+## sequences must be same length to cluster together 
 	my ($fasta, $cluster, $threads) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
 	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
+	print STDERR "$cmd\n" if $verbose;
 	`$cmd`;
 	if ($? == -1) {
     	die "ERROR: failed to execute: $!\n";

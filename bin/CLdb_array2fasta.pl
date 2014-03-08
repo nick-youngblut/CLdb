@@ -42,15 +42,11 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 =item -cluster  <bool>
 
-Get just cluster representatives of array elements? [FALSE]
+Get just cluster representatives of array elements (from clustering)? [FALSE]
 
 =item -cutoff  <float>
 
 Get array elements at the specified sequence identity cutoff. [1]
-
-=item -strand  <bool>
-
-Strand-specific array element clusters? [TRUE]
 
 =item -query  <char>
 
@@ -88,13 +84,13 @@ CLdb_array2fasta.pl -d CLdb.sqlite
 
 CLdb_array2fasta.pl -d CLdb.sqlite -r
 
-=head2 Write all unique spacers (strand-specific clustering)
+=head2 Write all unique spacers
 
-CLdb_array2fasta.pl -d CLdb.sqlite -g
+CLdb_array2fasta.pl -d CLdb.sqlite -clust
 
-=head2 Write all unique spacers (strand-agnostirc clustering)
+=head2 Write all spacers clustered at 80% seqence ID
 
-CLdb_array2fasta.pl -d CLdb.sqlite -g -strand
+CLdb_array2fasta.pl -d CLdb.sqlite -clust -cut 0.8
 
 =head2 Refine spacer sequence query:
 
@@ -137,8 +133,7 @@ use CLdb::query qw/
 	table_exists
 	n_entries
 	join_query_opts
-	get_array_seq
-	get_arrays_seq_byLeader/;
+	get_array_seq/;
 use CLdb::utilities qw/
 	file_exists 
 	connect2db/;
@@ -162,9 +157,8 @@ GetOptions(
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "cluster" => \$by_cluster,
-	   "strand" => \$strand_spec, 			# strand-specific grouping? [TRUE]
 	   "cutoff=f" => \$cluster_cutoff, 		# clustering cutoff [1.00]
+	   "cluster" => \$by_cluster,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -172,8 +166,6 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
-if(defined $strand_spec){ $strand_spec = 0; }	# strand-agnostic
-else{ $strand_spec = 1; }						# strand-specific
 
 #--- MAIN ---#
 # connect 2 db #
@@ -208,7 +200,6 @@ my %opts = (
 	by_cluster => $by_cluster,
 	spacer_DR_b => $spacer_DR_b,
 	cutoff => $cluster_cutoff,
-	strand_spec => $strand_spec
 	);
 
 ## querying CLdb ##
