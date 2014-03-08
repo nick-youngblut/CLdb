@@ -133,6 +133,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+use List::Util qw/max/;
 
 # CLdb #
 use FindBin;
@@ -140,11 +141,12 @@ use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
 	table_exists
-	n_entries
-	get_array_seq_byLeader/;
+	n_entries/;
 use CLdb::utilities qw/
 	file_exists 
 	connect2db/;
+use CLdb::seq qw/
+	revcomp/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -184,6 +186,8 @@ my $dbh = connect2db($database_file);
 my $dir = make_cluster_dir($database_file, $path); 
 
 # making fastas of array sequences #
+## status ##
+print STDERR "Getting array element sequences. Orienting sequences by leader or loci_start-end\n";
 ## spacers ##
 my (%aliases, $spacer_fasta, $dr_fasta);
 if($spacer_bool){
@@ -191,15 +195,13 @@ if($spacer_bool){
 		extra_query => "",
 		join_sql => "",
 		spacer_DR_b => 0,
-		);
-	my $arrays_r = get_array_seq_byLeader($dbh,\%opts); 
+		leader => 1,
+		 );
+	my $arrays_r = get_array_seq_preCluster($dbh,\%opts); 
 
-        print Dumper $arrays_r;
-        
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'spacers');
-        
-        chdir $curdir or die $!;
+    chdir $curdir or die $!;
 	$spacer_fasta = "spacers.fna";
 	}
 if($dr_bool){
@@ -207,44 +209,28 @@ if($dr_bool){
 		extra_query => "",
 		join_sql => "",
 		spacer_DR_b => 1,
+		leader => 1
 		);
-	my $arrays_r = get_array_seq_byLeader($dbh,\%opts); 
+	my $arrays_r = get_array_seq_preCluster($dbh,\%opts); 
+	
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'DRs');
 	chdir $curdir or die $!;
 	$dr_fasta = "DRs.fna";
 	}
 
-# strand specific #	
-## clustering at each cutoff ##
+# clustering at each cutoff #
+## strand-specific clustering (sequence orientation based on leader or loci orientation ##
 chdir $dir or die $!;
-my $spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases, 
-		'spacers', 'strand_spec', $threads)
+my $spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases, 'spacers', $threads)
 		if $spacer_bool;
-my $DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 
-		'DRs', 'strand_spec', $threads)
+my $DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 'DRs',  $threads)
 		if $dr_bool;		
 chdir $curdir or die $!;
 
 ## updating db ##
-add_entry($dbh, $spacer_cluster_r, "spacer", 'strand_spec') if $spacer_bool;
-add_entry($dbh, $DR_cluster_r, "DR", 'strand_spec') if $dr_bool;
-
-
-# strand invariant #
-## clustering at each cutoff ##
-chdir $dir or die $!;
-$spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases, 
-		'spacers', 'no_strand_spec', $threads)
-		if $spacer_bool;
-$DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 
-		'DRs', 'no_strand_spec', $threads)
-		if $dr_bool;		
-chdir $curdir or die $!;
-
-## updating db ##
-add_entry($dbh, $spacer_cluster_r, "spacer", 'no_strand_spec') if $spacer_bool;
-add_entry($dbh, $DR_cluster_r, "DR", 'no_strand_spec') if $dr_bool;
+add_entry($dbh, $spacer_cluster_r, "spacer") if $spacer_bool;
+add_entry($dbh, $DR_cluster_r, "DR") if $dr_bool;
 
 
 # disconnect #
@@ -253,27 +239,53 @@ exit;
 
 
 ### Subroutines
+sub add_entry{
+# add_entry to *_cluster #
+	my ($dbh, $clust_r, $cat) = @_;
+
+	# sql #
+	my $cmd = "INSERT into $cat\_clusters(locus_id, $cat\_id, cutoff, cluster_id, Rep_sequence) values(?,?,?,?,?)";
+	my $sql = $dbh->prepare($cmd);
+	
+	my $entry_cnt = 0;
+	foreach my $cutoff (keys %$clust_r){
+		foreach my $entry ( @{$clust_r->{$cutoff}}){
+			
+			$sql->execute($$entry[0], $$entry[2], $cutoff, $$entry[4], $$entry[5]);
+			if($DBI::err){
+				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$entry ), "\n";
+				}
+			else{ $entry_cnt++; }
+			}
+		}
+	$dbh->commit;
+
+	print STDERR "...$entry_cnt $cat cluster entries added/updated\n" unless $verbose;
+	}
+
 sub cluster_cutoffs{
 # clustering at each cutoff #
-	my ($cluster_cut_r, $fasta, $aliases_r, $cat, $strand_spec, $threads) = @_;
+	my ($cluster_cut_r, $fasta, $aliases_r, $cat, $threads) = @_;
 	
-	if($strand_spec eq 'strand_spec'){
-		warn "\n### strand-specific clustering ###\n";
-		}
-	else{ warn "\n### strand-agnositic clustering ###\n"; }
+	# status #
+	print STDERR "Clustering array sequences...\n";
 	
 	my %cluster;
+	my %cluster_seq;
 	for (my $i=$$cluster_cut_r[0]; 
 			$i<=$$cluster_cut_r[1]; 		# rounding issues
 			$i+=$$cluster_cut_r[2]){
 		$i = sprintf('%.2f', $i);
-		warn "...clustering $cat at cutoff: $i\n" unless $verbose;
+		print STDERR "...Clustering $cat at cutoff: $i\n" unless $verbose;
 	
 		## call cd-hit-est ##
-		my $cdhit_out = call_cdhit($fasta, $i, $threads, $strand_spec);
+		my $cdhit_out = call_cdhit($fasta, $i, $threads);
 
-		## parse cd-hit-est output ##
-		$cluster{$i} = parse_cdhit($cdhit_out, $i, $aliases_r, $cat, $strand_spec);
+		## parse cd-hit-est cluster representative sequence output ##
+		parse_cdhit_seq(\%cluster_seq, $cdhit_out);
+
+		## parse cd-hit-est cluster output ##
+		$cluster{$i} = parse_cdhit_clstr($cdhit_out, $i, $aliases_r, $cat, \%cluster_seq);
 		}
 		
 		#print Dumper %cluster; exit;
@@ -291,38 +303,9 @@ sub check_cluster{
 	return $cluster_r;
 	}
 
-sub add_entry{
-# add_entry to *_cluster #
-	my ($dbh, $clust_r, $cat, $strand_spec) = @_;
-
-	# strand-specificity #	
-	my $spec;
-	if($strand_spec eq 'strand_spec'){ $spec = 1; }
-	else{ $spec = 0; }
-	
-	# sql #
-	my $cmd = "INSERT into $cat\_clusters(locus_id, $cat\_id, strand_spec, cutoff, cluster_id) values(?,?,?,?,?)";
-	my $sql = $dbh->prepare($cmd);
-	
-	my $entry_cnt = 0;
-	foreach my $cutoff (keys %$clust_r){
-		foreach my $entry ( @{$clust_r->{$cutoff}}){
-			
-			$sql->execute($$entry[0], $$entry[2], $spec, $cutoff, $$entry[5] );
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @$entry ), "\n";
-				}
-			else{ $entry_cnt++; }
-			}
-		}
-	$dbh->commit;
-
-	print STDERR "...$entry_cnt $cat cluster entries added/updated\n" unless $verbose;
-	}
- 
-sub parse_cdhit{
+sub parse_cdhit_clstr{
 # parsing the cdhit results #
-	my ($cdhit_out, $cluster, $aliases_r, $cat, $strand_spec) = @_;
+	my ($cdhit_out, $cluster, $aliases_r, $cat, $cluster_seq_r) = @_;
 
 	open IN, "$cdhit_out.clstr" or die $!;
 	
@@ -356,15 +339,16 @@ sub parse_cdhit{
 		my @entry = @{$aliases_r->{$cat}{$line[2]}};
 		
 		# editing clusterID #
-		## strand_spec _ cutoff _ clusterID ##
 		my $cluster_id2 = $cluster_id;
-		if($strand_spec eq "strand_spec"){
-			$cluster_id2 = join("_", 1, $cluster, $cluster_id);
-			}
-		else{ $cluster_id2 = join("_", 0, $cluster, $cluster_id); }
-		
+		$cluster_id2 = join("_", $cluster, $cluster_id);
+
 		# assigning cluster ID
-		$entry[5] = $cluster_id2;
+		$entry[4] = $cluster_id2;
+		
+		# assigning rep sequence
+		die "ERROR: cannot find rep-seq for clusterID: $cluster_id\n"
+			unless exists $cluster_seq_r->{$cluster_id};
+		$entry[5] = $cluster_seq_r->{$cluster_id};
 		
 		# loading & checking #
 		push @clusters, \@entry;
@@ -391,15 +375,36 @@ sub parse_cdhit{
 		#print Dumper @clusters; 
 	return \@clusters;
 	}
+ 
+sub parse_cdhit_seq{
+# parsing the representative fasta sequence file from cdhit
+	my ($clusters_seq_r, $cdhit_out) = @_;
+	
+	open IN, $cdhit_out or die $!;
+	my $seq_cnt = -1;
+	while(<IN>){
+		chomp;
+		next if /^\s*$/;
+		
+		if(/^>/){
+			$seq_cnt++;
+			$clusters_seq_r->{$seq_cnt} = "";
+			}
+		else{
+			$clusters_seq_r->{$seq_cnt} .= $_;
+			}
+		}
+	close IN;
+	
+		#print Dumper %$clusters_seq_r; exit;
+	}
 
 sub call_cdhit{
 # calling cd-hit-est on spacers/DRs #
-	my ($fasta, $cluster, $threads, $strand_spec) = @_;
+	my ($fasta, $cluster, $threads) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads";
-	$cmd .= " -r 0" if $strand_spec eq 'strand_spec'; 			# strand-specific clustering 
-		
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
 	`$cmd`;
 	if ($? == -1) {
     	die "ERROR: failed to execute: $!\n";
@@ -449,4 +454,61 @@ sub write_array_seq{
 	
 		#print Dumper %$aliases_r; exit;
 	}
+	
+sub get_array_seq_preCluster{
+# getting array sequences and orienting by leader (if selected & if leader present) or by loci orientation
+  my ($dbh, $opts_r) = @_;
+  
+  # checking for opts #
+  map{ die "ERROR: cannot find option: '$_'" 
+	 unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
+
+  # getting table info (spacer|DR)#
+  my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if defined $opts_r->{"spacer_DR_b"};
+
+  my $query = "SELECT
+b.Locus_ID, 
+'$tbl_prefix', 
+b.$tbl_prefix\_ID,
+b.$tbl_prefix\_sequence,
+a.leader_end,
+a.array_start,
+a.array_end,
+a.locus_start,
+a.locus_end
+FROM 
+	(SELECT * 
+	FROM loci 
+	LEFT OUTER JOIN leaders ON loci.locus_id=leaders.locus_id) a,
+$tbl_oi b
+WHERE a.locus_id = b.locus_id";
+
+	$query =~ s/\n/ /g;
+	
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	#print Dumper %$opts_r; exit;
+	
+	# making fasta #
+	my @arrays;
+	foreach my $row (@$ret){
+		
+		# if leader: revcomp if leader_end > max(array_end, array_start)
+		if($opts_r->{leader} && defined $$row[4] && $$row[4] ne ""){
+			$$row[3] = revcomp($$row[3]) if $$row[4] > max(@$row[5..6]);
+			}
+		else{ # if no leader: recomp if locus_start > locus_end
+			$$row[3] = revcomp($$row[3]) if $$row[7] >= $$row[8];
+			}
+		
+		@$row = @$row[0..3];
+		}
+		
+		#print Dumper @$ret; exit;
+	return $ret;
+}
 
