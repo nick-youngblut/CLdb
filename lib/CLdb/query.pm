@@ -21,7 +21,7 @@ n_entries
 join_query_opts
 get_array_seq
 get_leader_pos
-get_arrays_seq_byLeader
+get_array_seq_byLeader
 list_columns
 /;
 
@@ -140,7 +140,153 @@ AND leaders.locus_id IS NOT NULL
 	return $ret;
 	}
 
-sub get_array_seq{
+sub get_array_seq_byLeader{
+# getting spacer or DR sequence from either table #
+#-- input --#
+# $dbh = DBI database object
+# $opts_r = hash of options 
+#-- options --#
+# spacer_DR_b = spacer or DR [spacer]
+# extra_query = extra sql
+# by_cluster	= spacer/DR group (undef|1)? [undef]
+# 	cutoff = sequenceID cutoff [1]
+# 	strand_spec = strand specific (0|1)? [0]
+# join_sql = "AND" statements 
+	
+	my ($dbh, $opts_r) = @_;
+	
+	# checking for opts #
+	map{ confess "ERROR: cannot find option: '$_'" 
+		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
+	
+	# getting table info #
+	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
+	($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+
+# selecting all elements that have a leader
+        my $query = "SELECT
+$tbl_oi.Locus_ID,
+$tbl_oi.$tbl_prefix\_ID,
+$tbl_oi.$tbl_prefix\_Sequence,
+$tbl_oi.$tbl_prefix\_Start,
+$tbl_oi.$tbl_prefix\_End,
+leaders.leader_start,
+leaders.leader_end
+FROM $tbl_oi, leaders
+WHERE $tbl_oi.locus_ID=leaders.locus_ID";
+
+        $query =~ s/\n/ /g;
+        #print Dumper $query;
+
+        # query db
+        my $ret = $dbh->selectall_arrayref($query);
+        print STDERR  "WARNING: no ararys with leaders found in CLdb!\n" unless $$ret[0];
+
+        # orienting elements by leader #
+        foreach my $row (@$ret) {
+            $row = orient_byleader($row);
+        }
+
+# selecting all elements that do not have a leader; orienting by loci table
+        $query = "SELECT *
+a.Locus_ID,
+a.$tbl_prefix\_ID,
+a.$tbl_prefix\_Sequence,
+a.$tbl_prefix\_Start,
+a.$tbl_oi.$tbl_prefix\_End,
+loci.array_start,
+loci.array_end
+FROM
+   (SELECT * FROM spacers
+     LEFT JOIN leaders ON $tbl_oi.locus_id=leaders.locus_id
+         WHERE leaders.locus_id is not NULL) a,
+    loci
+    WHERE a.locus_id = loci.locus_id";
+
+        $query =~ s/\n/ /g;
+        #print Dumper $query;
+
+        # query db
+        my $ret2 = $dbh->selectall_arrayref($query);
+        print STDERR "WARNING: no arrays without leaders found in CLdb!\n"
+            unless $$ret2[0];
+        #print Dumper $ret; exit;
+
+        # orienting based on array start-end
+        foreach my $row (@$ret2) {
+            $row = orient_byArray($row); 
+        }
+
+
+        # combining arrays & returning
+        #my @comb = push @$ret, @$ret2;
+        map{ push @$ret, $_ } @$ret2;
+        
+        
+        print Dumper @$ret;
+        exit;
+        
+        
+        return $ret;
+    }
+
+sub orient_byArray{
+    # orienting (rev-comp if needed) by array start-end
+    # if array_start > array_end, revcomp element
+    # else: revcomp
+  # columns:
+    # locus_ID
+    # element_ID
+    # eleement_seq
+    # element_start
+    # element_end
+    # array_start
+    # array_end
+    
+    my ($row) = @_;
+
+    if ($$row[5] <= $$row[6]) { # array start > array end
+        return [@$row[0..2]];
+        
+    }
+    else {
+        $$row[2] = revcomp($$row[2]);
+        return [@$row[0..2]];
+       
+    }
+
+}
+
+
+sub orient_byleader{
+    # orienting (rev-comp if needed) by leader
+    # if leader comes prior to element, no rev-comp
+    # else: revcomp
+  # columns:
+    # locus_ID
+    # element_ID
+    # eleement_seq
+    # element_start
+    # element_end
+    # leader_stat
+    # leader_end
+    
+    my ($row) = @_;
+
+    if ($$row[3] >= $$row[6]) { #array_start >= leader_end position
+        return [@$row[0..2]];
+        
+    }
+    else {
+        $$row[2] = revcomp($$row[2]);
+        return [@$row[0..2]];
+       
+    }
+    
+}
+
+
+sub get_array_seq_OLD{
 # getting spacer or DR sequence from either table #
 #-- input --#
 # $dbh = DBI database object

@@ -58,7 +58,8 @@ Gene length cutoff for counting gene as real in overlap assessment (bp). [150]
 
 =item -repeat  <bool>
 
-Use repeat degeneracies to determine which side contains the leader region? [FALSE]
+Use repeat degeneracies to determine which side contains the leader region 
+(only works if DRs have been clustered)? [FALSE]
 
 =item -verbose  <bool>
 
@@ -535,38 +536,40 @@ sub check_gene_overlap{
 	}
 
 sub get_DR_seq{
+# determining potential leader regions based on dr degeneracy: if $degen_check 
+# if no $degen_check; start-end could be on either side
 	my ($dbh, $array_se_r) = @_;
 
-	#my $cmd = "SELECT DR_id, DR_start, DR_end, DR_group from DRs where Locus_ID = ?";
-	my $cmd = "SELECT a.DR_id, a.DR_start, a.DR_end, b.Cluster_ID 
+        my $cmd = "SELECT a.DR_id, a.DR_start, a.DR_end, b.Cluster_ID 
 				FROM DRs a, DR_clusters b
 				WHERE a.Locus_id = b.Locus_id
 				AND a.DR_id = b.DR_id
 				AND b.Cutoff = 1
 				AND a.locus_ID = ?";	
+       	  
 	$cmd =~ s/\s+/ /g;
 	my $sql = $dbh->prepare($cmd);
 	
-	my %leader_loc;
+	my %leader_loc;	
 	foreach my $locus (keys %$array_se_r){		# each CRISPR locus
-		$sql->execute($locus);
-		my $ret = $sql->fetchall_arrayref();
 		
-		die " ERROR: no direct repeats found for locus_ID: $locus!\n"
+	        if($degen_check){
+		  $sql->execute($locus);
+		  my $ret = $sql->fetchall_arrayref();
+		
+		  die " ERROR: no direct repeats found for locus_ID: $locus!\n"
 			unless $$ret[0];
-		die " ERROR: no 'repeat_group' entries found!\n Run CLdb_groupArrayElements.pl before this script!\n\n"
+		  die " ERROR: no 'repeat_group' entries found!\n Run CLdb_groupArrayElements.pl before this script!\n\n"
 			unless defined $$ret[0][3];
 		
-		# determining leader based on degeneracies #
-		if($degen_check){			# skipping if opted 
-			$leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
-			}
-		else{
-			$leader_loc{$locus} = ["start", "end"];
-			}
+		  $leader_loc{$locus} = determine_leader($ret, $array_se_r->{$locus}, $locus);
 		}
+		else{
+		  $leader_loc{$locus} = ["start", "end"];
+		}
+	      }
 	
-		#print Dumper %leader_loc; exit;
+	       #print Dumper %leader_loc; exit;
 	return \%leader_loc;
 	}
 
@@ -587,7 +590,7 @@ WHERE (array_start is not null or array_end is not null)";
 
 	# querying db #
 	my %array_se;
-	if(defined $leader_tbl){
+	if(defined $leader_tbl){ 
 		my $sth = $dbh->prepare($cmd);
 		foreach my $x (@$leader_tbl){
 			#$sth->bind_param(1, $$x[0] );
@@ -609,7 +612,7 @@ WHERE (array_start is not null or array_end is not null)";
 			die "ERROR: no matching entries for locusID: '$$x[0]'!\n" unless $ret_cnt;
 			}
 		}
-	else{
+	else{ 
 		my $ret = $dbh->selectall_arrayref($cmd);
 
 		die "ERROR: no matching entries!\n" unless $ret;

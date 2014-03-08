@@ -261,10 +261,10 @@ DROP TABLE IF EXISTS spacer_clusters;
 CREATE TABLE spacer_clusters (
 Locus_ID	TEXT	NOT NULL,
 Spacer_ID	TEXT	NOT NULL,
-Strand_spec	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, Spacer_ID, Strand_spec, Cutoff)
+Rep_sequence	TEXT	NOT NULL,
+UNIQUE (Locus_ID, Spacer_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 
@@ -277,10 +277,10 @@ DROP TABLE IF EXISTS DR_clusters;
 CREATE TABLE DR_clusters (
 Locus_ID	TEXT	NOT NULL,
 DR_ID	TEXT	NOT NULL,
-Strand_spec	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
-UNIQUE (Locus_ID, DR_ID, Strand_spec, Cutoff)
+Rep_sequence	TEXT	NOT NULL,
+UNIQUE (Locus_ID, DR_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 

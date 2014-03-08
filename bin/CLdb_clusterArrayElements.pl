@@ -78,9 +78,10 @@ Sequences must be the same length to be in the same cluster
 
 =over 
 
-=item Strand-specific: 
+=item Strand-by-leader: 
 
-elements must be on the same strand (+/+ or -/-) to fall into a cluster
+elements must be on the same strand (+/+ or -/-) with strand defined
+by leader position. If no leader defined, either strand can be used.
 
 =item Strand-agnostric: 
 
@@ -140,7 +141,7 @@ use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
 	table_exists
 	n_entries
-	get_array_seq/;
+	get_array_seq_byLeader/;
 use CLdb::utilities qw/
 	file_exists 
 	connect2db/;
@@ -191,11 +192,14 @@ if($spacer_bool){
 		join_sql => "",
 		spacer_DR_b => 0,
 		);
-	my $arrays_r = get_array_seq($dbh,\%opts); 
-	
+	my $arrays_r = get_array_seq_byLeader($dbh,\%opts); 
+
+        print Dumper $arrays_r;
+        
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'spacers');
-	chdir $curdir or die $!;
+        
+        chdir $curdir or die $!;
 	$spacer_fasta = "spacers.fna";
 	}
 if($dr_bool){
@@ -204,7 +208,7 @@ if($dr_bool){
 		join_sql => "",
 		spacer_DR_b => 1,
 		);
-	my $arrays_r = get_array_seq($dbh,\%opts); 
+	my $arrays_r = get_array_seq_byLeader($dbh,\%opts); 
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'DRs');
 	chdir $curdir or die $!;
