@@ -108,7 +108,6 @@ CLdb_clusterArrayElements.pl -d CLdb.sqlite -s -r
 
 CLdb_clusterArrayElements.pl -d CLdb.sqlite -s -r -c 0.9 1 0.1
 
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
@@ -186,10 +185,11 @@ my $dbh = connect2db($database_file);
 my $dir = make_cluster_dir($database_file, $path); 
 
 # making fastas of array sequences #
+my %aliases;
 ## status ##
 print STDERR "Getting array element sequences. Orienting sequences by leader or loci_start-end\n";
 ## spacers ##
-my (%aliases, $spacer_fasta, $dr_fasta);
+my ($spacer_fasta, $dr_fasta);
 if($spacer_bool){
 	my %opts = (
 		extra_query => "",
@@ -201,7 +201,7 @@ if($spacer_bool){
 
 	chdir $dir or die $!;
 	write_array_seq($arrays_r, \%aliases, 'spacers');
-    chdir $curdir or die $!;
+        chdir $curdir or die $!;
 	$spacer_fasta = "spacers.fna";
 	}
 if($dr_bool){
@@ -227,6 +227,7 @@ my $spacer_cluster_r = cluster_cutoffs($cluster_cut_r, $spacer_fasta, \%aliases,
 my $DR_cluster_r = cluster_cutoffs($cluster_cut_r, $dr_fasta, \%aliases, 'DRs',  $threads)
 		if $dr_bool;		
 chdir $curdir or die $!;
+
 
 ## updating db ##
 add_entry($dbh, $spacer_cluster_r, "spacer") if $spacer_bool;
@@ -281,8 +282,11 @@ sub cluster_cutoffs{
 		## call cd-hit-est ##
 		my $cdhit_out = call_cdhit($fasta, $i, $threads);
 
+		## making Rep-seqID => clusterID index ##
+	        my $id2cid_r = id2clstrid($cdhit_out);
+
 		## parse cd-hit-est cluster representative sequence output ##
-		parse_cdhit_seq(\%cluster_seq, $cdhit_out);
+		parse_cdhit_seq(\%cluster_seq, $cdhit_out, $id2cid_r);
 
 		## parse cd-hit-est cluster output ##
 		$cluster{$i} = parse_cdhit_clstr($cdhit_out, $i, $aliases_r, $cat, \%cluster_seq);
@@ -302,6 +306,45 @@ sub check_cluster{
 	
 	return $cluster_r;
 	}
+
+sub id2clstrid{
+# parsing cd-hit output to make rep-seqid => clusterID index as done in make_multi_seq.pl
+  my ($cdhit_out, $cluster, $aliases_r, $cat, $cluster_seq_r) = @_;
+
+  # getting cluster ID & relating that to fasta
+  open IN, "$cdhit_out.clstr" or die $!;
+
+  my $size_cutoff = 0;
+  my %id2cid=();
+  my $cid = "";
+  my @ids = ();
+  my $no = 0;
+  while(<IN>) {
+    my $ll = $_;
+    if ($ll =~ /^>/) {
+      if ($no >= $size_cutoff) {
+	foreach my $i (@ids) { $id2cid{$i} = $cid;}
+      }
+     
+      if ($ll =~ /^>Cluster (\d+)/) { $cid = $1; }
+      else { die "Wrong format $ll"; }
+      @ids = ();
+      $no = 0;
+    }
+    else {
+      if ($ll =~ /(aa|nt), >(.+)\.\.\./) { push(@ids, $2); $no++; }
+      else { die "Wrong format $ll"; }
+    }
+  }
+  close IN or die $!;
+
+  if ($no >= $size_cutoff) {
+    foreach my $i (@ids) { $id2cid{$i} = $cid;}
+  }
+  #print Dumper %id2cid; exit;
+
+  return \%id2cid; # rep-seqID => clusterID
+}
 
 sub parse_cdhit_clstr{
 # parsing the cdhit results #
@@ -333,6 +376,7 @@ sub parse_cdhit_clstr{
 			}
 			
 		# getting ID (aliase -> id) #
+		#print Dumper %$aliases_r; exit;
 		$line[2] =~ s/^>|\.{3}$//g;	
 		die "ERROR: cannot find '$line[2]' in alias list!\n"
 			unless exists $aliases_r->{$cat}{$line[2]};
@@ -349,6 +393,9 @@ sub parse_cdhit_clstr{
 		die "ERROR: cannot find rep-seq for clusterID: $cluster_id\n"
 			unless exists $cluster_seq_r->{$cluster_id};
 		$entry[5] = $cluster_seq_r->{$cluster_id};
+
+		#### add aliase: debug
+		$entry[6] = $line[2]; # alias
 		
 		# loading & checking #
 		push @clusters, \@entry;
@@ -375,29 +422,33 @@ sub parse_cdhit_clstr{
 		#print Dumper @clusters; 
 	return \@clusters;
 	}
- 
+
 sub parse_cdhit_seq{
 # parsing the representative fasta sequence file from cdhit
-	my ($clusters_seq_r, $cdhit_out) = @_;
-	
+## converting to rep-seqID to clusterIDs
+	my ($clusters_seq_r, $cdhit_out, $id2cid_r) = @_;
+
+	#print Dumper $id2cid_r; exit;
+
 	open IN, $cdhit_out or die $!;
-	my $seq_cnt = -1;
+	my $seq_name = "";
 	while(<IN>){
 		chomp;
 		next if /^\s*$/;
 		
-		if(/^>/){
-			$seq_cnt++;
-			$clusters_seq_r->{$seq_cnt} = "";
-			}
-		else{
-			$clusters_seq_r->{$seq_cnt} .= $_;
-			}
+		if(/^>(.+)/){
+		  die "ERROR: cannot find $1 in id2cid\n"
+		    unless exists $id2cid_r->{$1};
+		  $seq_name = $id2cid_r->{$1};
+		  $clusters_seq_r->{ $seq_name } = "";
 		}
+		else{
+		  $clusters_seq_r->{ $seq_name } .= $_;
+		}
+        }
 	close IN;
-	
-		#print Dumper %$clusters_seq_r; exit;
-	}
+     		#print Dumper sort{$a<=>$b} keys %$clusters_seq_r; exit;
+}
 
 sub call_cdhit{
 # calling cd-hit-est on spacers/DRs #
@@ -405,7 +456,9 @@ sub call_cdhit{
 	my ($fasta, $cluster, $threads) = @_;
 	
 	(my $cdhit_out = $fasta) =~ s/\.fna/.txt/;
-	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0";
+	#my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c 1 -n 8 -s 1 -T $threads -r 0";
+
+	my $cmd = "cd-hit-est -i $fasta -o $cdhit_out -c $cluster -n 8 -s 1 -T $threads -r 0 -d 0";
 	print STDERR "$cmd\n" if $verbose;
 	`$cmd`;
 	if ($? == -1) {
@@ -466,8 +519,13 @@ sub get_array_seq_preCluster{
 	 unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
 
   # getting table info (spacer|DR)#
-  my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if defined $opts_r->{"spacer_DR_b"};
+  my ($tbl_oi, $tbl_prefix);
+  if( $opts_r->{spacer_DR_b} ){ # DR
+    ($tbl_oi, $tbl_prefix) = ("DRs","DR");
+  }
+  else{  # spacer
+    ($tbl_oi, $tbl_prefix) = ("spacers","spacer"); 
+  }
 
   my $query = "SELECT
 b.Locus_ID, 
@@ -487,13 +545,11 @@ $tbl_oi b
 WHERE a.locus_id = b.locus_id";
 
 	$query =~ s/\n/ /g;
-	
+
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
 	die " ERROR: no matching entries!\n"
 		unless $$ret[0];
-	
-	#print Dumper %$opts_r; exit;
 	
 	# making fasta #
 	my @arrays;
