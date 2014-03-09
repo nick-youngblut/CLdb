@@ -176,8 +176,6 @@ $tbl_prefix\_clusters.Rep_sequence
 FROM $tbl_prefix\_clusters, loci 
 WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
 AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
-GROUP BY $tbl_prefix\_clusters.cluster_ID
-ORDER BY $tbl_prefix\_clusters.cluster_ID
 $opts_r->{'join_sql'}";
       }
 	else{ # selecting all spacers
@@ -197,6 +195,12 @@ $opts_r->{'join_sql'}";
 
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
+
+	# adding group by  & order if clustering
+	$query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
+	  if defined $opts_r->{by_cluster}; # selecting by cluster
+	  
+
 
 #print Dumper $tbl_prefix;
 #print Dumper $query; exit;

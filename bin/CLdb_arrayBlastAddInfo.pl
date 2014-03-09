@@ -40,6 +40,10 @@ Add taxon_name? [FALSE]
 
 Add start-stop position? [FALSE]
 
+=item -append  <bool>
+
+Append subject blast DB file name to subject value? [FALSE]
+
 =item -order  <bool>
 
 Add spacer-leader order? [FALSE]
@@ -116,7 +120,7 @@ use CLdb::blast qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file);
-my ($subtype_b, $taxon_id_b, $taxon_name_b, $pos_b, $order_b);
+my ($subtype_b, $taxon_id_b, $taxon_name_b, $pos_b, $order_b, $append_b);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype" => \$subtype_b,
@@ -124,6 +128,7 @@ GetOptions(
 	   "taxon_name" => \$taxon_name_b,
 	   "position" => \$pos_b,
 	   "order" => \$order_b,
+	   "append_db" => \$append_b,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -165,7 +170,8 @@ sub write_blast_file{
 	foreach my $query (sort keys %$lines_r){
 		(my $q = $query) =~ s/^# Query:\s([^|]+\|(spacer|DR)\|[^|]+\|[^|]+).*/$1/;
 		foreach my $db (sort keys %{$lines_r->{$query}}){
-			foreach my $blast (keys %{$lines_r->{$query}{$db}}){
+		  my $db_name = get_db_name($db) if $append_b; # appending db_name onto subject
+		       foreach my $blast (keys %{$lines_r->{$query}{$db}}){
 				if(exists $index_r->{$q}){		# spacer group
 					# duplicating blast hits #
 					foreach my $new_query (@{$index_r->{$q}}){
@@ -184,6 +190,15 @@ sub write_blast_file{
 								unless exists $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'query id'};
 							my $query_id_i = $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'query id'};
 							$l[$query_id_i] = $new_query;	
+							
+							# changing subject ID column if append_b #
+							if(defined $db_name){
+							  die "ERROR: cannot find 'subject id' for '$l'\n"
+							    unless exists  $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'subject id'};
+							  my $subject_id_i = $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'subject id'};
+							  $l[$subject_id_i] = join("|", $db_name, $l[$subject_id_i]);
+							}
+							# writing output
 							print join("\t", @l), "\n";
 							}
 						}				
@@ -195,15 +210,37 @@ sub write_blast_file{
 					print $lines_r->{$query}{$db}{$blast}{'fields'}, "\n"
 						if exists $lines_r->{$query}{$db}{$blast}{'fields'};
 					print join("\n", @{$lines_r->{$query}{$db}{$blast}{'comments'}}), "\n";
-					# printing all hits #
-					print join("\n", @{$lines_r->{$query}{$db}{$blast}{'hits'}}), "\n";
+					
+					# changing subject ID column if append_b
+					if(defined $db_name){
+					  foreach my $l (@{$lines_r->{$query}{$db}{$blast}{'hits'}}){
+					    my @l = split /\t/, $l;
+					    die "ERROR: cannot find 'subject id' for '$l'\n"
+					      unless exists  $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'subject id'};
+					    my $subject_id_i = $lines_r->{$query}{$db}{$blast}{'fields_sep'}{'subject id'};
+					    $l[$subject_id_i] = join("|", $db_name, $l[$subject_id_i]);
+					    print join("\t", @l), "\n";
+					  }
+					}
+					else{
+					  # printing all hits #
+					  print join("\n", @{$lines_r->{$query}{$db}{$blast}{'hits'}}), "\n";
+					}
 					}
 				}
 			}
 		}
-	
-	
 	}
+
+sub get_db_name{
+ # getting just the file name of the blast DB used 
+  my ($db) = @_;
+  $db =~ s/.+\s//;
+  my @parts = File::Spec->splitdir($db);
+
+  #print Dumper @parts; exit;
+  return $parts[$#parts];
+}
 
 sub get_CLdb_info{
 # getting necessary info from CLdb #
@@ -211,6 +248,7 @@ sub get_CLdb_info{
 	my ($dbh, $lines_r, $query) = @_;
 	
 	my %res;
+	my $proc_cnt = 0;
 	foreach my $l (keys %$lines_r){
 
 		next unless ($l =~ /^# Query:\s[^|]+\|(spacer|DR)\|[^|]+\|[^|]+.*/i);
@@ -248,6 +286,11 @@ sub get_CLdb_info{
 			my $new_name = join("|", @$x);
 			push @{$res{$name}}, $new_name;
 			}
+
+		# status #
+		$proc_cnt++;
+		print STDERR "Number of hits processed: $proc_cnt\n"
+		  if ! $verbose and $proc_cnt % 10 == 0;
 		}
 
 		#print Dumper %res; exit;
