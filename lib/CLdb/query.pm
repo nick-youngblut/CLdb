@@ -158,13 +158,11 @@ sub get_array_seq{
 #	locus_ID
 #	spacer|DR
 #	spacer/DR_ID
-#	start
-#	end
 # 	clusterID
 # 	sequence
 
 	my $query; 
-	if(defined $opts_r->{by_cluster}){
+	if(defined $opts_r->{by_cluster}){ # selecting by cluster
 	
 	  # by group default options #
 	  $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
@@ -182,20 +180,26 @@ GROUP BY $tbl_prefix\_clusters.cluster_ID
 ORDER BY $tbl_prefix\_clusters.cluster_ID
 $opts_r->{'join_sql'}";
       }
-	else{
+	else{ # selecting all spacers
 	$query = "SELECT
-$tbl_prefix\_clusters.Locus_ID,
+$tbl_oi.Locus_ID,
 '$tbl_prefix',
-$tbl_prefix\_clusters.$tbl_prefix\_ID,
+$tbl_oi.$tbl_prefix\_ID,
 'NA',
 $tbl_prefix\_clusters.Rep_sequence
-FROM $tbl_prefix\_clusters, loci
-WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
+FROM $tbl_oi, $tbl_prefix\_clusters, loci
+WHERE loci.locus_id = $tbl_oi.locus_id
+AND $tbl_oi.locus_id = $tbl_prefix\_clusters.locus_id
+AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID 
+AND $tbl_prefix\_clusters.cutoff = 1
 $opts_r->{'join_sql'}";
 	}
 
 	$query =~ s/[\n\t]+/ /g;
 	$query = join(" ", $query, $opts_r->{"extra_query"});
+
+#print Dumper $tbl_prefix;
+#print Dumper $query; exit;
 	
 	# query db #
 	my $ret = $dbh->selectall_arrayref($query);
