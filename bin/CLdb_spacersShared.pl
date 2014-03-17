@@ -209,17 +209,15 @@ sub write_shared_matrix{
 sub get_arrays_join_clust{
 	my ($dbh, $extra_query, $group_by_r) = @_;
 	
-	my $sel = join(",", qw/c.cluster_ID count(c.cluster_ID)/, @$group_by_r);
-	my $group_by = join(",", @$group_by_r, "c.Cluster_ID");
+	my $sel = join(",", qw/spacer_clusters.cluster_ID count(spacer_clusters.cluster_ID)/, @$group_by_r);
+	my $group_by = join(",", @$group_by_r, "spacer_clusters.Cluster_ID");
 	
 	# make query #
 	my $q = "SELECT 
 $sel
-FROM loci a, spacers b, spacer_clusters c
-WHERE a.locus_id = b.locus_id
-AND b.locus_id = c.locus_id
-AND b.spacer_id = c.spacer_ID
-AND c.cutoff = $cutoff
+FROM loci, spacer_clusters
+WHERE loci.locus_id = spacer_clusters.locus_id
+AND spacer_clusters.cutoff = $cutoff
 $extra_query
 GROUP BY $group_by";
 	$q =~ s/\n/ /g;
@@ -235,33 +233,33 @@ GROUP BY $group_by";
 	my %arrays;
 	my %groups;
 	foreach my $row (@$ret){
-		die " ERROR: not matching entries!\n"
-			unless $$row[0]; 
-		my $id;
-		if(! @$group_by_r){			# just total for each cluster
-			$id = "Total";
-			}
-		elsif(! $$row[2]){			# group_by ID
-			$id = "NULL";
-			}
-		else{
-			$id = join("__", @$row[2..$#$row]);			
-			}
-		$arrays{$$row[0]}{$id} = $$row[1];
-		$groups{$id} = 1;
-		}
-	
-		#print Dumper %arrays; exit;
-	return \%arrays, \%groups;
+	  die " ERROR: not matching entries!\n"
+	    unless $$row[0]; 
+	  my $id;
+	  if(! @$group_by_r){			# just total for each cluster
+	    $id = "Total";
+	  }
+	  elsif(! $$row[2]){			# group_by ID
+	    $id = "NULL";
+	  }
+	  else{
+	    $id = join("__", @$row[2..$#$row]);			
+	  }
+	  $arrays{$$row[0]}{$id} = $$row[1];
+	  $groups{$id} = 1;
 	}
+	
+	#print Dumper %arrays; exit;
+	return \%arrays, \%groups;
+      }
 
 sub make_group_by_sql{
 	my ($subtype, $taxon_id, $taxon_name, $locus_id) = @_;
 	my @group_by;
-	push @group_by, "a.subtype" if $subtype;
-	push @group_by, "a.taxon_id" if $taxon_id;
-	push @group_by,"a.taxon_name" if $taxon_name;
-	push @group_by, "a.locus_id" if $locus_id;
+	push @group_by, "loci.subtype" if $subtype;
+	push @group_by, "loci.taxon_id" if $taxon_id;
+	push @group_by,"loci.taxon_name" if $taxon_name;
+	push @group_by, "loci.locus_id" if $locus_id;
 	return \@group_by;
 	}
 	

@@ -191,8 +191,7 @@ my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
 # getting spacer, DR, leader, gene from CLdb #
 my %dna_segs; 
-my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs, 
-							$join_sql, $extra_query, $spacer_cutoff);
+my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs,$join_sql, $extra_query, $spacer_cutoff);
 get_DR_info($dbh, \%dna_segs, $join_sql, $extra_query);
 get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
 get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
@@ -670,7 +669,6 @@ WHERE Loci.locus_id = Spacers.locus_id
 AND Spacers.locus_id = Spacer_clusters.locus_id
 AND Spacers.spacer_id = Spacer_clusters.spacer_id
 AND Spacer_clusters.cutoff = $spacer_cutoff
-AND Spacer_clusters.strand_spec = 0
 $join_sql
 $extra_query
 ";
