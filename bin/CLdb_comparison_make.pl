@@ -265,6 +265,7 @@ AND locus_id = ?
 			$locus_id2 = $locus_id;
 			}
 			
+		next unless defined $locus_id1 && exists $dna_segs_r->{gene}{$dna_seg_id1}{$locus_id1};
 		my %keep_cnt;
 		foreach my $feat_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id1}{$locus_id1}}){
 			# seeing if feat_d is in blast res #
@@ -357,8 +358,9 @@ AND pctid >= $blastp_cutoff
 	# querying each geneID #
 	my %blastp_res;
 	for my $i (0..($#$dna_segs_order_r-1)){
-		my $dna_seg_id1 = $$dna_segs_order_r[$i];
+	  	my $dna_seg_id1 = $$dna_segs_order_r[$i];
 		my $dna_seg_id2 = $$dna_segs_order_r[$i+1];
+
 		# getting loci to compare #
 		my ($locus_id1, $locus_id2);
 		foreach my $locus_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id1}}){
@@ -367,6 +369,14 @@ AND pctid >= $blastp_cutoff
 		foreach my $locus_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id2}}){
 			$locus_id2 = $locus_id;
 			}
+		
+		# sanity check 
+		unless( defined $locus_id1 && exists $dna_segs_r->{gene}{$dna_seg_id1}{$locus_id1} ){
+		  print STDERR "WARNING: no genes found for $dna_seg_id1\n";
+		  next;
+		}		  
+
+		# querying ITEP
 		foreach my $feat_id (keys %{$dna_segs_r->{"gene"}{$dna_seg_id1}{$locus_id1}}){
 			$sth->bind_param(1, $feat_id);
 			$sth->execute();

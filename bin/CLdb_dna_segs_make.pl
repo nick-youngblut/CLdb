@@ -159,7 +159,7 @@ if(@ITEP_sqlite){
 		unless -e $ITEP_sqlite[0];
 	}
 else{
-	warn "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
+	print STDERR "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
 	}
 
 
@@ -174,10 +174,10 @@ die "ERROR: no entries in spacer_cluster table! Cannnot use a spacer clustering 
 # connect to ITEP #
 my $dbh_ITEP;
 if(@ITEP_sqlite){
-	my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-	$dbh_ITEP = DBI->connect("dbi:SQLite:dbname=$ITEP_sqlite[0]", '','', \%attr) 
-		or die " Can't connect to $ITEP_sqlite[0]!\n";	
-	}
+  my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
+  $dbh_ITEP = DBI->connect("dbi:SQLite:dbname=$ITEP_sqlite[0]", '','', \%attr) 
+    or die " Can't connect to $ITEP_sqlite[0]!\n";	
+}
 
 # joining query options (for table join) #
 my $join_sql = "";
@@ -198,14 +198,14 @@ get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
 
 # getting gene cluster info if ITEP provided #
 if (@ITEP_sqlite){
-	my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
-						$ITEP_sqlite[1], \%dna_segs);
-	my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
-		#flip_genes_on_neg_strand(\%dna_segs, $strand_r);
-	}
+  my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
+					     $ITEP_sqlite[1], \%dna_segs);
+  my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
+  #flip_genes_on_neg_strand(\%dna_segs, $strand_r);
+}
 else{	# gene cluster = 1 for all  
-	gene_cluster_same(\%dna_segs);
-	}
+  gene_cluster_same(\%dna_segs);
+}
 
 # mutli-loci / multi-subtype problem
 ## determining if multiple loci/subtypes per taxon_name ##
@@ -533,7 +533,7 @@ AND geneid = ?
 			}
 		}
 	
-		#print Dumper %gene_clusters; exit;
+	#print Dumper %gene_clusters; exit;
 	return \%gene_clusters;
 	}
 

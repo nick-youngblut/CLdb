@@ -102,7 +102,8 @@ Genes are designated as falling in the CAS operon
 ('In_CAS' field in DB) if they fall inside
 the designated operon range (designated in Loci table)
 but not inside the CRISPR array range (also 
-designated in Loci table).
+designated in Loci table), UNLESS the array spans both
+sides of the CAS operon (CAS_start-CAS_end).
 
 =head2 WARNING:
 
@@ -349,51 +350,58 @@ sub write_loci_tbl{
 
 sub check_in_CAS{
 # checing whether CDS features are in the designated operon locations #
-	my ($loci_se_r, $loci_tbl_r) = @_;
+  my ($loci_se_r, $loci_tbl_r) = @_;
 	
-	foreach my $locus (keys %$loci_tbl_r){
-		foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
-			#print Dumper "$locus -> $feature";
-			die " LOGIC ERROR: $!\n" unless 
-				exists $loci_se_r->{$locus};
-								
-			# defining start - end #
-			## f = feature; o = operion; c = crispr array ##
-			my $f_start = int ${$loci_tbl_r->{$locus}{$feature}}[0];
-			my $f_end = int ${$loci_tbl_r->{$locus}{$feature}}[1];
-			
-			my $o_start = ${$loci_se_r->{$locus}}[3];
-			my $o_end = ${$loci_se_r->{$locus}}[4];			
-			
-			my $c_start = ${$loci_se_r->{$locus}}[5];
-			my $c_end = ${$loci_se_r->{$locus}}[6];
-
-			# skipping if no CAS_start || CAS_end #
-			next if ! defined $o_start || $o_start =~ /^$/
-				|| ! defined $o_end || $o_end =~ /^$/;
-
-			# making all on the + strand #
-			($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
-			($o_start, $o_end) = set_to_pos_strand($o_start, $o_end);
-			($c_start, $c_end) = set_to_pos_strand($c_start, $c_end) if $c_start && $c_end;		
-			
-			# determining location #
-			## gene must fall in operon, without falling into crispr array ##
-			if($f_start >= $o_start && $f_end <= $o_end){	# gene in CAS
-				if($c_start && $c_end){					# check for overlap w/ CRISPR array if present
-					if( ($f_start < $c_start && $f_end < $c_end) ||
-						($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array
-						push(@{$loci_tbl_r->{$locus}{$feature}}, "yes");
-						}
-					else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }	# in crispr array, so not defined as in operon				
-					}
-				else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "yes"); }	# in operon, no CRISPR array
-				}
-			else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }		# no in operon
-			}
-		}
-		#print Dumper %$loci_tbl_r; exit;
+  foreach my $locus (keys %$loci_tbl_r){
+    foreach my $feature (keys %{$loci_tbl_r->{$locus}}){
+      #print Dumper "$locus -> $feature";
+      die " LOGIC ERROR: $!\n" unless 
+	exists $loci_se_r->{$locus};
+      
+      # defining start - end #
+      ## f = feature; o = operon; c = crispr_array ##
+      my $f_start = int ${$loci_tbl_r->{$locus}{$feature}}[0];
+      my $f_end = int ${$loci_tbl_r->{$locus}{$feature}}[1];
+      
+      my $o_start = ${$loci_se_r->{$locus}}[3];
+      my $o_end = ${$loci_se_r->{$locus}}[4];			
+      
+      my $c_start = ${$loci_se_r->{$locus}}[5];
+      my $c_end = ${$loci_se_r->{$locus}}[6];
+      
+      # skipping if no CAS_start || CAS_end #
+      next if ! defined $o_start || $o_start =~ /^$/
+	|| ! defined $o_end || $o_end =~ /^$/;
+      
+      # making all on the + strand #
+      ($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
+      ($o_start, $o_end) = set_to_pos_strand($o_start, $o_end);
+      ($c_start, $c_end) = set_to_pos_strand($c_start, $c_end) if $c_start && $c_end;		
+      
+      # determining location #
+      ## gene must fall in operon, without falling into crispr array ##
+      if($f_start >= $o_start && $f_end <= $o_end){	# gene in CAS
+	if($c_start && $c_end){					# check for overlap w/ CRISPR array if present
+	  if( ($f_start < $c_start && $f_end < $c_end) ||
+	      ($f_start > $c_start && $f_end > $c_end) ){			# not in crispr array	   
+	    push(@{$loci_tbl_r->{$locus}{$feature}}, "yes");
+	  }
+	  else{    # inside of CRISPR array span
+	    if( $c_start < $o_start && $c_end > $o_end ){   # in crispr array, but array spans operon, so calling 'yes'
+	      push(@{$loci_tbl_r->{$locus}{$feature}}, "yes");
+	    }
+	    else{
+	      push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); # in crispr array & array does not span CAS operon, so not defined as in operon				
+	    }
+	  }	
 	}
+	else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "yes"); }	# in operon, no CRISPR array
+      }
+      else{ push(@{$loci_tbl_r->{$locus}{$feature}}, "no"); }		# no in operon
+    }
+  }
+  #print Dumper %$loci_tbl_r; exit;
+}
 
 sub set_to_pos_strand{
 # setting all start-end so start is <= end #
