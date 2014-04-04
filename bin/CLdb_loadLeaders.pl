@@ -146,7 +146,6 @@ my $fasta_aln_r = load_fasta($ARGV[1]);
 
 # making sure no gaps in 'raw' fasta
 check_no_gaps($fasta_raw_r);
-exit;
 
 # determining orientation of aligned sequence #
 my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
