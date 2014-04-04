@@ -144,6 +144,10 @@ check_for_loci_table($table_list_r);
 my $fasta_raw_r = load_fasta($ARGV[0]);
 my $fasta_aln_r = load_fasta($ARGV[1]);
 
+# making sure no gaps in 'raw' fasta
+check_no_gaps($fasta_raw_r);
+exit;
+
 # determining orientation of aligned sequence #
 my $ori_r = get_orientation($fasta_raw_r, $fasta_aln_r);
 
@@ -482,7 +486,7 @@ sub get_orientation{
 # which side is farthest from array? need to account for rev-comp during alignment #
 # mafft provides rev-comp name 
 	my ($fasta_raw_r, $fasta_aln_r) = @_;
-
+	
 	my %ori;
 	foreach my $aln (keys %$fasta_aln_r){			# checking for intersect of seq in the input files
 		die " ERROR: \"$aln\" not found in raw leader sequence file!\n"
@@ -502,7 +506,7 @@ sub get_orientation{
 			print STDERR "$aln: rev-comp orientation\n" if $verbose;		
 			$ori{$aln} = "rev-comp";
 			}
-		else{ die " ERROR: could not match aligned sequence of $aln with raw sequence!\n"; }
+		else{ die " ERROR: could not match aligned sequence of locus '$aln' with raw sequence!\n"; }
 		}
 		#print Dumper %ori; exit;
 	return \%ori;
@@ -652,4 +656,12 @@ sub list_tables{
 	return [keys %$all];
 	}
 
+sub check_no_gaps{
+# making sure no gaps in fasta
+  my ($fasta_r) = @_;
 
+  foreach my $name (keys %$fasta_r){
+    die "ERROR: gaps found in 'raw' sequence for locus '$name'!\n The fasta should not be an alignment!"
+      if $fasta_r->{$name}{seq} =~ /-/;
+  }
+}
