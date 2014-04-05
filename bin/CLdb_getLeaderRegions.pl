@@ -579,7 +579,8 @@ sub get_array_se{
 	
 	my $cmd = "SELECT Locus_ID, array_start, array_end, fasta_file, genbank_file, scaffold
 FROM loci
-WHERE (array_start is not null or array_end is not null)";
+WHERE (array_start is not null or array_end is not null)
+AND (array_start != '' or array_end != '')";
 
 	# if select loci #
 	$cmd .= " AND locus_ID = ?" if defined $leader_tbl;
