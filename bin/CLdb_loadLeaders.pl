@@ -67,7 +67,7 @@ degeneracy.
 
 =head1 EXAMPLES
 
-=head2 Triming off the 50bp of unconserved alignment 
+=head2 Triming 50 positions off of the unconserved end of the alignment (furthest from array)
 
 CLdb_loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
 

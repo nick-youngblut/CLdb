@@ -56,6 +56,11 @@ Check for overlapping genes (& trim region if overlap)? [TRUE]
 
 Gene length cutoff for counting gene as real in overlap assessment (bp). [150]
 
+=item -annotation <regex>
+
+Regular expression for screening out potential overlapping genes by annotation
+(eg. '[Hh]ypothetical|[Cc]onservered'). []
+
 =item -repeat  <bool>
 
 Use repeat degeneracies to determine which side contains the leader region 
@@ -80,10 +85,15 @@ perldoc CLdb_getLeaderRegions.pl
 Get the suspected leader regions for CRISPR loci 
 in the CRISPR database.
 
-The leader region length will be truncated if any genes overlap in 
-that region (unless -overlap used).
-
 The default leader region length is 1000bp from the CRISPR array.
+
+=head2 Gene overlap
+
+By default, the leader region length will be 
+truncated if any genes overlap in that region 
+(disable with '-overlap'). '-annotation' can be 
+used to screen out false genes (eg. hypotheticals).
+Gene overlap assessed for genes on both strands.
 
 =head2 Selecting leader regions (-location)
 
@@ -208,7 +218,7 @@ use CLdb::seq qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check, $loc_in);
+my ($verbose, $database_file, $overlap_check, $degeneracy_bool, $degen_check, $loc_in, $annotation);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $length = 1000;				# max length of leader region
@@ -224,6 +234,7 @@ GetOptions(
 	   "cutoff=i" => \$gene_len_cutoff,	
 	   "repeat" => \$degen_check,				# use degeneracies to determine leader side? [FALSE]
 	   "location=s" => \$loc_in, 				# location table 
+	   "annotation=s" => \$annotation, # annotation regex
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -233,7 +244,7 @@ GetOptions(
 file_exists($database_file, "database");
 $database_file = File::Spec->rel2abs($database_file);
 my $genbank_path = path_by_database($database_file);
-
+$annotation = qr/$annotation/ if $annotation;
 
 #--- MAIN ---#
 # connect 2 db #
@@ -283,7 +294,7 @@ if($loc_in){
 # else: writing out possible leader region #
 else{
 	## getting sequences from genbanks ##
-	get_leader_seq($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length);
+	get_leader_seq($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length, $annotation);
 	}
 
 
@@ -364,7 +375,7 @@ sub get_locus_fasta{
 
 sub get_leader_seq{
 # getting leader seqs from genbanks #
-	my ($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length) = @_;
+	my ($array_se_r, $leader_loc_r, $fasta_dir, $genbank_path, $length, $annotation) = @_;
 
 	# making fasta => scaffold => locus index #
 	my (%fasta_locus, %fasta_genbank);
@@ -427,7 +438,8 @@ sub get_leader_seq{
 					$leader_end = $scaf_len if $leader_end > $scaf_len;
 					
 					# checking for gene overlap; truncating leader region if overlap #
-					($leader_start, $leader_end) = check_gene_overlap($seq, $leader_start, $leader_end, $loc, $locus)
+					($leader_start, $leader_end) = check_gene_overlap($seq, $leader_start, 
+											  $leader_end, $loc, $locus, $annotation)
 						unless $overlap_check;
 					
 					# skipping if leader length is < 10 bp #
@@ -460,13 +472,18 @@ sub get_leader_seq{
 sub check_gene_overlap{
 # checking to see if and genes overlap w/ leader region #
 # if yes, truncating leader region #
-	my ($seq, $region_start, $region_end, $leader_loc, $locus) = @_;
+	my ($seq, $region_start, $region_end, $leader_loc, $locus, $annotation) = @_;
 		
 	# making an interval tree #
 	my $itree = Set::IntervalTree->new();
 	for my $feat ($seq->get_SeqFeatures){
+	        # screening features 
 		next if $feat->primary_tag eq "source";
+		if(defined $annotation and grep{ $_ eq 'product'} $feat->get_all_tags){
+		  next if grep{$_ =~ /$annotation/} $feat->get_tag_values('product');
+		}
 
+		# feat start-end
 		my $start = $feat->location->start;
 		my $end = $feat->location->end;
 	
