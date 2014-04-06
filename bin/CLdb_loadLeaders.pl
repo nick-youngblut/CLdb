@@ -364,10 +364,17 @@ sub load_leader{
   # update db
   my $cnt = 0;
   foreach my $locus (keys %$fasta_aln_r){  
-    $sql->execute( $locus, 									# locus_ID
-		   $fasta_aln_r->{$locus}{"meta"}{"start"}, 	# start
-		   $fasta_aln_r->{$locus}{"meta"}{"end"}, 		# end
-		   $fasta_aln_r->{$locus}{"seq"});					# sequence
+    # flipping leader start-end if strand = '-'
+    die "ERROR: strand not recognized!\n"
+      unless $fasta_aln_r->{$locus}{meta}{strand} =~ /^[+-]$/;
+    my ($leader_start, $leader_end) = ($fasta_aln_r->{$locus}{"meta"}{"start"},  
+				       $fasta_aln_r->{$locus}{"meta"}{"end"});
+    ($leader_start,$leader_end) = ($leader_end, $leader_start) 
+      if $fasta_aln_r->{$locus}{meta}{strand} eq '-';
+    
+    # uploading
+    $sql->execute( $locus, $leader_start, $leader_end,
+		   $fasta_aln_r->{$locus}{"seq"} );
     if($DBI::err){
       print STDERR "ERROR: $DBI::errstr for $locus\n";
     }

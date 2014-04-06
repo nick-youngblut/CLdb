@@ -507,7 +507,8 @@ sub check_gene_overlap{
   my $itree = Set::IntervalTree->new();
   for my $feat ($seq->get_SeqFeatures){
     # filtering features by source & annotation 
-    next if $feat->primary_tag eq "source";
+    next if $feat->primary_tag eq "source" or
+      $feat->primary_tag eq "gene";
     if(defined $annotation and grep{ $_ eq 'product'} $feat->get_all_tags){
       next if grep{$_ =~ /$annotation/} $feat->get_tag_values('product');
     }
