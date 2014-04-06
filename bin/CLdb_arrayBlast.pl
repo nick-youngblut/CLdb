@@ -48,6 +48,10 @@ Extra sql to refine which sequences are returned.
 
 BLASTn parameters (besides required flags). [-evalue 0.1]
 
+=item -fork  <int>
+
+Number of parallel blastn calls. [1] 
+
 =item -v  <bool>
 
 Verbose output. [TRUE]
@@ -125,7 +129,8 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
-use Forks::Super;
+#use Forks::Super;
+use Parallel::ForkManager;
 
 # CLdb #
 use FindBin;
@@ -191,7 +196,7 @@ my $subject_loci_r = get_loci_fasta($dbh, $join_sql, $extra_query);
 
 ## making blast directory; blastdb; and blast alias##
 my $blast_dir = make_blast_dir($db_path);
-my $blast_dbs_r = make_blast_db($subject_loci_r, $db_path, $blast_dir);
+my $blast_dbs_r = make_blast_db($subject_loci_r, $db_path, $blast_dir, $fork);
 
 ## blasting ##
 call_blastn_short($blast_dbs_r, $query_file, $blast_params, $fork); 
@@ -199,89 +204,91 @@ call_blastn_short($blast_dbs_r, $query_file, $blast_params, $fork);
 
 #--- Subroutines ---#
 sub call_blastn_short{
-	my ($blast_dbs_r, $query_file, $blast_params, $fork) = @_;
-		
-	my $outfmt = join(" ", qw/7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-evalue bitscore qlen slen btop/);
+  my ($blast_dbs_r, $query_file, $blast_params, $fork) = @_;
 
-	# sanity check #
-	map{die " ERROR: cannot find $_!\n" unless -e $_} @$blast_dbs_r;
+  # blast table output format
+  my $outfmt = join(" ", qw/7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
+			    evalue bitscore qlen slen btop/);
+  
+  # sanity check #
+  map{die " ERROR: cannot find $_!\n" unless -e $_} @$blast_dbs_r;
 
-	my %output;
-	foreach my $blast_db (@$blast_dbs_r){
-		my $job = fork{
-			share => [\%output],
-			sub => sub{
-				my $cmd = "blastn -task 'blastn-short' -query $query_file -db $blast_db -outfmt '$outfmt' $blast_params";
-				open PIPE, "$cmd |" or die $!;
-				while(<PIPE>){
-					push @{$output{$blast_db}}, $_;
-					}
-				close PIPE;
-				}
-			}
-		}
-	waitall;
-	
-	# status #
-	foreach my $out (sort keys %output){
-		print STDERR "Number of blast hits to $out:\t",
-			scalar @{$output{$out}}, "\n";
-		}	
-	
-	# writing output #
-	foreach my $out (sort keys %output){
-		print join("", @{$output{$out}});
-		}
-	}
+  # forking
+  my $pm = Parallel::ForkManager->new($fork);
+  
+  $pm->run_on_finish(
+    sub{		     
+      my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $ret_r) = @_;
+      # status #
+      foreach my $out (sort keys %$ret_r){
+	print STDERR "Number of blast hits to $out:\t",
+	  scalar @{$ret_r->{$out}}, "\n";
+      }	
+      
+      # writing output #
+      foreach my $out (sort keys %$ret_r){
+	print join("", @{$ret_r->{$out}});
+      }
+    }
+   );
+
+  my %output;
+  foreach my $blast_db (@$blast_dbs_r){
+    $pm->start and next;
+    
+    my %output;
+    my $cmd = "blastn -task 'blastn-short' -query $query_file -db $blast_db -outfmt '$outfmt' $blast_params";
+    open PIPE, "$cmd |" or die $!;
+    while(<PIPE>){
+      push @{$output{$blast_db}}, $_;
+    }
+    close PIPE;
+    $pm->finish(0, \%output); 
+  }
+  $pm->wait_all_children; 
+}
 
 sub make_blast_db{
 # foreach fasta, making a blast DB #
-	my ($subject_loci_r, $db_path, $blast_dir) = @_;
-	
-	my $fasta_dir = "$db_path/fasta";
+  my ($subject_loci_r, $db_path, $blast_dir) = @_;
+  
+  my $fasta_dir = "$db_path/fasta";
+  
+  # sanity check #
+  die " ERROR: cannot find $fasta_dir!\n" unless -d $fasta_dir;
+  die " ERROR: cannot find $blast_dir!\n" unless -d $blast_dir;
+  
+  # status #
+  print STDERR "...making blast databases in $blast_dir\n";
+  
+  # making blast dbs #
+  my @blastdbs;
+  foreach my $row (@$subject_loci_r){
+    unless($$row[2]){
+      map{$_ = "" unless $_} @$row;
+      print STDERR " Skipping: '", join(",", @$row), "'! 'fasta_file' value empty!\n";
+      next; 		# next unless fasta file present
+    }
+    
+    # sanity check #
+    die " ERROR: cannnot find $fasta_dir/$$row[2]!"
+      unless -e "$fasta_dir/$$row[2]"; 		
 
-	# sanity check #
-	die " ERROR: cannot find $fasta_dir!\n" unless -d $fasta_dir;
-	die " ERROR: cannot find $blast_dir!\n" unless -d $blast_dir;
-	
-	# status #
-	print STDERR "...making blast databases in $blast_dir\n";
-	
-	# making blast dbs #
-	my @blastdbs;
-	foreach my $row (@$subject_loci_r){
-		unless($$row[2]){
-			map{$_ = "" unless $_} @$row;
-			print STDERR " Skipping: '", join(",", @$row), "'! 'fasta_file' value empty!\n";
-			next; 		# next unless fasta file present
-			}
-
-		# sanity check #
-		die " ERROR: cannnot find $fasta_dir/$$row[2]!"
-			unless -e "$fasta_dir/$$row[2]"; 		
+    # making symlink in blast directory #
+    unless(-e "$blast_dir/$$row[2]" || -l "$blast_dir/$$row[2]"){
+      symlink("$fasta_dir/$$row[2]", "$blast_dir/$$row[2]") or die $!;
+    }
+    
+    # making blast db #
+    my $cmd = "makeblastdb -dbtype nucl -parse_seqids -in $blast_dir/$$row[2]";
+    print STDERR "$cmd\n" unless $verbose;
+    `$cmd`;
 		
-		# making symlink in blast directory #
-		unless(-e "$blast_dir/$$row[2]" || -l "$blast_dir/$$row[2]"){
-			symlink("$fasta_dir/$$row[2]", "$blast_dir/$$row[2]") or die $!;
-			}
-		
-		# making blast db #
-		my $cmd = "makeblastdb -dbtype nucl -parse_seqids -in $blast_dir/$$row[2]";
-		print STDERR "$cmd\n" unless $verbose;
-		`$cmd`;
-		
-		push @blastdbs, "$blast_dir/$$row[2]";
-		}
-		
-	# making blast alias #
-#	my $cmd = join("", "blastdb_aliastool -dblist \"",
-#			join(" ", @blastdbs),
-#			"\" -dbtype nucl -out $blast_dir/CLdb_genomes -title 'CLdb_genomes'");
-#	`$cmd`;
-	
-	return \@blastdbs;
-	}
+    push @blastdbs, "$blast_dir/$$row[2]";
+  }
+  
+  return \@blastdbs;
+}
 
 sub get_loci_fasta{
 # querying CLdb for fasta files for each select taxon to use for blastdb #

@@ -414,21 +414,30 @@ sub trim_se{
 
     # editing sequence region start-end
     ## start-end set for + strand
+    ## floor of 0 for trimming (no negative numbers)
     if($fasta_aln_r->{$locus}{meta}{strand} eq '+'){
       ## start
+      my $trim_up = length($up_seq) - $gap_cnt{up};
+      $trim_up = 0 if $trim_up < 0;
       $fasta_aln_r->{$locus}{meta}{start} = 
-	$fasta_aln_r->{$locus}{meta}{start} + length($up_seq) - $gap_cnt{up};
+	$fasta_aln_r->{$locus}{meta}{start} + $trim_up;
       ## end
+      my $trim_down = length($down_seq) - $gap_cnt{down};
+      $trim_down = 0 if $trim_down < 0;
       $fasta_aln_r->{$locus}{meta}{end} = 
-	$fasta_aln_r->{$locus}{meta}{end} - length($down_seq) - $gap_cnt{down};
+	$fasta_aln_r->{$locus}{meta}{end} - $trim_down;
     }
     elsif($fasta_aln_r->{$locus}{meta}{strand} eq '-'){   # - strand, start-end on + strand flipped
       ## start (relates to downstream on + strand)
+      my $trim_down = length($down_seq) - $gap_cnt{down};
+      $trim_down = 0 if $trim_down < 0;
       $fasta_aln_r->{$locus}{meta}{start} = 
-	$fasta_aln_r->{$locus}{meta}{start} + length($down_seq) - $gap_cnt{down};
+	$fasta_aln_r->{$locus}{meta}{start} + $trim_down;
       ## end (relates to upstream on + strand)
+      my $trim_up = length($up_seq) - $gap_cnt{up};
+      $trim_up = 0 if $trim_up < 0;
       $fasta_aln_r->{$locus}{meta}{end} = 
-	$fasta_aln_r->{$locus}{meta}{end} - length($up_seq) - $gap_cnt{up};
+	$fasta_aln_r->{$locus}{meta}{end} - $trim_up;
     }
     else{
       die "ERROR: cannot identify strand for locus: $locus\n";
