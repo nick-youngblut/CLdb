@@ -46,7 +46,7 @@ Extra sql to refine which sequences are returned.
 
 =item -blast  <char>
 
-BLASTn parameters (besides required flags). [-evalue 0.1]
+BLASTn parameters (besides required flags). [-evalue 1e-3]
 
 =item -fork  <int>
 
@@ -152,7 +152,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $database_file, $query_file);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
-my $blast_params = "-evalue 0.1";		# 1e-1
+my $blast_params = "-evalue 1e-3";		# 1e-3
 my $fork = 1;
 GetOptions(
 	   "database=s" => \$database_file,
