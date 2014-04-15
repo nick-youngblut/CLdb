@@ -164,7 +164,7 @@ sub write_array_seq{
 # writing arrays as fasta
   my ($fasta2_r) = @_;
   
-  foreach my $seq (keys %$fasta2_r){
+  foreach my $seq (sort keys %$fasta2_r){
     foreach my $element (@{$fasta2_r->{$seq}{"data"}}){
       my $name = join("|", @$element);
       print join("\n", ">$name", $fasta2_r->{$seq}{"seq"}), "\n";
@@ -185,26 +185,28 @@ sub get_CLdb_info{
     die "ERROR: '$seq[1]' must be 'spacer', 'DR' or 'leader'\n"
       unless $seq[1] =~ /^(spacer|DR|leader)$/i;
     
-    # if no group 
     my $cmd;
-    if($seq[3] eq 'NA'){
+    if($seq[3] eq 'NA'){ # no spacer|DR grouping
       $cmd = query_noGroup(\@seq, $query,);
     }
-    else{
+    else{  # grouping
       $cmd = query_byGroup(\@seq, $query);
     }
     
     $cmd =~ s/[\n\t]+/ /g;
     $cmd =~ s/ +/ /g;
-    
+
+    # status
+    print STDERR "$cmd\n" if $verbose;
+
+    # query db
     my $ret = $dbh->selectall_arrayref($cmd);
     die "ERROR: no matching entries!\n"
       unless $$ret[0];
     
     # loading hash #
     $res{$seq}{"data"} = $ret;
-    $res{$seq}{"seq"} = $fasta_r->{$seq};
-    
+    $res{$seq}{"seq"} = $fasta_r->{$seq};   
   }
   
   #print Dumper %res; exit;
@@ -245,8 +247,14 @@ $tbl_oi.Locus_ID,
   # where statement #
   $cmd .= "
 FROM $tbl_oi, loci
-WHERE loci.locus_id = $tbl_oi.locus_id";
+WHERE loci.locus_id = $tbl_oi.locus_id
+AND loci.locus_id = $$seq_r[0]";
+
   
+  # selecting by element id
+  $cmd .= " AND $tbl_oi.$prefix\_ID = $$seq_r[2]" 
+    if $tbl_oi =~ /Spacers|DRs/;
+     
   #print Dumper $cmd; exit;
   return $cmd;
 }
