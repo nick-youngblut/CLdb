@@ -59,6 +59,9 @@ perldoc CLdb_leader2fasta.pl
 Get leader sequences from the CRISPR database
 and write them in fasta format.
 
+Use CLdb_arrayFastaAddInfo.pl to add more
+metadata (eg., subtype) to each sequence name.
+
 =head2 OUTPUT: sequence names
 
 locus_id|Leader_start|Leader_end
@@ -152,13 +155,7 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 
 
 # getting leaderss of interest from database #
-my $leaders_r;
-if($join_sql){
-	$leaders_r = get_leaders_join($dbh, $extra_query, $join_sql);
-	}
-else{
-	$leaders_r = get_leaders($dbh, $extra_query);
-	}
+my $leaders_r = get_leaders($dbh, $extra_query, $join_sql);
 
 # writing fasta #
 write_leaders_fasta($leaders_r);
@@ -170,79 +167,47 @@ exit;
 
 ### Subroutines
 sub write_leaders_fasta{
-# writing arrays as fasta
-	my ($leaders_r) = @_;
-	
-	foreach my $locus_id (keys %$leaders_r){
-		print join("\n", 
-				join("|", 
-					">$locus_id", 
-					$leaders_r->{$locus_id}{'Leader_start'},
-					$leaders_r->{$locus_id}{'Leader_end'}),
-				$leaders_r->{$locus_id}{'Leader_sequence'}
-				), "\n";
-		}
-	}
+  # writing arrays as fasta
+  my ($leaders_r) = @_;
+  
+  foreach my $locus_id (keys %$leaders_r){
+    print join("\n", 
+	       join("|", 
+		    ">$locus_id", 
+		    'Leader', 'NA', 'NA'
+		    ),
+	       $leaders_r->{$locus_id}{'Leader_sequence'}
+	      ), "\n";
+  }
+}
 
 sub get_leaders{
-	my ($dbh, $extra_query) = @_;
-	
-	# make query #
-	my $query = "SELECT Locus_ID, Leader_start, Leader_end, Leader_sequence FROM Leaders";
-	$query = join(" ", $query, $extra_query);
-	
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %leaders;
-	foreach my $row (@$ret){
-		$$row[3] =~ s/-//g if $gap_rm; 		# removing gaps
-		$leaders{$$row[0]}{'Leader_start'} = $$row[1];
-		$leaders{$$row[0]}{'Leader_end'} = $$row[2];
-		$leaders{$$row[0]}{'Leader_sequence'} = $$row[3];
-		}
-	
-		#print Dumper %leaders; exit;
-	return \%leaders;
-	}
-	
-sub get_leaders_join{
-	my ($dbh, $extra_query, $join_sql) = @_;
-	
-	# make query #
-	my $query = "SELECT a.Locus_ID, a.Leader_sequence FROM Leaders a, Loci b WHERE a.locus_id = b.locus_id $join_sql";
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
+  my ($dbh, $extra_query, $join_sql) = @_;
+  
+  # make query #
+  my $query = "SELECT loci.Locus_ID, leaders.Leader_sequence
+FROM Loci, Leaders
+WHERE loci.locus_id = leaders.locus_id
+$join_sql";
+  $query = join(" ", $query, $extra_query);
 
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %leaders;
-	foreach my $row (@$ret){
-		$$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
-		$leaders{$$row[0]} = $$row[1];
-		}
-	
-	#	print Dumper %leaders; exit;
-	return \%leaders;
-	}
-	
-sub join_query_opts_OLD{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
+  # status #
+  print STDERR "$query\n" if $verbose;
 
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
-
-
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries!\n"
+    unless $$ret[0];
+  
+  my %leaders;
+  foreach my $row (@$ret){
+    $$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
+#    $leaders{$$row[0]}{'Leader_start'} = $$row[1];
+#    $leaders{$$row[0]}{'Leader_end'} = $$row[2];
+    $leaders{$$row[0]}{'Leader_sequence'} = $$row[1];
+  }
+  
+  #print Dumper %leaders; exit;
+  return \%leaders;
+}
 

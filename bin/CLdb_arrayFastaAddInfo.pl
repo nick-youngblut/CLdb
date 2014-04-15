@@ -162,128 +162,138 @@ exit;
 ### Subroutines
 sub write_array_seq{
 # writing arrays as fasta
-	my ($fasta2_r) = @_;
-	
-	foreach my $seq (keys %$fasta2_r){
-		foreach my $element (@{$fasta2_r->{$seq}{"data"}}){
-			my $name = join("|", @$element);
-			print join("\n", ">$name", $fasta2_r->{$seq}{"seq"}), "\n";
-			}
-		}
-	}
+  my ($fasta2_r) = @_;
+  
+  foreach my $seq (keys %$fasta2_r){
+    foreach my $element (@{$fasta2_r->{$seq}{"data"}}){
+      my $name = join("|", @$element);
+      print join("\n", ">$name", $fasta2_r->{$seq}{"seq"}), "\n";
+    }
+  }
+}
 
 sub get_CLdb_info{
-# getting necessary info from CLdb #
-## query is sequence-dependent ##
-	my ($dbh, $fasta_r, $query) = @_;
-	
-	my %res;
-	foreach my $seq (keys %$fasta_r){
-		my @seq = split /\|/, $seq;
-		die "ERROR: '$seq' does not have 4 components separated by '|'\n"
-			unless scalar @seq == 4;
-		die "ERROR: '$seq[1]' must be 'spacer' or 'DR'\n"
-			unless $seq[1] =~ /^(spacer|DR)$/i;
-		
-		# if no group 
-		my $cmd;
-		if($seq[3] eq 'NA'){
-			$cmd = query_noGroup(\@seq, $query,);
-			}
-		else{
-			$cmd = query_byGroup(\@seq, $query);
-			}
-	
-		$cmd =~ s/[\n\t]+/ /g;
-		$cmd =~ s/ +/ /g;
-	
-		my $ret = $dbh->selectall_arrayref($cmd);
-		die "ERROR: no matching entries!\n"
-			unless $$ret[0];
-		
-		# loading hash #
-		$res{$seq}{"data"} = $ret;
-		$res{$seq}{"seq"} = $fasta_r->{$seq};
-		
-		}
+  # getting necessary info from CLdb #
+  ## query is sequence-dependent ##
+  my ($dbh, $fasta_r, $query) = @_;
+  
+  my %res;
+  foreach my $seq (keys %$fasta_r){
+    my @seq = split /\|/, $seq;
+    die "ERROR: '$seq' does not have 4 components separated by '|'\n"
+      unless scalar @seq == 4;
+    die "ERROR: '$seq[1]' must be 'spacer', 'DR' or 'leader'\n"
+      unless $seq[1] =~ /^(spacer|DR|leader)$/i;
+    
+    # if no group 
+    my $cmd;
+    if($seq[3] eq 'NA'){
+      $cmd = query_noGroup(\@seq, $query,);
+    }
+    else{
+      $cmd = query_byGroup(\@seq, $query);
+    }
+    
+    $cmd =~ s/[\n\t]+/ /g;
+    $cmd =~ s/ +/ /g;
+    
+    my $ret = $dbh->selectall_arrayref($cmd);
+    die "ERROR: no matching entries!\n"
+      unless $$ret[0];
+    
+    # loading hash #
+    $res{$seq}{"data"} = $ret;
+    $res{$seq}{"seq"} = $fasta_r->{$seq};
+    
+  }
+  
+  #print Dumper %res; exit;
+  return \%res;
+}
 
-		#print Dumper %res; exit;
-	return \%res;
-	}
-	
 sub query_noGroup{
-	my ($seq_r, $query) = @_;
-	
-	# table #
-	my $tbl_oi = "Spacers";
-	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
-		
-	my $prefix = $$seq_r[1];			# "spacer|DR"
-	my $cmd = "SELECT 
+  my ($seq_r, $query) = @_;
+  
+  # table #  
+  my $tbl_oi;
+  if($seq_r->[1] =~ /spacer/i){
+    $tbl_oi = "Spacers";
+  }
+  elsif($seq_r->[1] =~ /DR/i){
+    $tbl_oi = "DRs";
+  }
+  elsif($seq_r->[1] =~ /leader/i){
+    $tbl_oi = "Leaders";
+  }
+  else{ die "LOGIC ERROR: $!\n"; }
+
+  my $prefix = $$seq_r[1];			# "spacer|DR|leader"
+  my $cmd = "SELECT 
 $tbl_oi.Locus_ID,
-'$prefix',
-$tbl_oi.$prefix\_ID,
-'NA'";
-	
-	# adding other query options #
-	$cmd .= ", $query" if $query;
-	if($pos_b){
-		$cmd .= ", loci.Scaffold";
-		$cmd .= ", $tbl_oi.$prefix\_start";
-		$cmd .= ", $tbl_oi.$prefix\_end";
-		}	
-	
-	# where statement #
-	$cmd .= "
+'$prefix'";
+  $cmd .= $tbl_oi =~ /Spacers|DRs/ ? ",$tbl_oi.$prefix\_ID,'NA'" :
+    ",'NA','NA'";
+  
+  # adding other query options #
+  $cmd .= ", $query" if $query;
+  if($pos_b){
+    $cmd .= ", loci.Scaffold";
+    $cmd .= ", $tbl_oi.$prefix\_start";
+    $cmd .= ", $tbl_oi.$prefix\_end";
+  }	
+  
+  # where statement #
+  $cmd .= "
 FROM $tbl_oi, loci
 WHERE loci.locus_id = $tbl_oi.locus_id";
-	
-	return $cmd;
-	}
-	
+  
+  #print Dumper $cmd; exit;
+  return $cmd;
+}
+
 sub query_byGroup{
-	my ($seq_r, $query) = @_;
-	
-	# table #
-	my $tbl_oi = "Spacers";
-	$tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
-		
-	my $prefix = $$seq_r[1];			# "spacer|DR"
-	my $cmd = "SELECT 
+  my ($seq_r, $query) = @_;
+  
+  # table #
+  my $tbl_oi = "Spacers";
+  $tbl_oi = "DRs" if $$seq_r[1] =~ /DR/i;
+  
+  my $prefix = $$seq_r[1];			# "spacer|DR"
+  my $cmd = "SELECT 
 $tbl_oi.Locus_ID,
 '$prefix',
 $tbl_oi.$prefix\_ID,
 $prefix\_clusters.cluster_id";
-	
-	# adding other query options #
-	$cmd .= ", $query" if $query;
-	if($pos_b){
-		$cmd .= ", loci.Scaffold";
-		$cmd .= ", $tbl_oi.$prefix\_start";
-		$cmd .= ", $tbl_oi.$prefix\_end";
-		}
-	
-	# where statement #
-	$cmd .= "
+  
+  # adding other query options #
+  $cmd .= ", $query" if $query;
+  if($pos_b){
+    $cmd .= ", loci.Scaffold";
+    $cmd .= ", $tbl_oi.$prefix\_start";
+    $cmd .= ", $tbl_oi.$prefix\_end";
+  }
+  
+  # where statement #
+  $cmd .= "
 FROM $tbl_oi, loci, $prefix\_clusters
 WHERE loci.locus_id = $tbl_oi.locus_id 
 AND $prefix\_clusters.locus_ID = $tbl_oi.locus_ID
 AND $prefix\_clusters.$prefix\_ID = $tbl_oi.$prefix\_ID
 AND $prefix\_clusters.cluster_id = '$$seq_r[3]'";
-	
-	return $cmd;
-	}
-	
+  
+  return $cmd;
+}
+
 sub add_query_opts{
-	my ($subtype_b, $taxon_id_b, $taxon_name_b) = @_;
-	
-	my @query;
-	push @query, "loci.subtype" if $subtype_b;
-	push @query, "loci.taxon_id" if $taxon_id_b;
-	push @query,"loci.taxon_name" if $taxon_name_b;
-	
-	return join(",", @query);
-	}
+  my ($subtype_b, $taxon_id_b, $taxon_name_b) = @_;
+  
+  my @query;
+  push @query, "loci.subtype" if $subtype_b;
+  push @query, "loci.taxon_id" if $taxon_id_b;
+  push @query,"loci.taxon_name" if $taxon_name_b;
+  
+  return join(",", @query);
+}
 
 
 
