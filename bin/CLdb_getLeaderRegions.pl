@@ -290,8 +290,7 @@ else{				# by query
 
 # making fasta from genbank sequence if needed #
 my $loci_update = genbank2fasta($subject_loci_r, $db_path, $fasta_dir);
-update_loci($dbh, $leader_tbl_r) if $loci_update;
-
+update_loci($dbh, $subject_loci_r) if $loci_update;  # update loci table if and fasta files made
 
 # getting array start-end from loci table #
 my $array_se_r = get_array_se($dbh, $join_sql, $extra_query, $leader_tbl_r);
@@ -393,14 +392,20 @@ sub get_leader_seq{
 # getting leader seqs from genbanks #
   my ($array_se_r, $leader_loc_r, $fasta_dir, 
       $genbank_path, $length, $annotation, $by_strand) = @_;
+
+#  print Dumper $array_se_r; exit;
   
   # making fasta => scaffold => locus index #
   ## for querying by genome instead of by locus
   my (%fasta_locus, %fasta_genbank);
   foreach my $array (keys %$array_se_r){
+    die "ERROR: no fasta file name for locus '$array'\n" unless
+      ${$array_se_r->{$array}}[3] ne '';
     push @{$fasta_locus{${$array_se_r->{$array}}[3]}{${$array_se_r->{$array}}[5]}}, $array;
     $fasta_genbank{${$array_se_r->{$array}}[3]} = ${$array_se_r->{$array}}[4];
   }
+
+  #print Dumper %fasta_locus; exit;
   
   # getting all leader regions for each fasta #
   foreach my $fasta (keys %fasta_locus){ # each genome
@@ -705,6 +710,7 @@ sub genbank2fasta{
       $update_cnt++;
     }
   }
+
   return $update_cnt;		# if >0; update loci tbl
 }
 
@@ -802,7 +808,7 @@ GROUP BY taxon_name, taxon_id";
 
 sub update_loci{
   # updating loci w/ fasta file info for newly written fasta #
-  my ($dbh, $leader_tbl_r) = @_;
+  my ($dbh, $subject_tbl_r) = @_;
   
   # status#
   print STDERR "...updating Loci table with newly made fasta files\n";
@@ -811,7 +817,7 @@ sub update_loci{
   my $q = "UPDATE loci SET fasta_file=? WHERE genbank_file=?";
   my $sth = $dbh->prepare($q);
   
-  foreach my $row (@$leader_tbl_r){
+  foreach my $row (@$subject_tbl_r){
     next unless $$row[3]; 						# if no fasta_file; skipping
     my @parts = File::Spec->splitpath($$row[3]);
     
@@ -824,7 +830,7 @@ sub update_loci{
     }
   }
   $dbh->commit();
-  
+
   print STDERR "...updates committed!\n";
 }
 
