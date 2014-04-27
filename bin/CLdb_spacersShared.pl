@@ -184,110 +184,110 @@ exit;
 ### Subroutines
 sub write_shared_matrix{
 # writing matrix of shared spacers (based on spacer groups/clusters) #
-	my ($arrays_r, $groups_r) = @_;		# cluster_ID => grouping_ID => count
-	
-	my @groups = sort{$a cmp $b} keys %$groups_r;
-	
-	# header #
-	print join("\t", "Spacer_cluster", @groups), "\n"; 
-	
-	# body #
-	foreach my $clust (sort keys %$arrays_r){
-		my @row = ("$clust");
-		foreach my $group ( @groups ){
-			if(exists $arrays_r->{$clust}{$group}){
-				push @row, $arrays_r->{$clust}{$group};
-				}
-			else{
-				push @row, 0;				# count of zero for cluster => group
-				}
-			}
-		print join("\t", @row), "\n";		# writing line of matrix
-		}
-	}
+  my ($arrays_r, $groups_r) = @_;		# cluster_ID => grouping_ID => count
+  
+  my @groups = sort{$a cmp $b} keys %$groups_r;
+  
+  # header #
+  print join("\t", "Spacer_cluster", @groups), "\n"; 
+  
+  # body #
+  foreach my $clust (sort keys %$arrays_r){
+    my @row = ("$clust");
+    foreach my $group ( @groups ){
+      if(exists $arrays_r->{$clust}{$group}){
+	push @row, $arrays_r->{$clust}{$group};
+      }
+      else{
+	push @row, 0;				# count of zero for cluster => group
+      }
+    }
+    print join("\t", @row), "\n";		# writing line of matrix
+  }
+}
 
 sub get_arrays_join_clust{
-	my ($dbh, $extra_query, $group_by_r) = @_;
-	
-	my $sel = join(",", qw/spacer_clusters.cluster_ID count(spacer_clusters.cluster_ID)/, @$group_by_r);
-	my $group_by = join(",", @$group_by_r, "spacer_clusters.Cluster_ID");
-	
-	# make query #
-	my $q = "SELECT 
+  my ($dbh, $extra_query, $group_by_r) = @_;
+  
+  my $sel = join(",", qw/spacer_clusters.cluster_ID count(spacer_clusters.cluster_ID)/, @$group_by_r);
+  my $group_by = join(",", @$group_by_r, "spacer_clusters.Cluster_ID");
+  
+  # make query #
+  my $q = "SELECT 
 $sel
 FROM loci, spacer_clusters
 WHERE loci.locus_id = spacer_clusters.locus_id
 AND spacer_clusters.cutoff = $cutoff
 $extra_query
 GROUP BY $group_by";
-	$q =~ s/\n/ /g;
-	
-	# status #
-	print STDERR "$q\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($q);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %arrays;
-	my %groups;
-	foreach my $row (@$ret){
-	  die " ERROR: not matching entries!\n"
-	    unless $$row[0]; 
-	  my $id;
-	  if(! @$group_by_r){			# just total for each cluster
-	    $id = "Total";
-	  }
-	  elsif(! $$row[2]){			# group_by ID
-	    $id = "NULL";
-	  }
-	  else{
-	    $id = join("__", @$row[2..$#$row]);			
-	  }
-	  $arrays{$$row[0]}{$id} = $$row[1];
-	  $groups{$id} = 1;
-	}
-	
-	#print Dumper %arrays; exit;
-	return \%arrays, \%groups;
-      }
+  $q =~ s/\n/ /g;
+  
+  # status #
+  print STDERR "$q\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($q);
+  die " ERROR: no matching entries!\n"
+    unless $$ret[0];
+  
+  my %arrays;
+  my %groups;
+  foreach my $row (@$ret){
+    die " ERROR: not matching entries!\n"
+      unless $$row[0]; 
+    my $id;
+    if(! @$group_by_r){			# just total for each cluster
+      $id = "Total";
+    }
+    elsif(! $$row[2]){			# group_by ID
+      $id = "NULL";
+    }
+    else{
+      $id = join("__", @$row[2..$#$row]);			
+    }
+    $arrays{$$row[0]}{$id} = $$row[1];
+    $groups{$id} = 1;
+  }
+  
+  #print Dumper %arrays; exit;
+  return \%arrays, \%groups;
+}
 
 sub make_group_by_sql{
-	my ($subtype, $taxon_id, $taxon_name, $locus_id) = @_;
-	my @group_by;
-	push @group_by, "loci.subtype" if $subtype;
-	push @group_by, "loci.taxon_id" if $taxon_id;
-	push @group_by,"loci.taxon_name" if $taxon_name;
-	push @group_by, "loci.locus_id" if $locus_id;
-	return \@group_by;
-	}
-	
+  my ($subtype, $taxon_id, $taxon_name, $locus_id) = @_;
+  my @group_by;
+  push @group_by, "loci.subtype" if $subtype;
+  push @group_by, "loci.taxon_id" if $taxon_id;
+  push @group_by,"loci.taxon_name" if $taxon_name;
+  push @group_by, "loci.locus_id" if $locus_id;
+  return \@group_by;
+}
+
 sub entry_count{
-	my ($dbh, $table_list_r) = @_;
-	my %table;
-	foreach my $table (@$table_list_r){
-		my $q = "SELECT count(*) FROM $table";
-		my $res = $dbh->selectall_arrayref($q);
-		$table =~ tr/A-Z/a-z/;
-		$table{$table} = $$res[0][0];
-		}
-		#print Dumper %table; exit;
-	return \%table;
-	}
+  my ($dbh, $table_list_r) = @_;
+  my %table;
+  foreach my $table (@$table_list_r){
+    my $q = "SELECT count(*) FROM $table";
+    my $res = $dbh->selectall_arrayref($q);
+    $table =~ tr/A-Z/a-z/;
+    $table{$table} = $$res[0][0];
+  }
+  #print Dumper %table; exit;
+  return \%table;
+}
 
 sub list_tables{
-	my $dbh = shift;
-	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-	return [keys %$all];
-	}
+  my $dbh = shift;
+  my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
+  return [keys %$all];
+}
 
 sub join_query_opts_OLD{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
-	}
+  # joining query options for selecting loci #
+  my ($vals_r, $cat) = @_;
+  
+  return "" unless @$vals_r;	
+  
+  map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+  return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
+}
