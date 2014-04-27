@@ -85,6 +85,14 @@ Fasta files should be in the CLdb_HOME/fasta/ directory
 Spacer and DR groups can be blasted at the same time (combined fasta)
 Athough, it may be best to blast DRs with a higher evalue cutoff.
 
+=head2 IF PERFORMING BLAST WITHOUT THIS SCRIPT:
+
+You can conduct the blastn run without this script.
+Just make sure to use the blastn in the blast+ toolkit
+and set the output format as:
+'-outfmt "7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
+evalue bitscore qlen slen btop"'
+
 =head1 EXAMPLES
 
 =head2 Blasting all spacers against all genomes in CLdb

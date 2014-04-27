@@ -143,7 +143,7 @@ use CLdb::seq qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database_file, $path, @cluster_cut);
-my ($spacer_bool, $dr_bool, $invariant);
+my ($spacer_bool, $dr_bool, $invariant, $delete_entries);
 my $cluster = 1;
 my $threads = 1;
 GetOptions(
@@ -153,6 +153,7 @@ GetOptions(
 	   "cluster=f{,}" => \@cluster_cut,
 	   "invariant" => \$invariant,
 	   "path=s" => \$path,
+	   "delete" => \$delete_entries,  # deleting all entries currently in CLdb
 	   "threads=i" => \$threads,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -174,6 +175,12 @@ my $cluster_cut_r = check_cluster(\@cluster_cut);
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
+
+# deleting any existing entries if requested
+if($delete_entries){
+  delete_cluster_entries($dbh, 'spacer_clusters') if $spacer_bool;
+  delete_cluster_entries($dbh, 'DR_clusters') if $dr_bool;  
+}
 
 # making a clustering directory #
 my $dir = make_cluster_dir($database_file, $path); 
@@ -236,7 +243,20 @@ $dbh->disconnect();
 exit;
 
 
-### Subroutines
+#--- Subroutines ---#
+sub delete_cluster_entries{
+# deleting existing entries
+  my ($dbh, $tbl) = @_;
+
+  my $cmd = "DELETE FROM $tbl";
+  my $sql = $dbh->prepare($cmd);
+  $sql->execute();
+  $dbh->commit();
+
+  # status
+  print STDERR "Deleted all entries in '$tbl' table\n";
+}
+
 sub add_entry{
 # add_entry to *_cluster #
   my ($dbh, $clust_r, $cat) = @_;
