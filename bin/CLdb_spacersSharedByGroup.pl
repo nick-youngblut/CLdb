@@ -123,20 +123,20 @@ sub get_specific_spacers{
   }
 
   # summarizing
-  foreach my $spacer_id (keys %$shared_r){
+  foreach my $spacer_id (keys %{$shared_r->{spacer}}){
     # determining how many groups have >0 counts
     my $pres_cnt = 0;
-    map{ $pres_cnt++ if $_ > 0 } @{$shared_r->{$spacer_id}}{ keys %{$shared_r->{$spacer_id}} };
+    map{ $pres_cnt++ if $_ > 0 } @{$shared_r->{spacer}{$spacer_id}}{ keys %{$shared_r->{spacer}{$spacer_id}} };
 
     # if pres_cnt == 1, check for pres in >= %percent of group
     if($pres_cnt == 1){
-      foreach my $group_id (keys %{$shared_r->{$spacer_id}}){
+      foreach my $group_id (keys %{$shared_r->{spacer}{$spacer_id}}){
 	die "LOGIC ERROR: cannot find '$group_id' in group counts\n"
 	  unless exists $groups_r->{counts}{$group_id};
 	
-	if($shared_r->{$spacer_id}{$group_id} > 0){
+	if($shared_r->{spacer}{$spacer_id}{$group_id} > 0){ # must be found in > percent of group
 	  $summary{$group_id}++ if 
-	    $shared_r->{$spacer_id}{$group_id} / $groups_r->{counts}{$group_id} * 100 
+	    $shared_r->{spacer}{$spacer_id}{$group_id} / $groups_r->{counts}{$group_id} * 100 
 	      > $percent;
 	}
       }
@@ -146,12 +146,17 @@ sub get_specific_spacers{
   
   # writing output
   ## header
-  print join("\t", qw/group N_specific_spacers total_spacers percent_of_total/), "\n";
+  print join("\t", qw/group N_specific_spacers total_group_spacers 
+		      percent_of_group total_spacers percent_of_total/), "\n";
   ## body
-  foreach my $group_id (keys %summary){
+  foreach my $group_id (sort keys %summary){
     print join("\t", $group_id, $summary{$group_id}, 
-	       scalar keys %$shared_r,	       
-	       sprintf("%.2f", ($summary{$group_id} / scalar keys %$shared_r) * 100)
+	       $shared_r->{total}{$group_id},
+	       sprintf("%.2f", ($summary{$group_id} / 
+				$shared_r->{total}{$group_id}) * 100),
+	       scalar keys %{$shared_r->{spacer}},
+	       sprintf("%.2f", ($summary{$group_id} /
+				scalar keys %{$shared_r->{spacer}}) * 100)
 	      ), "\n";
   }
 
@@ -202,14 +207,23 @@ sub load_spacers_shared{
     else{   # body
       # initializing group counts
       foreach my $group (keys %{$groups_r->{counts}}){
-	$spacers{$l[0]}{$group} = 0;
+	$spacers{spacer}{$l[0]}{$group} = 0;
+	$spacers{total}{$group} = 0 
+	  unless exists $spacers{total}{$group};
       }
 
       # counting
+      my %group_cnt;
       for my $i (1..$#l){
 	my $group = $groups_r->{index}{$i};
-	$spacers{$l[0]}{$group}++ if $l[$i] > 0;
+	if($l[$i] > 0){
+	  $spacers{spacer}{$l[0]}{$group}++;
+	  $group_cnt{$group} = 1;
 	}
+      }  
+      foreach my $group_id (keys %group_cnt){ # adding to total if spacer present in group
+	$spacers{total}{$group_id}++; 
+      }
     }
   }
 
