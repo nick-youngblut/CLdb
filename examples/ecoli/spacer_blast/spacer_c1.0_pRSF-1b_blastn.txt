@@ -1,0 +1,314 @@
+# BLASTN 2.2.28+
+# Query: S17
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S17	pRSF-1b	100.00	32	0	0	1	32	1397	1366	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S31
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S31	pRSF-1b	100.00	33	0	0	1	33	2193	2161	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S22
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S22	pRSF-1b	100.00	32	0	0	1	32	1613	1644	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S11
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S11	pRSF-1b	100.00	32	0	0	1	32	977	1008	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S32
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S32	pRSF-1b	100.00	32	0	0	1	32	2231	2262	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S23
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S23	pRSF-1b	100.00	32	0	0	1	32	1621	1652	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S15
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S15	pRSF-1b	100.00	32	0	0	1	32	1158	1189	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S8
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S8	pRSF-1b	100.00	32	0	0	1	32	469	500	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S3
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S3	pRSF-1b	100.00	33	0	0	1	33	182	214	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S35
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S35	pRSF-1b	100.00	32	0	0	1	32	2425	2394	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S2
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S2	pRSF-1b	100.00	32	0	0	1	32	61	92	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S5
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S5	pRSF-1b	100.00	32	0	0	1	32	388	357	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S14
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S14	pRSF-1b	100.00	33	0	0	1	33	1155	1187	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S21
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S21	pRSF-1b	100.00	32	0	0	1	32	1491	1522	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S8
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S8	pRSF-1b	100.00	32	0	0	1	32	469	500	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S12
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S12	pRSF-1b	100.00	32	0	0	1	32	1060	1029	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S20
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S20	pRSF-1b	100.00	32	0	0	1	32	1507	1476	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S12
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S12	pRSF-1b	100.00	32	0	0	1	32	1060	1029	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S5
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S5	pRSF-1b	100.00	32	0	0	1	32	388	357	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S37
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S37	pRSF-1b	100.00	33	0	0	1	33	3626	3594	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S1
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S1	pRSF-1b	100.00	32	0	0	1	32	50	19	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S33
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S33	pRSF-1b	100.00	32	0	0	1	32	2277	2246	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S5
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S5	pRSF-1b	100.00	32	0	0	1	32	388	357	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S24
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S24	pRSF-1b	100.00	32	0	0	1	32	1638	1669	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S6
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S6	pRSF-1b	100.00	32	0	0	1	32	374	405	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S27
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S27	pRSF-1b	100.00	32	0	0	1	32	1507	1476	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S8
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S8	pRSF-1b	100.00	32	0	0	1	32	469	500	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S34
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S34	pRSF-1b	100.00	33	0	0	1	33	2319	2351	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S6
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S6	pRSF-1b	100.00	32	0	0	1	32	374	405	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S26
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S26	pRSF-1b	100.00	32	0	0	1	32	1723	1754	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S19
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 2 hits found
+S19	pRSF-1b	100.00	32	0	0	1	32	1501	1470	5e-15	63.9	32	3669	32
+S19	pRSF-1b	100.00	21	0	0	12	32	522	542	2e-08	42.1	32	3669	21
+# BLASTN 2.2.28+
+# Query: S7
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S7	pRSF-1b	100.00	32	0	0	1	32	434	403	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S12
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S12	pRSF-1b	100.00	32	0	0	1	32	1060	1029	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S10
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S10	pRSF-1b	100.00	32	0	0	1	32	887	856	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S4
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S4	pRSF-1b	100.00	32	0	0	1	32	210	241	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S4
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S4	pRSF-1b	100.00	32	0	0	1	32	210	241	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S9
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S9	pRSF-1b	100.00	32	0	0	1	32	786	817	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S18
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S18	pRSF-1b	100.00	33	0	0	1	33	1422	1454	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S25
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S25	pRSF-1b	100.00	32	0	0	1	32	1643	1674	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S34
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S34	pRSF-1b	100.00	33	0	0	1	33	2319	2351	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S35
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S35	pRSF-1b	100.00	32	0	0	1	32	2425	2394	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S33
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S33	pRSF-1b	100.00	32	0	0	1	32	2277	2246	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S36
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S36	pRSF-1b	100.00	32	0	0	1	32	3266	3235	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S30
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S30	pRSF-1b	100.00	32	0	0	1	32	2140	2171	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S13
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S13	pRSF-1b	100.00	32	0	0	1	32	1140	1171	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S29
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S29	pRSF-1b	100.00	32	0	0	1	32	2090	2121	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S8
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S8	pRSF-1b	100.00	32	0	0	1	32	469	500	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S34
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S34	pRSF-1b	100.00	33	0	0	1	33	2319	2351	1e-15	65.9	33	3669	33
+# BLASTN 2.2.28+
+# Query: S4
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S4	pRSF-1b	100.00	32	0	0	1	32	210	241	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S26
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S26	pRSF-1b	100.00	32	0	0	1	32	1723	1754	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S28
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S28	pRSF-1b	100.00	32	0	0	1	32	1959	1928	5e-15	63.9	32	3669	32
+# BLASTN 2.2.28+
+# Query: S16
+# Database: pRSF-1b.fna
+# Fields: query id, subject id, % identity, alignment length, mismatches, gap opens, q. start, q. end, s. start, s. end, evalue, bit score, query length, subject length, BTOP
+# 1 hits found
+S16	pRSF-1b	100.00	32	0	0	1	32	1205	1174	5e-15	63.9	32	3669	32
+# BLAST processed 52 queries

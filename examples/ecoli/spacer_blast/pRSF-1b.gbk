@@ -1,0 +1,133 @@
+LOCUS       pRSF-1b      3669 bp    DNA   circular            16-JUN-2003
+DEFINITION  pRSF-1b (kan).
+SOURCE      
+  ORGANISM  
+COMMENT     This file is created by Vector NTI
+            http://www.informaxinc.com/
+COMMENT     VNTDATE|304599816|
+COMMENT     VNTDBDATE|305573303|
+COMMENT     VNTNAME|pRSF-1b|
+COMMENT     VNTREPLTYPE|Plasmid
+COMMENT     VNTEXTCHREPL|Bacteria
+FEATURES             Location/Qualifiers
+     CDS             complement(579..1394)
+                     /vntifkey="4"
+                     /label=Kan
+     CDS             complement(2447..3529)
+                     /vntifkey="4"
+                     /label=lacI
+                     /note="Wildtype lacI gene"
+     promoter        3653..3669
+                     /vntifkey="30"
+                     /label=T7\Promoter
+     protein_bind    5..25
+                     /vntifkey="31"
+                     /label=lacO
+     RBS             58..63
+                     /vntifkey="32"
+                     /label=RBS-1
+     primer          complement(288..306)
+                     /vntifkey="27"
+                     /label=T7\Terminator\primer
+     terminator      302..349
+                     /vntifkey="43"
+                     /label=T7\Terminator
+     protein_bind    206..250
+                     /vntifkey="31"
+                     /label=S-Tag
+     misc_RNA        complement(1502..2200)
+                     /vntifkey="53"
+                     /label=RNA\II
+     misc_RNA        2091..2197
+                     /vntifkey="53"
+                     /label=RNA\I
+     rep_origin      1502..2251
+                     /vntifkey="33"
+                     /label=RSF\ori\-\RSF1030\Homology
+     -10_signal      2079..2084
+                     /vntifkey="47"
+                     /label=-10\RNA\I
+     -35_signal      2055..2060
+                     /vntifkey="48"
+                     /label=-35\RNA\I
+     RBS             complement(1400..1404)
+                     /vntifkey="32"
+                     /label=RBS
+     -35_signal      complement(1459..1464)
+                     /vntifkey="48"
+                     /label=-35\Ap
+     -10_signal      complement(1436..1442)
+                     /vntifkey="47"
+                     /label=-10\Ap
+     protein_bind    113..127
+                     /vntifkey="31"
+                     /label=Ek
+     misc_feature    77..94
+                     /vntifkey="21"
+                     /label=His-Tag
+BASE COUNT      924 a       972 c       875 g       898 t 
+ORIGIN
+        1 ggggaattgt gagcggataa caattcccct gtagaaataa ttttgtttaa ctttaataag 
+       61 gagatatacc atggcacatc accaccacca tcacgtgggt accggttcga atgatgacga 
+      121 cgacaagagt ccggatccca attgggagct cgtgtacacg gcgcgcctgc aggtcgacaa 
+      181 gcttgcggcc gcactcgagt ctggtaaaga aaccgctgct gcgaaatttg aacgccagca 
+      241 catggactcg tctactagcg cagcttaatt aacctaggct gctgccaccg ctgagcaata 
+      301 actagcataa ccccttgggg cctctaaacg ggtcttgagg ggttttttgc tgaaacctca 
+      361 ggcatttgag aagcacacgg tcacactgct tccggtagtc aataaaccgg taaaccagca 
+      421 atagacataa gcggctattt aacgaccctg ccctgaaccg acgacaagct gacgaccggg 
+      481 tctccgcaag tggcactttt cggggaaatg tgcgcggaac ccctatttgt ttatttttct 
+      541 aaatacattc aaatatgtat ccgctcatga attaattctt agaaaaactc atcgagcatc 
+      601 aaatgaaact gcaatttatt catatcagga ttatcaatac catatttttg aaaaagccgt 
+      661 ttctgtaatg aaggagaaaa ctcaccgagg cagttccata ggatggcaag atcctggtat 
+      721 cggtctgcga ttccgactcg tccaacatca atacaaccta ttaatttccc ctcgtcaaaa 
+      781 ataaggttat caagtgagaa atcaccatga gtgacgactg aatccggtga gaatggcaaa 
+      841 agtttatgca tttctttcca gacttgttca acaggccagc cattacgctc gtcatcaaaa 
+      901 tcactcgcat caaccaaacc gttattcatt cgtgattgcg cctgagcgag acgaaatacg 
+      961 cggtcgctgt taaaaggaca attacaaaca ggaatcgaat gcaaccggcg caggaacact 
+     1021 gccagcgcat caacaatatt ttcacctgaa tcaggatatt cttctaatac ctggaatgct 
+     1081 gttttcccgg ggatcgcagt ggtgagtaac catgcatcat caggagtacg gataaaatgc 
+     1141 ttgatggtcg gaagaggcat aaattccgtc agccagttta gtctgaccat ctcatctgta 
+     1201 acatcattgg caacgctacc tttgccatgt ttcagaaaca actctggcgc atcgggcttc 
+     1261 ccatacaatc gatagattgt cgcacctgat tgcccgacat tatcgcgagc ccatttatac 
+     1321 ccatataaat cagcatccat gttggaattt aatcgcggcc tagagcaaga cgtttcccgt 
+     1381 tgaatatggc tcatactctt cctttttcaa tattattgaa gcatttatca gggttattgt 
+     1441 ctcatgagcg gatacatatt tgaatgtatt tagaaaaata aacaaatagg catgcagcgc 
+     1501 tcttccgctt cctcgctcac tgactcgcta cgctcggtcg ttcgactgcg gcgagcggtg 
+     1561 tcagctcact caaaagcggt aatacggtta tccacagaat caggggataa agccggaaag 
+     1621 aacatgtgag caaaaagcaa agcaccggaa gaagccaacg ccgcaggcgt ttttccatag 
+     1681 gctccgcccc cctgacgagc atcacaaaaa tcgacgctca agccagaggt ggcgaaaccc 
+     1741 gacaggacta taaagatacc aggcgtttcc ccctggaagc tccctcgtgc gctctcctgt 
+     1801 tccgaccctg ccgcttaccg gatacctgtc cgcctttctc ccttcgggaa gcgtggcgct 
+     1861 ttctcatagc tcacgctgtt ggtatctcag ttcggtgtag gtcgttcgct ccaagctggg 
+     1921 ctgtgtgcac gaaccccccg ttcagcccga ccgctgcgcc ttatccggta actatcgtct 
+     1981 tgagtccaac ccggtaagac acgacttatc gccactggca gcagccattg gtaactgatt 
+     2041 tagaggactt tgtcttgaag ttatgcacct gttaaggcta aactgaaaga acagattttg 
+     2101 gtgagtgcgg tcctccaacc cacttacctt ggttcaaaga gttggtagct cagcgaacct 
+     2161 tgagaaaacc accgttggta gcggtggttt ttctttattt atgagatgat gaatcaatcg 
+     2221 gtctatcaag tcaacgaaca gctattccgt tactctagat ttcagtgcaa tttatctctt 
+     2281 caaatgtagc acctgaagtc agccccatac gatataagtt gtaattctca tgttagtcat 
+     2341 gccccgcgcc caccggaagg agctgactgg gttgaaggct ctcaagggca tcggtcgaga 
+     2401 tcccggtgcc taatgagtga gctaacttac attaattgcg ttgcgctcac tgcccgcttt 
+     2461 ccagtcggga aacctgtcgt gccagctgca ttaatgaatc ggccaacgcg cggggagagg 
+     2521 cggtttgcgt attgggcgcc agggtggttt ttcttttcac cagtgagacg ggcaacagct 
+     2581 gattgccctt caccgcctgg ccctgagaga gttgcagcaa gcggtccacg ctggtttgcc 
+     2641 ccagcaggcg aaaatcctgt ttgatggtgg ttaacggcgg gatataacat gagctgtctt 
+     2701 cggtatcgtc gtatcccact accgagatgt ccgcaccaac gcgcagcccg gactcggtaa 
+     2761 tggcgcgcat tgcgcccagc gccatctgat cgttggcaac cagcatcgca gtgggaacga 
+     2821 tgccctcatt cagcatttgc atggtttgtt gaaaaccgga catggcactc cagtcgcctt 
+     2881 cccgttccgc tatcggctga atttgattgc gagtgagata tttatgccag ccagccagac 
+     2941 gcagacgcgc cgagacagaa cttaatgggc ccgctaacag cgcgatttgc tggtgaccca 
+     3001 atgcgaccag atgctccacg cccagtcgcg taccgtcttc atgggagaaa ataatactgt 
+     3061 tgatgggtgt ctggtcagag acatcaagaa ataacgccgg aacattagtg caggcagctt 
+     3121 ccacagcaat ggcatcctgg tcatccagcg gatagttaat gatcagccca ctgacgcgtt 
+     3181 gcgcgagaag attgtgcacc gccgctttac aggcttcgac gccgcttcgt tctaccatcg 
+     3241 acaccaccac gctggcaccc agttgatcgg cgcgagattt aatcgccgcg acaatttgcg 
+     3301 acggcgcgtg cagggccaga ctggaggtgg caacgccaat cagcaacgac tgtttgcccg 
+     3361 ccagttgttg tgccacgcgg ttgggaatgt aattcagctc cgccatcgcc gcttccactt 
+     3421 tttcccgcgt tttcgcagaa acgtggctgg cctggttcac cacgcgggaa acggtctgat 
+     3481 aagagacacc ggcatactct gcgacatcgt ataacgttac tggtttcaca ttcaccaccc 
+     3541 tgaattgact ctcttccggg cgctatcatg ccataccgcg aaaggttttg cgccattcga 
+     3601 tggtgtccgg gatctcgacg ctctccctta tgcgactcct gcattaggaa attaatacga 
+     3661 ctcactata 
+//
+
