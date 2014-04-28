@@ -8,30 +8,39 @@ blastOutfmtParse.pl -- parsing a blast file in '-outfmt 7' format while keeping 
 
 =head1 SYNOPSIS
 
-=head2 Making a comment index file
+=head2 write indexed comments
 
-blastOutfmtParse.pl [flags] -o index.txt < blast_hits.txt > blast_hits_noComments.txt
+blastOutfmtParse.pl -i < blast.txt > comment_index.txt
 
-=head2 Adding back comments
+=head2 write indexed blast hits
 
-blastOutfmtParse.pl -i index.txt < blast_hits_noComments.txt > blast_hits_withComments.txt
+blastOutfmtParse.pl -h < blast.txt > hit_index.txt
 
-=head2 Example of parsing (subsetting blast file)
+=head2 recombining comments & (modified) blast hits
 
-blastOutfmtParse.pl [flags] -o index.txt < blast_hits.txt | grep "E*coli" |
-blastOutfmtParse.pl [flags] -i index.txt > blast_hits_parsed.txt
+blastOutfmtParse.pl -r <(comment_index.txt) <(hit_index.txt)
+
+=head2 using tee to do it all in 1 step (selecting just hits to Ecoli)
+
+cat blast.txt | tee >(blastOutfmtParse.pl -i < blast.txt)
+>(blastOutfmtParse.pl -h < blast.txt | egrep "E*coli") >/dev/null |
+blastOutfmtParse.pl -r 
 
 =head2 Required flags
 
 =over
 
-=item -out
+=item -index 
 
-Output file name for index file. Do not provide if '-index' provided.
+Write index of comments
 
-=item -index
+=item -blast
 
-Index file name.
+Write index of blast hits
+
+=item -recombine
+
+Recombine comments and blast hits
 
 =back
 
@@ -54,9 +63,6 @@ perldoc blastOutfmtParse.pl
 Simple method to parse a blast table with comment lines
 (eg., using grep), while still retaining the comments.
 
-The comments are placed in an index file,
-and an index is added to the beginning of each blast hit
-in output blast table.
 
 =head1 EXAMPLES
 
@@ -89,32 +95,74 @@ use File::Tail;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
-my ($output, $index);
+my ($index, $hit, $rec);
 GetOptions(
-	   "output=s" => \$output,
-	   "index=s" => \$index,
+	   "index" => \$index,
+	   "blast" => \$hit,
+	   "recombine" => \$rec,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 #--- I/O error & defaults ---#
-die "ERROR: provide either an output file name or an index file name\n"
-  unless (defined $output || defined $index) && 
-  !(defined $output && defined $index);
+die "ERROR: provide either '-i', '-h', or '-r'\n"
+  unless $index || $hit || $rec;
 
 
 #--- MAIN ---#
-if($output){
-  parse_blast_write_index($output);
+if($index){
+  parse_blast_comment();
 }
-elsif($index){
-  my $index_r = load_index($index);
-  parse_blast_add_comments($index_r);
+elsif($hit){
+  parse_blast_hit();
 }
-else{ die $!; }
+elsif($rec){
+  recombine_blast();
+}
 
 
 #--- Subroutines ---#
+sub recombine_blast{
+  
+}
+
+sub parse_blast_comment{
+  my $index_cnt = 1;
+  my $last = '';
+  while(<>){
+    chomp;
+    next if /^\s*$/;
+
+    if(/^#/){
+      print join("\t", "#$index_cnt", $_),"\n";
+    }
+    else{
+      $index_cnt++ if $last =~ /^#/;
+    }
+    $last = $_;
+  }
+}
+
+sub parse_blast_hit{
+  my $index_cnt = 1;
+  my $last = '';
+  while(<>){
+    chomp;
+    next if /^\s*$/;
+
+    if(/^#/){
+    }
+    else{
+      print join("\t", "#$index_cnt", $_),"\n";
+      $index_cnt++ if $last =~ /^#/;
+    }
+    $last = $_;
+  }
+}
+
+
+
+
 sub parse_blast_add_comments{
 # parsing blast table and adding back comments from index file
   my ($index_r) = @_;
