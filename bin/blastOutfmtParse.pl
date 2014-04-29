@@ -113,6 +113,8 @@ while(<>){
   }
   else{ # writing blast hit w/ comment index
     print WRITER join("\t", $cmt_cnt, $_), "\n";
+
+    print Dumper $_;
   }
 }
 close WRITER;
@@ -137,7 +139,6 @@ while(<READER>){
 
   # writing hits
   print $l[1], "\n";
-
 }
 close READER;
 
