@@ -8,39 +8,15 @@ blastOutfmtParse.pl -- parsing a blast file in '-outfmt 7' format while keeping 
 
 =head1 SYNOPSIS
 
-=head2 write indexed comments
-
-blastOutfmtParse.pl -i < blast.txt > comment_index.txt
-
-=head2 write indexed blast hits
-
-blastOutfmtParse.pl -h < blast.txt > hit_index.txt
-
-=head2 recombining comments & (modified) blast hits
-
-blastOutfmtParse.pl -r <(comment_index.txt) <(hit_index.txt)
-
-=head2 using tee to do it all in 1 step (selecting just hits to Ecoli)
-
-cat blast.txt | tee >(blastOutfmtParse.pl -i < blast.txt)
->(blastOutfmtParse.pl -h < blast.txt | egrep "E*coli") >/dev/null |
-blastOutfmtParse.pl -r 
+blastOutfmtParse.pl -c < blast.txt > blast_edit.txt
 
 =head2 Required flags
 
 =over
 
-=item -index 
+=item -command
 
-Write index of comments
-
-=item -blast
-
-Write index of blast hits
-
-=item -recombine
-
-Recombine comments and blast hits
+Unix command use for editing blast hits. 
 
 =back
 
@@ -63,8 +39,22 @@ perldoc blastOutfmtParse.pl
 Simple method to parse a blast table with comment lines
 (eg., using grep), while still retaining the comments.
 
+The blast table is parsed into comments and blast hits,
+with a index added to the beginning of the row for each
+(eg., 1\tREST_OF_BLAST_HIT).
+
+'-command' is applied to each blast hit. The comments
+are then added back by using the index.
 
 =head1 EXAMPLES
+
+=head2 Just keep entries with hits
+
+blastOutfmtParse.pl -c "cat" < blast.txt > blast_edited.txt
+
+=head2 Just hits to scaffold5
+
+blastOutfmtParse.pl -c "grep 'scaffold5'" < blast.txt > blast_scaf5.txt
 
 =head1 AUTHOR
 
@@ -88,168 +78,67 @@ use warnings;
 use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
-use File::Spec;
-use File::Tail;
+use IPC::Open2;
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
-my ($index, $hit, $rec);
+my $cmd;
 GetOptions(
-	   "index" => \$index,
-	   "blast" => \$hit,
-	   "recombine" => \$rec,
+	   "cmd=s" => \$cmd,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 #--- I/O error & defaults ---#
-die "ERROR: provide either '-i', '-h', or '-r'\n"
-  unless $index || $hit || $rec;
+die "ERROR: provide a unix command\n"
+  unless defined $cmd;
 
 
 #--- MAIN ---#
-if($index){
-  parse_blast_comment();
-}
-elsif($hit){
-  parse_blast_hit();
-}
-elsif($rec){
-  recombine_blast();
-}
+my $pid = open2(\*READER, \*WRITER, $cmd);
 
-
-#--- Subroutines ---#
-sub recombine_blast{
+my $cmt_cnt = 0;
+my %index;
+while(<>){
+  chomp;
+  next if /^\s*$/;
   
-}
-
-sub parse_blast_comment{
-  my $index_cnt = 1;
-  my $last = '';
-  while(<>){
-    chomp;
-    next if /^\s*$/;
-
-    if(/^#/){
-      print join("\t", "#$index_cnt", $_),"\n";
-    }
-    else{
-      $index_cnt++ if $last =~ /^#/;
-    }
-    $last = $_;
+  if(/^# BLAST.*\d+\.\d+/ || eof){ # new comment
+    $cmt_cnt++;          
+  }
+  if(/^#/){ # loading comment
+    push @{$index{$cmt_cnt}}, $_;
+  }
+  else{ # writing blast hit w/ comment index
+    print WRITER join("\t", $cmt_cnt, $_), "\n";
   }
 }
-
-sub parse_blast_hit{
-  my $index_cnt = 1;
-  my $last = '';
-  while(<>){
-    chomp;
-    next if /^\s*$/;
-
-    if(/^#/){
-    }
-    else{
-      print join("\t", "#$index_cnt", $_),"\n";
-      $index_cnt++ if $last =~ /^#/;
-    }
-    $last = $_;
-  }
-}
+close WRITER;
 
 
+my %index_used;
+while(<READER>){
+  chomp;
+  my @l = split /\t/, $_, 2;
 
-
-sub parse_blast_add_comments{
-# parsing blast table and adding back comments from index file
-  my ($index_r) = @_;
-
-  my %index_used;
-  while(<>){
-    chomp;
-    next if /^\s*$/;
-    my @l = split /\t/, $_, 2;
-
-    # sanity checks
-    die "ERROR: index column not found on line $. of blast hits file\n"
-      unless scalar @l == 2 and $l[0] =~ /^\d+$/;
-    die "ERROR: cannot find index '$l[0]' in index file\n"
-      unless exists $index_r->{$l[0]};
-
-    # adding back index
-    if(! exists $index_used{$l[0]} ){ # writing comment
-      print join("\n", @{$index_r->{$l[0]}} ), "\n";
+  # sanity checks
+  die "ERROR: index column not found on line $. of blast hits file\n"
+    unless scalar @l == 2 and $l[0] =~ /^\d+$/;
+  die "ERROR: cannot find index '$l[0]' in index file\n"
+    unless exists $index{$l[0]};
+  
+  # adding back comments
+  if(! exists $index_used{$l[0]} ){ # writing comment
+    print join("\n", @{$index{$l[0]}} ), "\n";
       $index_used{$l[0]} = 1;
-    }
-    
-    print $l[1], "\n";
   }
+
+  # writing hits
+  print $l[1], "\n";
+
 }
+close READER;
 
-sub load_index{
-# loading index file
-  my ($index) = @_;
-
-  my %index;
-
-#  my $file = File::Tail->new($index);
-#  while( defined(my $line=$file->read) ){
-  
-  use IO::Handle;
-  
-  open IN, $index or die $!;
-  for (;;){
-    while(<IN>){
-      my $line = $_;
-      chomp $line;
-      
-      next if $line =~ /^\s*$/;
-      my @l = split /\t/, $line, 2;
-      die "ERROR: line $. has < 2 columns\n"
-	unless scalar @l == 2;
-      
-      push @{$index{$l[0]}}, $l[1];
-    }
-    sleep 1;
-    IN->clearerr();
-  }
-  close IN;
-  
-  print Dumper %index; exit;
-  return \%index;
-}
-
-sub parse_blast_write_index{
-# removing comments and adding index to blast hits
-  my ($output) = @_;
-
-  open OUT, ">$output" or die $!;
-  my @cmt;
-  my $cmt_cnt = 0;
-  while(<>){
-    chomp;
-    next if /^\s*$/;
-    
-    if(/^# BLAST.*\d+\.\d+/ || eof){ # new comment
-      $cmt_cnt++;      
-
-      # writing out last comment
-      map{ print OUT "$cmt_cnt\t$_\n" } @cmt;
-
-      # reseting
-      @cmt = ();      
-    }
-    if(/^#/){ # loading comment
-      push @cmt, $_;
-    }
-    else{ # writing blast hit w/ comment index
-      print "$cmt_cnt\t$_\n";
-    }
-
-  }
-  close OUT;
-}
 
