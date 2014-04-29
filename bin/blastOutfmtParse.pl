@@ -8,21 +8,25 @@ blastOutfmtParse.pl -- parsing a blast file in '-outfmt 7' format while keeping 
 
 =head1 SYNOPSIS
 
-blastOutfmtParse.pl -c < blast.txt > blast_edit.txt
+blastOutfmtParse.pl < blast.txt -c > blast_edit.txt
 
 =head2 Required flags
 
 =over
 
-=item -command
+=item -command 
 
-Unix command use for editing blast hits. 
+Unix command for editing blast hits (eg., 'grep "E*coli"')
 
 =back
 
 =head2 Optional flags
 
 =over
+
+=item -s 
+
+Index hash size (>= number of comments in BLAST file). [1000000]
 
 =item -v 	Verbose output. [FALSE]
 
@@ -79,14 +83,18 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use IPC::Open2;
+use threads;
+use threads::shared;
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
 my $cmd;
+my $hash_size = 1000000;
 GetOptions(
-	   "cmd=s" => \$cmd,
+	   "command=s" => \$cmd,
+	   "size=i" => \$hash_size,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -99,47 +107,60 @@ die "ERROR: provide a unix command\n"
 #--- MAIN ---#
 my $pid = open2(\*READER, \*WRITER, $cmd);
 
-my $cmt_cnt = 0;
+print STDERR "Making shared index hash (size=$hash_size)\n";
 my %index;
-while(<>){
-  chomp;
-  next if /^\s*$/;
-  
-  if(/^# BLAST.*\d+\.\d+/ || eof){ # new comment
-    $cmt_cnt++;          
-  }
-  if(/^#/){ # loading comment
-    push @{$index{$cmt_cnt}}, $_;
-  }
-  else{ # writing blast hit w/ comment index
-    print WRITER join("\t", $cmt_cnt, $_), "\n";
-
-    print Dumper $_;
-  }
+for my $i (0..$hash_size){
+  share( @{$index{$i}} );
 }
-close WRITER;
 
+print STDERR "Reading & writing to command: '$cmd'\n";
+my $thread = async{
+  close WRITER;
 
-my %index_used;
-while(<READER>){
-  chomp;
-  my @l = split /\t/, $_, 2;
-
-  # sanity checks
-  die "ERROR: index column not found on line $. of blast hits file\n"
+  my %index_used;
+  while(<READER>){
+    chomp;
+    my @l = split /\t/, $_, 2;
+    
+    # sanity checks
+    die "ERROR: index column not found on line $. of blast hits file\n"
     unless scalar @l == 2 and $l[0] =~ /^\d+$/;
-  die "ERROR: cannot find index '$l[0]' in index file\n"
-    unless exists $index{$l[0]};
-  
-  # adding back comments
-  if(! exists $index_used{$l[0]} ){ # writing comment
-    print join("\n", @{$index{$l[0]}} ), "\n";
+    die "ERROR: cannot find index '$l[0]' in index file\n"
+      unless exists $index{$l[0]};
+    
+    #adding back comments
+    if(! exists $index_used{$l[0]} ){ # writing comment
+      print join("\n", @{$index{$l[0]}} ), "\n";
       $index_used{$l[0]} = 1;
+    }
+    
+    # writing hits
+    print $l[1], "\n";
   }
-
-  # writing hits
-  print $l[1], "\n";
-}
-close READER;
+  close READER;
+};
 
 
+{
+  my $cmt_cnt = 0;
+  #my %index;
+  while(<>){
+    chomp;
+    next if /^\s*$/;
+    
+    if(/^# BLAST.*\d+\.\d+/ || eof){ # new comment
+      $cmt_cnt++;          
+    }
+    if(/^#/){ # loading comment
+      push @{$index{$cmt_cnt}}, $_;
+      #$index{$.}{$.} = 1;
+    }
+    else{ # writing blast hit w/ comment index
+      print WRITER join("\t", $cmt_cnt, $_), "\n";    
+    }
+  }
+  close WRITER;
+}  
+
+$thread->join();
+waitpid($pid, 0);
