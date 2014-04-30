@@ -328,11 +328,8 @@ Calling blastdbcmd to extract subject sequence (full protospacer & extensions)
 sub call_blastdbcmd{
   my ($subject_id, $Sstart, $Send, $strand, $db) = @_;
 
-  #($Sstart, $Send) = ($Send, $Sstart) if $strand eq 'minus';
-
   # calling #
   my $cmd = "blastdbcmd -db $db -entry '$subject_id' -range '$Sstart-$Send' -strand $strand |";
-  #print Dumper $cmd; exit;
   open PIPE, $cmd or die $!;
   my $seq;
   while(<PIPE>){

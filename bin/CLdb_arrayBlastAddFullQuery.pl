@@ -39,6 +39,17 @@ perldoc CLdb_arrayBlastAddFullQuery.pl
 Adding the full query sequence to the spacer blast hits table.
 The blast table should be formatted as '-outfmt 7'
 
+
+=head2 Fields added to blast table:
+
+=over
+
+=item query_seq_full
+
+Full length query sequence
+
+=back
+
 =head1 EXAMPLES
 
 
@@ -91,7 +102,7 @@ GetOptions(
 	   );
 
 #--- I/O error & defaults ---#
-die "ERROR: provide a fasta file of the query sequences\n"
+die "ERROR: provide a fasta file of the query sequences ('-fasta')\n"
   unless defined $fasta_in;
 file_exists($fasta_in, "fasta");
 
@@ -116,7 +127,7 @@ write_blast_file($lines_r);
 sub add_full_query_seq{
 # adding full length query sequence to blast table #
   my ($lines_r, $fasta_r) = @_;
-	
+  
   foreach my $query ( keys %$lines_r ){
 	  
     # checking for existence of query in fasta #

@@ -10,7 +10,6 @@ use File::Spec;
 # export #
 use base 'Exporter';
 our @EXPORT_OK = qw/
-parse_blast_hits
 read_blast_file
 write_blast_file
 /;
@@ -108,47 +107,71 @@ sub read_blast_file{
 	return \%lines;
 	}
 
-sub parse_blast_hits{
-# REQUIRED: outfmt = 7;
-	my ($blast_in) = @_;
-	
-	my %blast;
-	my %fields;
-	my @header;
-	my ($db, $query);
-	while(<>){
-		chomp;		
-		next if /^\s*$/;		# skipping blank lines
-		if(/^#/){ 
-			@header = () if /^# BLASTN/;		# start of next set of comment lines 
-			push @header, $_; 
-			}
-		else{
-			if(/^DR_/){
-				@header = () if @header;
-				next;
-				}
-			
-			if(@header){ 				# need to parse header #
-				# parsing header #
-				($db, $query, %fields) = parse_header(\@header, \%blast, \%fields);
-				my @tmp = @header;
-				$blast{$query}{$db}{"header"} = \@tmp;
-				
-				# reseting header #
-				@header = ();
-				}
-			
-			my @line = split /\t/;	
-			
-			push @{$blast{$query}{$db}{"hits"}}, [split /\t/];
-			}
+=head2 parse_blast_hits
 
-		}
-		
-		confess " ERROR: not blast hits found in input file!\n" unless %blast;
-	return \%blast, \%fields;
-	}
+Parsing blast hit file (file in '-outfmt 7' format)
+
+Input: $(blast hit file), [$(OID field)]
+
+Output: %{query} => {db} => {category} => [hits]
+
+=cut
+
+push @EXPORT_OK, 'parse_blast_hits';
+
+sub parse_blast_hits{
+  my ($blast_in, $OID_field) = @_;
+
+  $OID_field-- if defined $OID_field;
+
+  my $fh;
+  $blast_in == 0 ?  $fh = *STDIN : 
+    open $fh, $blast_in or croak $!;
+	
+  my %blast;
+  my %fields;
+  my @header;
+  my ($db, $query);
+  while(<$fh>){
+    chomp;		
+    next if /^\s*$/;		# skipping blank lines
+    if(/^#/){ 
+      @header = () if /^# BLASTN/;		# start of next set of comment lines 
+      push @header, $_; 
+    }
+    else{
+      if(/^DR_/){
+	@header = () if @header;
+	next;
+      }
+      
+      if(@header){ 				# need to parse header #
+	# parsing header #
+	($db, $query, %fields) = parse_header(\@header, \%blast, \%fields);
+	my @tmp = @header;
+	$blast{$query}{$db}{"header"} = \@tmp;
+	
+	# reseting header #
+	#@header = ();
+      }
+      # parsing hit line
+      my @line = split /\t/;	      
+      # setting OID field
+      my $subjectID_i = exists $fields{'subject id'} ?
+	$fields{'subject id'} : croak $!;
+      $line[$subjectID_i] = (split /\|/, $line[$subjectID_i])[$OID_field];      
+
+      # loading hash with hit
+      push @{$blast{$query}{$db}{"hits"}}, \@line;
+    }
+    
+  }
+  close $fh;
+
+  confess " ERROR: not blast hits found in input file!\n" unless %blast;
+  return \%blast, \%fields;
+}
+
 
 sub parse_header{
 # parsing each header of blast output #

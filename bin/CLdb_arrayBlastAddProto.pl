@@ -32,6 +32,10 @@ adjacent up and downstream of the protospacer. [-3 -1 1 3]
 
 Protospacer as opposite strand of spacer blast hit? [FALSE] (default: protospacer oriented to subject + strand)
 
+=item -OID  <int>
+
+Field number of blast_db OID (fields delimited with '|'). [1]
+
 =item -verbose  <bool>
 
 Verbose output. [TRUE]
@@ -64,10 +68,6 @@ By default, the protospacer is oriented to subject + strand.
 =head2 Extra fields appended to the spacer blast table:
 
 =over
-
-=item * "proto_seq_rel2query" = protospacer sequence (just blast match); oriented to query + strand
-
-=item * "proto_seq_rel2subject" = protospacer sequence (just blast match); oriented to subject + strand 
 
 =item * "q_start_full" = query start (full length spacer)
 
@@ -171,11 +171,13 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $full_len, $revcomp_b, @pam);
 my $extend = 10;							# length to extend off of each side
 my $len_cut = 0.66;							# cutoff for length of blast hit relative to query length
+my $OID = 1;
 GetOptions(
 	   "x=i" => \$extend,
 	   "length=f" => \$len_cut,				# min length of spacer hit (fraction of total)
 	   "revcomp" => \$revcomp_b,			# reverse complement protospacer relative to blast hit? [FALSE]
 	   "pam=i{4,4}" => \@pam, 				# pam region to write out
+	   "OID=i" => \$OID,  # field number of OID
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -191,7 +193,7 @@ else{ @pam = (-3,-1,1,3); }
 
 ### main
 # parsing blast table #
-my ($blast_r, $fields_r) = parse_blast_hits();
+my ($blast_r, $fields_r) = parse_blast_hits(0, $OID);
 
 # getting protospacer & extensions #
 ## making list of protospacer/extension start-stop, & strand ##
@@ -201,8 +203,6 @@ my $new_fields_r = get_proto_seq($blast_r, $fields_r, $extend,
 # writing editted table #
 ## adding new fields ##
 add_new_fields($fields_r, $new_fields_r);
-
-#print Dumper $blast_r; exit;
 
 ## writing table ##
 write_editted_blast($blast_r, $fields_r);
