@@ -217,6 +217,8 @@ sub blast_xml2txt {
 
   # iterating through each hit
   foreach my $iter ( @{$blast_r->{'BlastOutput_iterations'}{'Iteration'}} ){
+    my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
+
     # comments for the query (if needed)
     if( $fields_r->{comments} == 1){
       print join(" ", '# blast:', $blast_r->{'BlastOutput_version'}), "\n";
@@ -225,50 +227,79 @@ sub blast_xml2txt {
       print join(" ", '# Fields:', 
 		 join(", ", @{$fields_r->{fields}})
 		), "\n";
-      printf "# %i hits found\n", scalar @{$iter->{'Iteration_hits'}{'Hit'}};
     }
     
-    # each hit
-    foreach my $hit ( @{$iter->{'Iteration_hits'}{'Hit'}} ){
-      # making output row
-      my @row;
-      foreach my $field ( @{$fields_r->{fields}} ){
-	my $index = $fields_r->{index}{$field};
-	
-	# if variable undefined
-	unless(defined $index->[1]){
-	  push @row, 'undef';
-	  next;
-	}
+    # multiple hits or just 1?
+    if(ref $hits_ref eq 'ARRAY'){ # multiple
+      foreach my $hit ( @$hits_ref){
+	make_blast_row($blast_r, $iter, $hit, $fields_r);
+      }
+    }
+    else{ 
+      make_blast_row($blast_r, $iter, $hits_ref, $fields_r);
+    }
+    
+    # make blast output row of field values
+    sub make_blast_row{
+      my ($blast_r, $iter, $hit, $fields_r) = @_;
 
-	# determing path to variable 
-	if( $index->[0] eq 'run' ){
-	  push @row, $iter->{$index->[1]};
-	  
-	}
-	if( $index->[0] eq 'hit' ){
-	  push @row, $hit->{$index->[1]};
-	}
-	if( $index->[0] eq 'hsp' ){
-	  # frames field
-	  if (defined $index->[2]){
-	    push @row, join("/", $hit->{Hit_hsps}{Hsp}{$index->[1]},
-			    $hit->{Hit_hsps}{Hsp}{$index->[2]});
-	  }
-	  elsif( $index->[1] eq 'Hsp_identity' ){
-	    push @row, $hit->{Hit_hsps}{Hsp}{Hsp_identity} / 
-	      $hit->{Hit_hsps}{Hsp}{'Hsp_align-len'} * 100;
-	  }
-	  else{ # other fields
-	    push @row, $hit->{Hit_hsps}{Hsp}{$index->[1]};
-	  }
-	}
-	if( $index->[0] eq 'param' ){
-	  push @row, $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
+      # parsing for each hsp
+      if( ref $hit->{Hit_hsps}{Hsp} eq 'ARRAY' ){
+	foreach my $hsp (@{$hit->{Hit_hsps}{Hsp}}){
+	  row_by_hsp($blast_r, $iter, $hit, 
+				$hsp, $fields_r);
 	}
       }
-      # writing out row
-      print join("\t", @row), "\n";
+      else{
+	row_by_hsp($blast_r, $iter, $hit, 
+			      $hit->{Hit_hsps}{Hsp}, $fields_r);
+      }
+
+      sub row_by_hsp{
+	my ($blast_r, $iter, $hit, $hsp, $fields_r) = @_;
+	
+	my @row; # output row
+	foreach my $field ( @{$fields_r->{fields}} ){
+	  my $index = $fields_r->{index}{$field};
+	  
+	  # if variable undefined
+	  unless(defined $index->[1]){
+	    push @row, 0;  # really, is 'undef'
+	    next;
+	  }
+	  
+	  # determing path to variable 
+	  ## run
+	  if( $index->[0] eq 'run' ){
+	    push @row, $iter->{$index->[1]};
+	    
+	  }
+	  ## hit
+	  if( $index->[0] eq 'hit' ){
+	    push @row, $hit->{$index->[1]};
+	  }
+	  ## hsp
+	  if( $index->[0] eq 'hsp' ){
+	    # hsp -> frames field
+	    if (defined $index->[2]){
+	      push @row, join("/", $hsp->{$index->[1]},
+			  $hsp->{$index->[2]});
+	    }
+	    elsif( $index->[1] eq 'Hsp_identity' ){
+	      push @row, $hsp->{Hsp_identity} / 
+		$hsp->{'Hsp_align-len'} * 100;
+	    }
+	    else{ # other fields
+	      push @row, $hsp->{$index->[1]};
+	    }
+	  }
+	  ## param
+	  if( $index->[0] eq 'param' ){
+	    push @row, $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
+	  }
+	}
+	print join("\t", @row), "\n";
+      }
     }
   }
   

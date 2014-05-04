@@ -78,5 +78,17 @@ GetOptions(
 
 
 #--- MAIN ---#
+
+my %blast;
+my $run_cnt = 0;
+while(<>){
+  if( exists $blast{$run_cnt} and (/<\?xml version="1.0"\?>/ or eof)){
+    $blast{$run_cnt} = XMLin( $blast{$run_cnt} );
+    $run_cnt++;
+  }
+  $blast{$run_cnt} .= $_;
+}
+
 my $encoder = Sereal::Encoder->new();
-print $encoder->encode( XMLin(\*STDIN) );
+print $encoder->encode( \%blast );
+

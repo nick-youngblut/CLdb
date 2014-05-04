@@ -89,9 +89,7 @@ Athough, it may be best to blast DRs with a higher evalue cutoff.
 
 You can conduct the blastn run without this script.
 Just make sure to use the blastn in the blast+ toolkit
-and set the output format as:
-'-outfmt "7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-evalue bitscore qlen slen btop"'
+and set the output format as '-outfmt 5' (xml output)
 
 =head1 EXAMPLES
 
@@ -137,8 +135,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
-#use Forks::Super;
-use Parallel::ForkManager;
+use File::Path qw/rmtree/;
 
 # CLdb #
 use FindBin;
@@ -152,6 +149,10 @@ use CLdb::utilities qw/
 	file_exists 
 	connect2db
 	get_file_path/;
+use CLdb::arrayBlast::blast qw/
+				make_blast_db
+				call_blastn_short
+			      /;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -204,99 +205,27 @@ my $subject_loci_r = get_loci_fasta($dbh, $join_sql, $extra_query);
 
 ## making blast directory; blastdb; and blast alias##
 my $blast_dir = make_blast_dir($db_path);
-my $blast_dbs_r = make_blast_db($subject_loci_r, $db_path, $blast_dir, $fork);
+my $blast_dbs_r = make_blast_db($subject_loci_r, $db_path, 
+				$blast_dir, $verbose);
 
 ## blasting ##
 call_blastn_short($blast_dbs_r, $query_file, $blast_params, $fork); 
 
 
 #--- Subroutines ---#
-sub call_blastn_short{
-  my ($blast_dbs_r, $query_file, $blast_params, $fork) = @_;
-
-  # blast table output format
-  my $outfmt = join(" ", qw/7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-			    evalue bitscore qlen slen btop/);
+sub make_blast_dir{
+  my $db_path = shift;
   
-  # sanity check #
-  map{die " ERROR: cannot find $_!\n" unless -e $_} @$blast_dbs_r;
-
-  # forking
-  my $pm = Parallel::ForkManager->new($fork);
+  my $dir = join("/", $db_path, "spacer_blast");
+  mkdir $dir unless -d $dir;
   
-  $pm->run_on_finish(
-    sub{		     
-      my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $ret_r) = @_;
-      # status #
-      foreach my $out (sort keys %$ret_r){
-	print STDERR "Number of blast hits to $out:\t",
-	  scalar @{$ret_r->{$out}}, "\n";
-      }	
-      
-      # writing output #
-      foreach my $out (sort keys %$ret_r){
-	print join("", @{$ret_r->{$out}});
-      }
-    }
-   );
+  $dir = "$dir/blast_db/";
+  rmtree $dir if -d $dir;
+  mkdir $dir;
 
-  my %output;
-  foreach my $blast_db (@$blast_dbs_r){
-    $pm->start and next;
-    
-    my %output;
-    my $cmd = "blastn -task 'blastn-short' -query $query_file -db $blast_db -outfmt '$outfmt' $blast_params";
-    open PIPE, "$cmd |" or die $!;
-    while(<PIPE>){
-      push @{$output{$blast_db}}, $_;
-    }
-    close PIPE;
-    $pm->finish(0, \%output); 
-  }
-  $pm->wait_all_children; 
+  return $dir;
 }
 
-sub make_blast_db{
-# foreach fasta, making a blast DB #
-  my ($subject_loci_r, $db_path, $blast_dir) = @_;
-  
-  my $fasta_dir = "$db_path/fasta";
-  
-  # sanity check #
-  die " ERROR: cannot find $fasta_dir!\n" unless -d $fasta_dir;
-  die " ERROR: cannot find $blast_dir!\n" unless -d $blast_dir;
-  
-  # status #
-  print STDERR "...making blast databases in $blast_dir\n";
-  
-  # making blast dbs #
-  my @blastdbs;
-  foreach my $row (@$subject_loci_r){
-    unless($$row[2]){
-      map{$_ = "" unless $_} @$row;
-      print STDERR " Skipping: '", join(",", @$row), "'! 'fasta_file' value empty!\n";
-      next; 		# next unless fasta file present
-    }
-    
-    # sanity check #
-    die " ERROR: cannnot find $fasta_dir/$$row[2]!"
-      unless -e "$fasta_dir/$$row[2]"; 		
-
-    # making symlink in blast directory #
-    unless(-e "$blast_dir/$$row[2]" || -l "$blast_dir/$$row[2]"){
-      symlink("$fasta_dir/$$row[2]", "$blast_dir/$$row[2]") or die $!;
-    }
-    
-    # making blast db #
-    my $cmd = "makeblastdb -dbtype nucl -parse_seqids -in $blast_dir/$$row[2]";
-    print STDERR "$cmd\n" unless $verbose;
-    `$cmd`;
-		
-    push @blastdbs, "$blast_dir/$$row[2]";
-  }
-  
-  return \@blastdbs;
-}
 
 sub get_loci_fasta{
 # querying CLdb for fasta files for each select taxon to use for blastdb #
@@ -318,21 +247,6 @@ GROUP BY taxon_name, taxon_id";
 	return $res;
 	}
 
-sub get_database_path{
-	my $database_file = shift;
-	$database_file = File::Spec->rel2abs($database_file);
-	my @parts = File::Spec->splitpath($database_file);
-	return $parts[1];
-	}
-
-sub make_blast_dir{
-	my $db_path = shift;
-	
-	my $dir = join("/", $db_path, "spacer_blast");
-	mkdir $dir unless -d $dir;
-
-	return $dir;
-	}
 
 sub check_query_fasta{
 # loading fasta file as a hash #
