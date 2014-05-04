@@ -42,6 +42,34 @@ binary data serialization format (Sereal)
 to blast tabular format: either
 with comments '-outfmt 7' or without '-outfmt 6'
 
+Currnently, only some of the possible output fields
+are supported:
+
+=head2 Supported fields:
+
+qseqid
+qlen
+sseqid
+sacc
+slen
+qstart
+qend
+sstart
+send
+qseq
+sseq
+evalue
+bitscore
+score
+length
+pident
+mismatch
+gapopen
+gaps
+frames
+qframe
+sframe
+
 =head1 EXAMPLES
 
 =head1 AUTHOR
@@ -81,7 +109,9 @@ use CLdb::arrayBlast::sereal qw/
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $outfmt);
+my ($verbose);
+my $outfmt = '7 qseqid sseqid pident length mismatch 
+gapopen qstart qend sstart send evalue bitscore'; 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "verbose" => \$verbose,
