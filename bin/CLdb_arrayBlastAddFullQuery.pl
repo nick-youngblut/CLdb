@@ -37,6 +37,8 @@ perldoc CLdb_arrayBlastAddFullQuery.pl
 =head1 DESCRIPTION
 
 Adding the full query sequence to the spacer blast hits table.
+Just using the query sequences provided during the blastn run(s).
+New field with full sequence: 'qseqfull'
 
 =head1 EXAMPLES
 
@@ -63,6 +65,7 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
+use Sereal qw/ encode_sereal /;
 
 # CLdb #
 use FindBin;
@@ -72,7 +75,7 @@ use CLdb::seq qw/read_fasta/;
 use CLdb::utilities qw/file_exists/;
 use CLdb::arrayBlast::sereal qw/decode_file/;
 use CLdb::arrayBlast::AddFullQuery qw/
-				       				       
+				       addFullQuery
 				     /;
 
 #--- parsing args ---#
@@ -98,47 +101,15 @@ my $fasta_r = read_fasta($fasta_in);
 ## blast ##
 my $blast_r = decode_file(fh => \*STDIN);
 
+# adding full query to blast table
+addFullQuery($blast_r, $fasta_r);
 
+print Dumper $blast_r; exit;
 
+# encoding blast
+print encode_sereal( $blast_r );
 
 
 #--- Subroutines ---#
-sub add_full_query_seq{
-# adding full length query sequence to blast table #
-  my ($lines_r, $fasta_r) = @_;
-  
-  foreach my $query ( keys %$lines_r ){
-	  
-    # checking for existence of query in fasta #
-    (my $name = $query) =~ s/# Query: //i;
-    unless (exists $fasta_r->{$name}){
-      warn "WARNING: '$name' not found in fasta. Skipping!\n";
-      next;
-    }
-    
-    # adding sequence to blast table #
-    foreach my $db ( keys %{$lines_r->{$query}} ){
-      
-      foreach my $blast ( keys %{$lines_r->{$query}{$db}} ){
-	next unless exists $lines_r->{$query}{$db}{$blast}{'fields'};
-	
-	$lines_r->{$query}{$db}{$blast}{'fields'} .= ", query_seq_full";
-	$lines_r->{$query}{$db}{$blast}{'fields_sep'}{"query_seq_full"} = 
-	  scalar keys %{$lines_r->{$query}{$db}{$blast}{'fields_sep'}};
-		    
-	foreach my $hit ( @{$lines_r->{$query}{$db}{$blast}{'hits'}} ){
-	  $hit .= "\t$fasta_r->{$name}";
-	}
-      }
-    }
-  }
-  #print Dumper $lines_r; exit
-}
-
-
-
-
-
-
 
 

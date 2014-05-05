@@ -66,20 +66,34 @@ sub addFullQuery{
     $db = (File::Spec->splitpath($db))[2];
     
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+      # query
+      my $query_id = $iter->{'Iteration_query-def'};
+
+      # getting sequence from fasta
+      my $fullSeq = exists $fasta_r->{$query_id} ? 
+	$fasta_r->{$query_id} : 
+	  die "ERROR: cannot find '$query_id' in fasta\n";
+
+      # adding fullSeq
+      $iter->{'qseqfull'} = $fullSeq;
+
+      # next if no hits
       next unless exists $iter->{'Iteration_hits'} and 
-	ref $iter->{'Iteration_hits'} eq 'HASH';
-           
+	ref $iter->{'Iteration_hits'} eq 'HASH';           
+
       # iterating through hits
       my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
       foreach my $hit ( @$hits_ref){
 	# subjectID
 	my $sseqid = $hit->{Hit_id};
 	my $subj = join("__", $db, $sseqid);
+
+	#print Dumper $hits_ref; exit;
 	
 	# iterating through hsp
 	my $hsp_ref = $hit->{Hit_hsps}{Hsp};	
 	foreach my $hsp (@{$hsp_ref}){
-	  
+	 
 	  # hsp values
 	  my $sstart = $hsp->{'Hsp_hit-from'};  # hit location on subject
 	  my $send = $hsp->{'Hsp_hit-to'};
