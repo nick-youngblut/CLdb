@@ -82,8 +82,8 @@ use File::Spec;
 use Sereal qw/ encode_sereal /;
 
 ### CLdb
+use CLdb::arrayBlast::sereal qw/ decode_file /;
 use CLdb::arrayBlast::DRfilter qw/
-				   decode_file
 				   make_DR_itree
 				   DR_filter_blast
 				 /;
@@ -114,8 +114,8 @@ map{ die "ERROR: cannot find '$_'\n" unless -e $_ } @ARGV[0..1];
 
 ### MAIN
 # decoding spacer and DR srl
-my $spacer_r = decode_file($ARGV[0]);
-my $DR_r = decode_file($ARGV[1]);
+my $spacer_r = decode_file( file => $ARGV[0]);
+my $DR_r = decode_file( file => $ARGV[1]);
 
 # DR blast hit interval tree
 my $itrees_r = make_DR_itree( $DR_r,

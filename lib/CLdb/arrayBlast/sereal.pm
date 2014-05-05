@@ -5,8 +5,11 @@ use strict;
 use warnings FATAL => 'all';
 use Data::Dumper;
 use Carp qw/carp croak/;
+
 use base 'Exporter';
 our @EXPORT_OK = '';
+
+use Sereal qw/decode_sereal/;
 
 =head1 NAME
 
@@ -29,6 +32,42 @@ subroutines for editing blast xml converted to json format
 
 
 =head1 SUBROUTINES/METHODS
+
+
+=head2 decode_file
+
+Sereal file decoding
+
+=head3 IN
+
+hash with either: file => file_name  or fh => filehandle_ref
+
+=head3 OUT
+
+decoded data structure
+
+=cut
+
+push @EXPORT_OK, 'decode_file';
+
+sub decode_file{
+  my %opt = @_;
+
+  my $fh;
+  if(exists $opt{file}){
+    open $fh, $opt{file} or die $!;
+  }
+  elsif(exists $opt{fh}){
+    $fh = $opt{fh};
+  }
+  else{ die "ERROR: provide a file or filehandle\n"; }
+  
+  my $str = '';
+  $str .= $_ while <$fh>;
+  close $fh;
+
+  return decode_sereal($str);
+}
 
 
 =head2 blast_all_array

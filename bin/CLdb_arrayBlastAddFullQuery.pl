@@ -8,7 +8,7 @@ CLdb_arrayBlastAddFullQuery -- adding the full query sequence to the blast table
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastAddFullQuery.pl [flags] < blast_results.txt > blast_results_info.txt
+CLdb_arrayBlastAddFullQuery.pl [flags] < blast_results.srl > blast_results_edit.srl
 
 =head2 Required flags
 
@@ -37,21 +37,8 @@ perldoc CLdb_arrayBlastAddFullQuery.pl
 =head1 DESCRIPTION
 
 Adding the full query sequence to the spacer blast hits table.
-The blast table should be formatted as '-outfmt 7'
-
-
-=head2 Fields added to blast table:
-
-=over
-
-=item query_seq_full
-
-Full length query sequence
-
-=back
 
 =head1 EXAMPLES
-
 
 =head1 AUTHOR
 
@@ -76,20 +63,17 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
-use DBI;
 
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
-use CLdb::utilities qw/
-	file_exists/;
-use CLdb::seq qw/
-	read_fasta/;
-use CLdb::blast qw/
-	read_blast_file
-	write_blast_file/;
-
+use CLdb::seq qw/read_fasta/;
+use CLdb::utilities qw/file_exists/;
+use CLdb::arrayBlast::sereal qw/decode_file/;
+use CLdb::arrayBlast::AddFullQuery qw/
+				       				       
+				     /;
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -112,13 +96,8 @@ file_exists($fasta_in, "fasta");
 ## fasta of query sequences ##
 my $fasta_r = read_fasta($fasta_in);
 ## blast ##
-my ($lines_r) = read_blast_file();
+my $blast_r = decode_file(fh => \*STDIN);
 
-## adding full length query ##
-add_full_query_seq($lines_r, $fasta_r);
-
-# writing edited fasta #
-write_blast_file($lines_r);
 
 
 

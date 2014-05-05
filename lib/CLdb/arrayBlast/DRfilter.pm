@@ -6,7 +6,6 @@ use warnings FATAL => 'all';
 use Carp  qw( carp confess croak );
 use Data::Dumper;
 use File::Spec;
-use Sereal qw/ decode_sereal /;
 use Set::IntervalTree;
 
 # export #
@@ -36,31 +35,6 @@ Subroutines for parsing & editing spacer/DR blast files
 
 =cut
 
-
-=head2 decode_file
-
-Sereal file decoding
-
-=head3 IN
-
-Sereal file name
-
-=head3 OUT
-
-decoded data structure
-
-=cut
-
-push @EXPORT_OK, 'decode_file';
-
-sub decode_file{
-  my $file = shift;
-  open IN, $file or die $!;
-  my $str = '';
-  $str .= $_ while <IN>;
-  close IN;
-  return decode_sereal($str);
-}
 
 =head2 make_DR_itree
 
