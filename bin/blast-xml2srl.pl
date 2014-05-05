@@ -33,6 +33,9 @@ perldoc blast-xml2srl.pl
 Simple script for converting blast output in xml format
 (-outfmt 5) to a binary serialization format.
 
+Multiple concatenated blast xml output files can be 
+provided via STDIN.
+
 =head1 EXAMPLES
 
 =head1 AUTHOR
@@ -64,6 +67,9 @@ use Sereal qw/ encode_sereal /;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::arrayBlast::sereal qw/
+				 blast_all_array
+			       /;
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -89,6 +95,16 @@ while(<>){
   $blast{$run_cnt} .= $_;
 }
 
+# making each hit & hsp an array (even if only 1)
+foreach my $run (keys %blast){
+  unless (ref $blast{$run} eq 'HASH'){
+    delete $blast{$run};
+    next;
+  }
+  blast_all_array($blast{$run});
+}
+
+# serializing 
 my $encoder = Sereal::Encoder->new();
 print $encoder->encode( \%blast );
 

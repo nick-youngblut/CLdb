@@ -31,6 +31,61 @@ subroutines for editing blast xml converted to json format
 =head1 SUBROUTINES/METHODS
 
 
+=head2 blast_all_array
+
+Making sure that 'Hit' and 'Hsp' are arrays, 
+even if just 1 present
+
+=head3 IN
+
+blast table hash_ref. Parsed xml blast output
+
+=head3 Output
+
+blast table hash_ref altered
+
+=cut
+
+push @EXPORT_OK, 'blast_all_array';
+
+sub blast_all_array{
+  my ($blast_r) = @_;
+
+  # iterating through each hit
+  foreach my $iter ( @{$blast_r->{'BlastOutput_iterations'}{'Iteration'}} ){
+    next unless exists $iter->{'Iteration_hits'};
+    next if ! ref $iter->{'Iteration_hits'} or 
+      ! exists $iter->{'Iteration_hits'}{'Hit'};
+    my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
+
+    # multiple hits or just 1?
+    if(ref $hits_ref eq 'ARRAY'){ # multiple
+      foreach my $hit ( @$hits_ref){
+        make_hsp_array($blast_r, $iter, $hit);
+      }
+    }
+    else{ # making array
+      make_hsp_array($blast_r, $iter, $hits_ref);
+      $iter->{'Iteration_hits'}{'Hit'} = [$hits_ref]
+    }
+
+    # make blast output row of field values
+    sub make_hsp_array{
+      my ($blast_r, $iter, $hit) = @_;
+
+      # multiple hsp or just 1?
+      if( ref $hit->{Hit_hsps}{Hsp} eq 'ARRAY' ){
+	# nothing needed
+      }
+      else{ # making array
+	$hit->{Hit_hsps}{Hsp} = [$hit->{Hit_hsps}{Hsp}];
+      }
+    }
+  }
+ #print Dumper $blast_r; exit;
+}
+
+
 =head2 parse_outfmt
 
 Parsing '-outfmt' argument.
