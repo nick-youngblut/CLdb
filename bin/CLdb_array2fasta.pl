@@ -217,14 +217,14 @@ exit;
 ### Subroutines
 sub write_array_seq{
 # writing arrays as fasta
-	my ($arrays_r, $opts_r) = @_;
-	
-	foreach (@$arrays_r){
-		print join("\n", 
-			join("|", ">$$_[0]", @$_[1..($#$_-1)]), 
-			$$_[$#$_]), "\n";
-		}
-	}
+  my ($arrays_r, $opts_r) = @_;
+  
+  foreach (@$arrays_r){
+    print join("\n", 
+	       join("|", ">$$_[0]", @$_[1..($#$_-1)]), 
+	       $$_[$#$_]), "\n";
+  }
+}
 
 
 

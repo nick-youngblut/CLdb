@@ -93,6 +93,9 @@ use CLdb::arrayBlast::sereal qw/ decode_file /;
 use CLdb::arrayBlast::AddcrRNA qw/
 				  get_query_IDs
 				  detect_clustered_spacers
+				  queryBySpacer
+				  queryBySpacerCluster
+				  groupByFastaFile
 				 /;
 
 ### args/flags
@@ -129,10 +132,18 @@ my $spacerIDs_r = get_query_IDs($spacer_r);
 $spacerIDs_r = detect_clustered_spacers($spacerIDs_r);
 
 # querying CLdb for info on spacer start-end & genome_file
+my %ret;
 ## single spacers
-#queryBySpacer($dbh, $spacerIDs_r->{single}) if $spacerIDs_r->{single};
+$ret{single} = squeryBySpacer($dbh, $spacerIDs_r->{single}) if $spacerIDs_r->{single};
 ## cluster spacers
-queryBySpacerCluster($dbh, $spacerIDs_r->{cluster}) if $spacerIDs_r->{cluster};
+$ret{cluster} = queryBySpacerCluster($dbh, $spacerIDs_r->{cluster}) if $spacerIDs_r->{cluster};
+
+# grouping spacers by fasta_file entry
+$spacers_grouped = groupByFastaFile( \%ret );
+
+# getting spacer region from each genome
+
+
 
 # encoding
 print encode_sereal( $spacer_r );

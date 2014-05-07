@@ -21,7 +21,6 @@ n_entries
 join_query_opts
 get_array_seq
 get_leader_pos
-get_array_seq
 list_columns
 /;
 
@@ -131,43 +130,51 @@ sub orient_byleader{
     
 }
 
+=head2 get_array_seq
 
-sub get_array_seq{
-#-- description --#
-# Getting spacer or DR cluster repesentative sequence from either table
-#-- input --#
-# $dbh = DBI database object
-# $opts_r = hash of options 
-#-- options --#
-# spacer_DR_b = spacer or DR [spacer]
-# extra_query = extra sql
-# cutoff = cluster sequenceID cutoff [1]
-# join_sql = "AND" statements 
-	
-	my ($dbh, $opts_r) = @_;
-	
-	# checking for opts #
-	map{ confess "ERROR: cannot find option: '$_'" 
-		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
-	
-	# getting table info #
-	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-	($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+=head3 description
 
-# columns:
-#	locus_ID
-#	spacer|DR
-#	spacer/DR_ID
-# 	clusterID
-# 	sequence
+Getting spacer or DR cluster repesentative sequence from either table
 
-	my $query; 
-	if(defined $opts_r->{by_cluster}){ # selecting by cluster
-	
-	  # by group default options #
-	  $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
-	
-	  $query = "SELECT 
+=head3 IN
+ 
+ $dbh = DBI database object
+ $opts_r = hash of options 
+
+=head3 Options
+ 
+ spacer_DR_b = spacer or DR [spacer]
+ extra_query = extra sql
+ cutoff = cluster sequenceID cutoff [1]
+ join_sql = "AND" statements 
+
+=cut
+
+sub get_array_seq{	
+  my ($dbh, $opts_r) = @_;
+  
+  # checking for opts #
+  map{ confess "ERROR: cannot find option: '$_'" 
+	 unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
+  
+  # getting table info #
+  my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+  
+  # columns:
+  #	locus_ID
+  #	spacer|DR
+  #	spacer/DR_ID
+  # 	clusterID
+  # 	sequence
+
+  my $query; 
+  if(defined $opts_r->{by_cluster}){ # selecting by cluster
+    
+    # by group default options #
+    $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
+    
+    $query = "SELECT 
 'NA',
 '$tbl_prefix',
 'NA',
@@ -177,9 +184,9 @@ FROM $tbl_prefix\_clusters, loci
 WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
 AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
 $opts_r->{'join_sql'}";
-      }
-	else{ # selecting all spacers
-	$query = "SELECT
+  }
+  else{ # selecting all spacers
+    $query = "SELECT
 $tbl_oi.Locus_ID,
 '$tbl_prefix',
 $tbl_oi.$tbl_prefix\_ID,
@@ -191,28 +198,25 @@ AND $tbl_oi.locus_id = $tbl_prefix\_clusters.locus_id
 AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID 
 AND $tbl_prefix\_clusters.cutoff = 1
 $opts_r->{'join_sql'}";
-	}
+  }
+  
+  $query =~ s/[\n\t]+/ /g;
+  $query = join(" ", $query, $opts_r->{"extra_query"});
+  
+  # adding group by  & order if clustering
+  $query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
+    if defined $opts_r->{by_cluster}; # selecting by cluster
+  
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  confess "ERROR: no matching $tbl_prefix entries!\n"
+    unless $$ret[0];
+  
+  #print Dumper @$ret; exit;
+  return $ret;
+}
 
-	$query =~ s/[\n\t]+/ /g;
-	$query = join(" ", $query, $opts_r->{"extra_query"});
-
-	# adding group by  & order if clustering
-	$query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
-	  if defined $opts_r->{by_cluster}; # selecting by cluster
-	  
-
-
-#print Dumper $tbl_prefix;
-#print Dumper $query; exit;
-	
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	confess "ERROR: no matching $tbl_prefix entries!\n"
-		unless $$ret[0];
-
-		#print Dumper @$ret; exit;
-	return $ret;
-	}
 
 sub join_query_opts{
 # joining query options for with 'AND' 
