@@ -24,10 +24,6 @@ CLdb database.
 
 =over
 
-=item -threads  <int>
-
-Number of threads used by cd-hit-est. [1]
-
 =item -verbose  <bool>
 
 Verbose output. [TRUE]
@@ -99,6 +95,10 @@ use CLdb::query qw/
 	table_exists/;
 use CLdb::load qw/
 	load_db_table/;
+use CLdb::load::loadArray qw/
+			      make_headers
+			      parse_array_file
+			    /;
 
 
 ### args/flags
@@ -128,8 +128,8 @@ my $array_r = get_array_file_names($dbh);
 # loading array tables #
 my %arrays;
 foreach my $array_file (@$array_r){
-	get_array_table($array_path, $$array_file[1], $$array_file[0],\%arrays);
-	}
+  parse_array_file($array_path, $$array_file[1], $$array_file[0],\%arrays);
+}
 	
 my ($dr_header_r, $sp_header_r) = make_headers();
 
@@ -145,118 +145,17 @@ exit;
 
 
 ### Subroutines 
-sub make_headers{
-# headers for CLdb entry loading #
-	my %dr_header = (
-		locus_id => 1,
-		dr_id => 2,
-		dr_start => 3,
-		dr_end => 4,
-		dr_sequence => 5
-		);
-	my %sp_header = (
-		locus_id => 1,
-		spacer_id => 2,
-		spacer_start => 3,
-		spacer_end => 4,
-		spacer_sequence => 5
-		);
-
-		#print Dumper %dr_header; exit;
-	return \%dr_header, \%sp_header;
-	}
-
-sub get_array_table{
-# getting array table info #
-	my ($array_path, $array_file, $locus_id, $arrays_r) = @_;
-	
-	die " ERROR: '$array_path/$array_file' not found!\n"
-		unless -e "$array_path/$array_file";
-	open IN, "$array_path/$array_file" or die $!;
-	
-	my $seq;
-	my $repeat_cnt = 0;
-	while(<IN>){
-		chomp;
-		next if /^\s*$/;
-		s/^\s+//;
-		my @line = split /\t/;
-		map{$_ =~ s/\s+//g} @line;
-		
-		# sanity check #
-		die " ERROR: table not formatted correctly (>=4 columns required)\n"
-			if scalar(@line) < 4;
-		die " ERROR: $array_file not formatted correctely!\n"
-			unless $line[0] =~ /^\d+$/;
-		die " ERROR: $array_file not formatted correctely!\n"
-			unless $line[1] =~ /^[A-Z-]+$/;
-		
-		# repeat count #
-		$repeat_cnt++;
-		
-		# getting positions #
-		my $pos_r = determine_positions(\@line, 1, $seq);
-	
-		# loading hash #
-		my $uID = join("_", $locus_id, "dri.$repeat_cnt");
-		$arrays_r->{"DR"}{$uID}{"locus_id"} = $locus_id;
-		$arrays_r->{"DR"}{$uID}{"dr_id"} = "$repeat_cnt";
-		$arrays_r->{"DR"}{$uID}{"dr_start"} = $$pos_r[0];
-		$arrays_r->{"DR"}{$uID}{"dr_end"} = $$pos_r[1];
-		$arrays_r->{"DR"}{$uID}{"dr_sequence"} = $line[1];
-		
-		# loading spacer #
-		if($$pos_r[2] && $$pos_r[3]){
-			my $uID = join("_", $locus_id, "$repeat_cnt");
-			$arrays_r->{"spacer"}{$uID}{"locus_id"} = $locus_id;
-			$arrays_r->{"spacer"}{$uID}{"spacer_id"} = "$repeat_cnt";
-			$arrays_r->{"spacer"}{$uID}{"spacer_start"} = $$pos_r[2];
-			$arrays_r->{"spacer"}{$uID}{"spacer_end"} = $$pos_r[3];
-			$arrays_r->{"spacer"}{$uID}{"spacer_sequence"} = $line[2];			
-			}
-	
-		# catting array sequence #
-		$seq .= join("", @line[1..2]);				# total array sequence
-		$seq =~ s/ +//g;		
-		}
-		
-	close IN;
-
-		#print Dumper %$arrays_r; exit;	
-	}
-
-sub determine_positions{
-	my ($line_r, $location, $seq) = @_;
-	
-	my @pos;
-	my $seq_length = length($seq);
-	$seq_length = 0 if ! $seq_length;
-	
-	$$line_r[0] = $seq_length + 1 unless $location; 				# start = sequence length
-		
-	$pos[0] = $$line_r[0] if $$line_r[1];													# repeat start
-	#$pos[1] = $$line_r[0] + length($$line_r[1]) - 1 if $$line_r[1];						# repeat end
-	$pos[1] = $$line_r[0] + length($$line_r[1]) if $$line_r[1];								# repeat end
-	$pos[2] = $$line_r[0] + length($$line_r[1]) if $$line_r[2]; 							# spacer start
-	#$pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) -2 if $$line_r[2];	# spacer end
-	$pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) if $$line_r[2];		# spacer end
-	
-		die "HERE" unless $$line_r[0];
-	
-	return \@pos;
-	}
-
 sub get_array_file_names{
 # querying genbank names from sqlite loci table #
-	my ($dbh) = @_;
-	
-	my $cmd = "SELECT locus_id, array_file from loci where array_file is not null";
-	my $names_r = $dbh->selectall_arrayref($cmd);
-	
-	die " ERROR: no array file names found!\n" unless $names_r;
-		#print Dumper $names_r; exit;
-	return $names_r;
-	}
+  my ($dbh) = @_;
+  
+  my $cmd = "SELECT locus_id, array_file from loci where array_file is not null";
+  my $names_r = $dbh->selectall_arrayref($cmd);
+  
+  die " ERROR: no array file names found!\n" unless $names_r;
+  #print Dumper $names_r; exit;
+  return $names_r;
+}
 
 
 

@@ -107,44 +107,44 @@ make_db($sql_r, $ARGV[0], \@tables);
 
 ### Subroutines
 sub make_db{
-	my ($sql_r, $db_name, $tables_r) = @_;
-	
-	# checking if tables specified exists, deleted if yes, dying if no #
-	if(-e $db_name){
-		foreach my $table (@$tables_r){
-			if(exists $sql_r->{$table}){
-				unless($drop_all){
-					print STDERR "...Not dropping table: \"$table\"\n";
-					delete $sql_r->{$table};
-					}
-				}
-			else{
-				print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
-				print STDERR "### tables in sql (ie. the tables that will be created) ###\n";
-				print STDERR join(",\n", keys %$sql_r), "\n";
-				exit;
-				}
-			}
-		# checking for overwrite of database #
-		die " ERROR: $db_name already exists! Use '-r' to replace\n" unless $replace
-		}
-	
-	# adding tables #
-	foreach my $table (keys %$sql_r){
-		open PIPE, "| sqlite3 $db_name" or die $!;
-		print PIPE "BEGIN TRANSACTION;\n";
-		print PIPE $sql_r->{$table}; 				# making table
-		print PIPE "COMMIT;\n";
-		close PIPE;
-		}
-		
-	print STDERR "...sqlite3 database tables created\n";
+  my ($sql_r, $db_name, $tables_r) = @_;
+  
+  # checking if tables specified exists, deleted if yes, dying if no #
+  if(-e $db_name){
+    foreach my $table (@$tables_r){
+      if(exists $sql_r->{$table}){
+	unless($drop_all){
+	  print STDERR "...Not dropping table: \"$table\"\n";
+	  delete $sql_r->{$table};
+	}
+      }
+      else{
+	print STDERR " ERROR: table: \"$table\" not found in sql for making tables\n";
+	print STDERR "### tables in sql (ie. the tables that will be created) ###\n";
+	print STDERR join(",\n", keys %$sql_r), "\n";
+	exit;
+      }
+    }
+    # checking for overwrite of database #
+    die " ERROR: $db_name already exists! Use '-r' to replace\n" unless $replace
+  }
+  
+  # adding tables #
+  foreach my $table (keys %$sql_r){
+    open PIPE, "| sqlite3 $db_name" or die $!;
+    print PIPE "BEGIN TRANSACTION;\n";
+    print PIPE $sql_r->{$table}; 				# making table
+    print PIPE "COMMIT;\n";
+    close PIPE;
+  }
+  
+  print STDERR "...sqlite3 database tables created\n";
 	}
 
 sub get_sql{
-	my %sql; 		# all tables individually 
-
-	$sql{"loci"} = <<HERE;
+  my %sql; 		# all tables individually 
+  
+  $sql{"loci"} = <<HERE;
 /* creating tables */
 DROP TABLE IF EXISTS Loci;
 
@@ -160,6 +160,7 @@ CAS_Start	INTEGER,
 CAS_End	INTEGER,
 Array_Start	INTEGER,
 Array_End	INTEGER,
+Array_Sense_Strand    INTEGER,
 CAS_Status	TEXT	NOT NULL,
 Array_Status	TEXT	NOT NULL,
 Genbank_File	TEXT	NOT NULL,
@@ -175,7 +176,7 @@ ON CONFLICT REPLACE
 HERE
 
 
-	$sql{"spacers"} = <<HERE;
+  $sql{"spacers"} = <<HERE;
 DROP TABLE IF EXISTS Spacers;
 
 CREATE TABLE Spacers (
