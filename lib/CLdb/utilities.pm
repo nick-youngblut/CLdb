@@ -84,7 +84,7 @@ sub connect2db{
 # $db_file = database file
 	my $db_file = shift;
 
-	my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
+	my %attr = (RaiseError => 0, PrintError=>1, AutoCommit=>0);
 	my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '','', \%attr) 
 		or confess " Can't connect to $db_file!\n";
 		

@@ -27,7 +27,7 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Subroutines for parsing & editing spacer/DR blast files
+Subroutines for parsing array files (CRISPRFinder format)
 
 =head1 EXPORT_OK
 

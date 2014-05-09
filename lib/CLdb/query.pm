@@ -16,13 +16,12 @@ use CLdb::seq qw/
 # export #
 use base 'Exporter';
 our @EXPORT_OK = qw/
-table_exists
-n_entries
-join_query_opts
-get_array_seq
-get_leader_pos
-list_columns
-/;
+		     table_exists
+		     n_entries
+		     join_query_opts
+		     get_array_seq
+		     get_leader_pos
+		   /;
 
 	
 =head1 NAME
@@ -44,91 +43,168 @@ Subroutines for querying CLdb
 
 =head1 EXPORT_OK
 
-table_exists
-n_entries
-join_query_opts
-get_array_seq
+=cut
+
+
+=head2 queryLociTable
+
+general query for loci table.
+returning all entries & columns in loci table
+that match sql 
+
+
+=head3 IN
+
+dbh =>  dbh object
+refine =>  refinement query
+columns => array_ref of columns (fields) to return 
+
+=head3 OUT
+
+@@ of matching entries.
+Column names are 1st @
 
 =cut
 
-sub list_columns{
-#-- description --#
-# listing all columns in specified table (table must exist) 
-# lists column names
-#-- input --#
+push @EXPORT_OK, 'queryLociTable';
+
+sub queryLociTable{
+  my %opt = @_;
+  my $dbh = defined $opt{dbh} ? $opt{dbh} : 
+    croak "ERROR: provide a dbh object\n";
+  my $columns = defined $opt{columns} ?
+    join(",", @{$opt{columns}}) : '*';
+
+
+  my $sql = <<HERE;
+SELECT $columns
+FROM loci
+WHERE locus_id IS NOT NULL
+$opt{refine}
+HERE
+  
+  my $sth = $dbh->prepare($sql);
+  my $rv = $sth->execute;
+  my $ret = $sth->fetchall_arrayref;
+
+  die "ERROR: no matching entries for query:\n'$sql'\n"
+    unless scalar @$ret;
+
+  # adding column names
+  unshift @$ret, $sth->{NAME};
+
+  # making undef columns = ''
+  foreach my $r (@$ret){
+    map{ $_ = '' unless defined $_ } @$r;
+  }
+
+  #print Dumper @$ret; exit;
+  return $ret;
+}
+
+
+
+=head2 list_columns
+
+listing all columns in specified table (table must exist) 
+lists column names
+
+=head3 IN
+
 # $dbh = DBI object
 # $tbl = sql table of interest
 # $silent_ret = no verbose & exit; return column names
-	my ($dbh, $tbl, $silent_ret) = @_;
-	my $all = $dbh->selectall_arrayref("pragma table_info($tbl)");
 
-	my %tmp;
-	foreach (@$all){ 
-		$$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
-		$tmp{$$_[1]} = 1; 
-		}
-		
-	if(defined $silent_ret){ return \%tmp; }
-	else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
-	}
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'list_columns';
+
+sub list_columns{
+  my ($dbh, $tbl, $silent_ret) = @_;
+  my $all = $dbh->selectall_arrayref("pragma table_info($tbl)");
+  
+  my %tmp;
+  foreach (@$all){ 
+    $$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
+    $tmp{$$_[1]} = 1; 
+  }
+  
+  if(defined $silent_ret){ return \%tmp; }
+  else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
+}
 
 
 
+=head2 orient_byArray
 
-sub orient_byArray{
-    # orienting (rev-comp if needed) by array start-end
-    # if array_start > array_end, revcomp element
-    # else: revcomp
-  # columns:
-    # locus_ID
+ orienting (rev-comp if needed) by array start-end
+ 
+ if array_start > array_end, revcomp element
+ else: revcomp
+
+=head3 columns:
+    
+  # locus_ID
     # element_ID
     # eleement_seq
     # element_start
     # element_end
     # array_start
     # array_end
+
+=cut
+
+sub orient_byArray{    
+  my ($row) = @_;
+  
+  if ($$row[5] <= $$row[6]) { # array start > array end
+    return [@$row[0..2]];
     
-    my ($row) = @_;
-
-    if ($$row[5] <= $$row[6]) { # array start > array end
-        return [@$row[0..2]];
-        
-    }
-    else {
-        $$row[2] = revcomp($$row[2]);
-        return [@$row[0..2]];
-       
-    }
-
+  }
+  else {
+    $$row[2] = revcomp($$row[2]);
+    return [@$row[0..2]];
+    
+  }
+  
 }
 
 
-sub orient_byleader{
-    # orienting (rev-comp if needed) by leader
-    # if leader comes prior to element, no rev-comp
-    # else: revcomp
-  # columns:
-    # locus_ID
-    # element_ID
-    # eleement_seq
-    # element_start
-    # element_end
-    # leader_stat
-    # leader_end
-    
-    my ($row) = @_;
+=head2 orient_byleader
 
-    if ($$row[3] >= $$row[6]) { #array_start >= leader_end position
-        return [@$row[0..2]];
-        
-    }
-    else {
-        $$row[2] = revcomp($$row[2]);
-        return [@$row[0..2]];
+  # orienting (rev-comp if needed) by leader
+  # if leader comes prior to element, no rev-comp
+  # else: revcomp
+
+=head3 columns:
+
+  # locus_ID
+  # element_ID
+  # eleement_seq
+  # element_start
+  # element_end
+  # leader_stat
+  # leader_end
+
+=cut
+
+
+sub orient_byleader{  
+  my ($row) = @_;
+  
+  if ($$row[3] >= $$row[6]) { #array_start >= leader_end position
+    return [@$row[0..2]];
+  }
+  else {
+    $$row[2] = revcomp($$row[2]);
+    return [@$row[0..2]];
        
-    }
-    
+  }
 }
+
+
 
 =head2 get_array_seq
 
@@ -219,7 +295,9 @@ $opts_r->{'join_sql'}";
 
 
 sub join_query_opts{
-# joining query options for with 'AND' 
+# making sql refinement statment
+## joining query options for with 'AND' 
+
 	my ($vals_r, $cat) = @_;
 	
 	return "" unless @$vals_r;	

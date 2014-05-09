@@ -206,6 +206,7 @@ my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
 $pam_header_r->{"pam_sequence"} = 1;
 load_db_table($dbh, "pam", $pam_header_r, $pam_loci_r);
 
+
 # disconnect to db #
 $dbh->disconnect();
 exit;

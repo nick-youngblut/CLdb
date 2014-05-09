@@ -33,7 +33,8 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Subroutines for parsing & editing spacer/DR blast files
+Subroutines for parsing the tab-delimited loci 
+file and loading the entries into CLdb
 
 =head1 EXPORT_OK
 
