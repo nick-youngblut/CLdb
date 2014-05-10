@@ -150,7 +150,10 @@ push @EXPORT_OK, 'senseByLeaderLoc';
 sub senseByLeaderLoc{
   my ($sense_r, $leaders_r) = @_;
 
+  my %status = ( total => 0, leader => 0 );
   foreach my $locus_id (keys %$sense_r){
+    $status{total}++;  # number of locus_ids
+
     # skipping locus unless leader present for locuz
     next unless exists $leaders_r->{$locus_id};
 
@@ -171,15 +174,26 @@ sub senseByLeaderLoc{
     ## if leader downstream (on - strand): sense is - strand
     if($l_end <= $array_start){
       $sense_r->{$locus_id}->[2] = 1;   # + strand
+      $status{leader}++;
     }
     elsif($l_start >= $array_end){
       $sense_r->{$locus_id}->[2] = -1;   # - strand
+      $status{leader}++;
     }
     else{
       warn "WARNING: it appears that the leader & CRISPR array overlap for locus: '$locus_id'\n";
       next;
     }    
   }
+
+  # status
+  printf STDERR "Setting sense strand for %i %s\n", $status{total}, 
+    $status{total} == 1 ? 'locus' : 'loci';
+  my $setBySE =  $status{total} - $status{leader};
+  printf STDERR "Sense strand set based on array_start-array_end for %i %s\n",
+    $setBySE, $setBySE == 1 ? 'locus' : 'loci';
+  printf STDERR "Sense strand set base on leader region for %i %s\n",
+    $status{leader}, $status{leader} == 1 ? 'locus' : 'loci';
 
   return $sense_r;
 }
