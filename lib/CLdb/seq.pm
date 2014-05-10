@@ -38,6 +38,49 @@ revcomp
 
 =cut
 
+=head2 write_fasta
+
+writing out fasta to file or file handle
+
+=head3 IN
+
+fasta => hashref %{name}=>seq
+file => file name  ('>file_name' or other write operator)
+fh => file handle 
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'write_fasta';
+
+sub write_fasta{
+  my %h = @_;
+  
+  # I/O
+  croak "ERROR: provide a fasta as hash_ref"
+    unless exists $h{fasta};
+  my $outfh;
+  if(exists $h{file}){
+    open $outfh, $h{file} or croak 
+      "ERROR: could not write to $h{'file'}";
+  }
+  elsif(exists $h{fh}){ $outfh = $h{fh}; }
+  else{ croak "ERROR: provide a file name or file handle"; }
+
+  # writing
+  foreach my $name (keys %{$h{fasta}}){
+    $name =~ s/^>//;
+    print $outfh join("\n", ">$name", $h{fasta}{$name} ), "\n";
+  }
+  close $outfh;
+}
+
+
+
+=head2 seq_from_genome_fasta
+
+=cut
 
 sub seq_from_genome_fasta{
 #-- Description --#

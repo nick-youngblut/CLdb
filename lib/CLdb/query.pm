@@ -10,7 +10,8 @@ use DBI;
 
 ## CLdb ##
 use CLdb::seq qw/
-	revcomp/;
+		  revcomp
+		/;
 
 
 # export #
@@ -220,9 +221,8 @@ Getting spacer or DR cluster repesentative sequence from either table
 =head3 Options
  
  spacer_DR_b = spacer or DR [spacer]
- extra_query = extra sql
+ refine_sql = refinement sql (part of WHERE; must start with 'AND')
  cutoff = cluster sequenceID cutoff [1]
- join_sql = "AND" statements 
 
 =cut
 
@@ -231,8 +231,9 @@ sub get_array_seq{
   
   # checking for opts #
   map{ confess "ERROR: cannot find option: '$_'" 
-	 unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
-  
+	 unless exists $opts_r->{$_} } qw/spacer_DR_b/;
+  $opts_r->{refine_sql} = '' unless exists $opts_r->{refine_sql};
+
   # getting table info #
   my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
   ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
@@ -250,7 +251,8 @@ sub get_array_seq{
     # by group default options #
     $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
     
-    $query = "SELECT 
+    $query = "
+SELECT 
 'NA',
 '$tbl_prefix',
 'NA',
@@ -258,11 +260,11 @@ $tbl_prefix\_clusters.cluster_ID,
 $tbl_prefix\_clusters.Rep_sequence
 FROM $tbl_prefix\_clusters, loci 
 WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
-AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
-$opts_r->{'join_sql'}";
+AND $tbl_prefix\_clusters.cutoff = 1";
   }
   else{ # selecting all spacers
-    $query = "SELECT
+    $query = "
+SELECT
 $tbl_oi.Locus_ID,
 '$tbl_prefix',
 $tbl_oi.$tbl_prefix\_ID,
@@ -272,18 +274,17 @@ FROM $tbl_oi, $tbl_prefix\_clusters, loci
 WHERE loci.locus_id = $tbl_oi.locus_id
 AND $tbl_oi.locus_id = $tbl_prefix\_clusters.locus_id
 AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID 
-AND $tbl_prefix\_clusters.cutoff = 1
-$opts_r->{'join_sql'}";
+AND $tbl_prefix\_clusters.cutoff = 1";
   }
   
-  $query =~ s/[\n\t]+/ /g;
-  $query = join(" ", $query, $opts_r->{"extra_query"});
+  #$query =~ s/[\n\t]+/ /g;
   
   # adding group by  & order if clustering
   $query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
     if defined $opts_r->{by_cluster}; # selecting by cluster
   
-  
+  #print Dumper $query; exit;
+
   # query db #
   my $ret = $dbh->selectall_arrayref($query);
   confess "ERROR: no matching $tbl_prefix entries!\n"
@@ -291,6 +292,80 @@ $opts_r->{'join_sql'}";
   
   #print Dumper @$ret; exit;
   return $ret;
+}
+
+
+=head2 get_array_seq_preCluster
+
+Selecting array sequences (spacer|DR) if clustering tables
+aren't present
+
+=head3 IN
+
+$dbh :  dbh object
+$opts :  hashref of options
+
+=head3 Options
+ 
+ spacer_DR_b = spacer or DR [spacer]
+ refine_sql = refinement sql (part of WHERE; must start with 'AND')
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'get_array_seq_preCluster';
+
+sub get_array_seq_preCluster{
+  my ($dbh, $opts_r) = @_;
+
+  # checking for opts #
+  map{ die "ERROR: cannot find option: '$_'"
+         unless exists $opts_r->{$_} } qw/spacer_DR_b/;
+  $opts_r->{refine_sql} = '' unless exists $opts_r->{refine_sql};
+
+  # getting table info (spacer|DR)#
+  my ($tbl_oi, $tbl_prefix);
+  if( $opts_r->{spacer_DR_b} ){ # DR
+    ($tbl_oi, $tbl_prefix) = ("DRs","DR");
+  }
+  else{  # spacer
+    ($tbl_oi, $tbl_prefix) = ("spacers","spacer");
+  }
+
+  my $spacer_DR = $dbh->quote($tbl_prefix);
+
+  my $query = "SELECT
+b.Locus_ID,
+$spacer_DR,
+b.$tbl_prefix\_ID,
+b.$tbl_prefix\_sequence,
+a.array_sense_strand
+FROM loci a,$tbl_oi b
+WHERE a.locus_id = b.locus_id
+$opts_r->{'refine_sql'}";
+
+  # query db #
+  my $sth = $dbh->prepare($query) or croak $dbh->err;
+  $sth->execute;
+  my $ret = $sth->fetchall_arrayref() or croak $dbh->err;
+  die " ERROR: no matching entries!\n"
+    unless $$ret[0];
+
+  # making fasta #
+  my %fasta;
+  foreach my $row (@$ret){
+    # revcomp sequence if array_sense_strand == -1
+    croak "ERROR: sense strand must be 1 or -1\n"
+      unless $row->[4] == 1 or $row->[4] == -1;
+    $row->[3] = revcomp($row->[3]) if $row->[4] == -1;
+    
+    my $seq_name = join("|", @{$row}[0..2] );
+    $fasta{ $seq_name } = $row->[3];
+  }
+  
+  #print Dumper %fasta; exit;
+  return \%fasta;
 }
 
 

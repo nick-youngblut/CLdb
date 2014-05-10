@@ -195,8 +195,7 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 # getting arrays of interest from database #
 ## defining options for query subroutines ##
 my %opts = (
-	extra_query => $extra_query,
-	join_sql => $join_sql,
+	refine_sql => join("\n", $join_sql, $extra_query),
 	by_cluster => $by_cluster,
 	spacer_DR_b => $spacer_DR_b,
 	cutoff => $cluster_cutoff,
@@ -204,6 +203,8 @@ my %opts = (
 
 ## querying CLdb ##
 my $arrays_r = get_array_seq($dbh,\%opts);
+
+print Dumper $arrays_r; exit;
 
 # writing fasta #
 write_array_seq($arrays_r, \%opts);
