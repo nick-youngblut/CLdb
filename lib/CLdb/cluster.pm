@@ -29,7 +29,7 @@ our $VERSION = '0.01';
 
 use base 'Exporter';
 our @EXPORT_OK = '';
-use Carp qw/ confess carp croak/;
+use Carp qw/ confess carp confess/;
 use Data::Dumper;
 
 
@@ -50,11 +50,11 @@ $tbl :  name of table to delete
 push @EXPORT_OK, 'clear_cluster_table';
 
 sub clear_cluster_table{
-  my $dbh = shift or croak "ERROR: provide a dbh object";
-  my $tbl = shift or croak "ERROR: provide a table to clear";
+  my $dbh = shift or confess "ERROR: provide a dbh object";
+  my $tbl = shift or confess "ERROR: provide a table to clear";
 
   my $cmd = "DELETE FROM $tbl";
-  my $sql = $dbh->prepare($cmd) or croak $dbh->err;
+  my $sql = $dbh->prepare($cmd) or confess $dbh->err;
   $sql->execute();
   $dbh->commit();
 
@@ -84,16 +84,16 @@ push @EXPORT_OK, 'insert_cluster';
 sub insert_cluster{
   my %h = @_;
   my $dbh = exists $h{dbh} ? $h{dbh} :
-    croak "ERROR: provide a dbh object\n";
-  exists $h{cluster} or croak "ERROR: provide a cluster hashref\n";
+    confess "ERROR: provide a dbh object\n";
+  exists $h{cluster} or confess "ERROR: provide a cluster hashref\n";
   my $element = exists $h{element} ? $h{element} : 
-    croak "ERROR: element = spacer or DR\n";
+    confess "ERROR: element = spacer or DR\n";
 
   # sql #
   my $cmd = "INSERT INTO 
 $element\_clusters(locus_id, $element\_id, cutoff, cluster_id, Rep_sequence) 
 values(?,?,?,?,?)";
-  my $sql = $dbh->prepare($cmd) or croak $dbh->err;
+  my $sql = $dbh->prepare($cmd) or confess $dbh->err;
 
   # insert #
   my $entry_cnt = 0;
@@ -105,11 +105,11 @@ values(?,?,?,?,?)";
       $sql->bind_param(4, $h{cluster}{$cutoff}{$seq_name}{cluster_id});
       $sql->bind_param(5, $h{cluster}{$cutoff}{$seq_name}{rep_seq});
      
-      $sql->execute() or croak $dbh->err;
+      $sql->execute() or confess $dbh->err;
       $entry_cnt++;
     }
   }
-  $dbh->commit or croak $dbh->err;
+  $dbh->commit or confess $dbh->err;
 
   print STDERR "...$entry_cnt $element cluster entries added/updated\n" 
     unless $h{verbose};
@@ -139,13 +139,13 @@ push @EXPORT_OK, 'cluster_cutoffs';
 
 sub cluster_cutoffs{
   my %h = @_;
-  exists $h{cluster_cutoff} or croak "ERROR: provide a cluster cutoff array ref [start,end,jump]";
-  exists $h{fasta_file} or croak "ERROR: provide a fasta file name";
-  exists $h{element} or croak "ERROR: defined element [spacer|DR]";
+  exists $h{cluster_cutoff} or confess "ERROR: provide a cluster cutoff array ref [start,end,jump]";
+  exists $h{fasta_file} or confess "ERROR: provide a fasta file name";
+  exists $h{element} or confess "ERROR: defined element [spacer|DR]";
   $h{threads} = 1 unless exists $h{threads};
   
   # checking for existing cd hit
-  can_run("cd-hit-est") or croak "ERROR: cannot find cd-hit-est\n";
+  can_run("cd-hit-est") or confess "ERROR: cannot find cd-hit-est\n";
 
   # workflow for each clustering cutoff #  
   my %cluster;
@@ -231,10 +231,10 @@ $cdhit_out_clst :  cluster report output file name
 =cut
 
 sub ID2clusterID{
-  my $cdhit_out_clst = shift or croak "ERROR: provide a cdhit cluster output file\n";
+  my $cdhit_out_clst = shift or confess "ERROR: provide a cdhit cluster output file\n";
   my $verbose = shift;
 
-  open IN, $cdhit_out_clst or croak $!;
+  open IN, $cdhit_out_clst or confess $!;
   my %N_clusters;
   my %cluster_index;
   my $cluster_id;
@@ -246,7 +246,7 @@ sub ID2clusterID{
       $N_clusters{$cluster_id} = 1;
     }
     elsif( /nt,.+>(.+)\.\.\. [a*]/ ){
-      croak "ERROR: cd-hit cluster file not formatted corrrectly\n"
+      confess "ERROR: cd-hit cluster file not formatted corrrectly\n"
 	unless defined $cluster_id;
       $cluster_index{ $1} = $cluster_id;
     }
@@ -254,7 +254,7 @@ sub ID2clusterID{
   }
   close IN;
 
-  # status
+  # stats
   printf STDERR "\tNumber of clusters produced: %i\n",
     scalar keys %N_clusters;
 
@@ -267,7 +267,9 @@ sub ID2clusterID{
 
 Parsing the output from cd-hit-est
 
-Assuming sequence name in format: 'locus_id|element|element_id'
+Assuming sequence name in format: 'locus_id|element|element_id|clusterID'
+
+cluster_id should eq 'NA'
 
 =head3 IN
 
@@ -293,13 +295,13 @@ sub parse_cdhit_seq{
     if(/^>(.+)/){
       $seq_name = $1;
       my @seq_name = split /\|/, $seq_name;
-      croak "ERROR: sequence name '$seq_name' is not formated correctly\n"
-	unless scalar @seq_name == 3;
+      confess "ERROR: sequence name '$seq_name' is not formated correctly\n"
+	unless scalar @seq_name == 4;
       $seq_cluster{$seq_name}{locus_id} = $seq_name[0];
       $seq_cluster{$seq_name}{element} = $seq_name[1];
       $seq_cluster{$seq_name}{element_id} = $seq_name[2];
       $seq_cluster{$seq_name}{cluster_id} = exists $cluster_index->{$seq_name} ?
-	$cluster_index->{$seq_name} : croak "ERROR: cannot find cluster ID for $seq_name\n";
+	$cluster_index->{$seq_name} : confess "ERROR: cannot find cluster ID for $seq_name\n";
     }
     else{
       $seq_cluster{ $seq_name }{rep_seq} .= $_;

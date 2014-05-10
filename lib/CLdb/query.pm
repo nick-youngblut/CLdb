@@ -17,10 +17,8 @@ use CLdb::seq qw/
 # export #
 use base 'Exporter';
 our @EXPORT_OK = qw/
-		     table_exists
 		     n_entries
 		     join_query_opts
-		     get_array_seq
 		     get_leader_pos
 		   /;
 
@@ -211,7 +209,7 @@ sub orient_byleader{
 
 =head3 description
 
-Getting spacer or DR cluster repesentative sequence from either table
+etting spacer or DR cluster repesentative sequence from either table
 
 =head3 IN
  
@@ -226,13 +224,15 @@ Getting spacer or DR cluster repesentative sequence from either table
 
 =cut
 
+push @EXPORT_OK, 'get_array_seq';
+
 sub get_array_seq{	
-  my ($dbh, $opts_r) = @_;
-  
-  # checking for opts #
-  map{ confess "ERROR: cannot find option: '$_'" 
-	 unless exists $opts_r->{$_} } qw/spacer_DR_b/;
-  $opts_r->{refine_sql} = '' unless exists $opts_r->{refine_sql};
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+  my $opts_r = shift or confess "ERROR: provide a hashref of options\n";
+  my $cutoff = exists $opts_r->{cutoff} ? $opts_r->{cutoff} : 1;
+  my $refine_sql = exists $opts_r->{refine_sql} ? 
+    $opts_r->{refine_sql} : '';
+  exists $opts_r->{spacer_DR_b} or confess "ERROR: provide 'spacer_DR_b' as an arg";
 
   # getting table info #
   my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
@@ -244,54 +244,57 @@ sub get_array_seq{
   #	spacer/DR_ID
   # 	clusterID
   # 	sequence
+  #     sense_strand
 
   my $query; 
-  if(defined $opts_r->{by_cluster}){ # selecting by cluster
-    
-    # by group default options #
-    $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
-    
+  if( $opts_r->{by_cluster} ){ # selecting by cluster        
     $query = "
 SELECT 
 'NA',
 '$tbl_prefix',
 'NA',
 $tbl_prefix\_clusters.cluster_ID,
-$tbl_prefix\_clusters.Rep_sequence
+$tbl_prefix\_clusters.Rep_sequence,
+loci.array_sense_strand
 FROM $tbl_prefix\_clusters, loci 
 WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
-AND $tbl_prefix\_clusters.cutoff = 1";
+AND $tbl_prefix\_clusters.cutoff = $cutoff
+$refine_sql
+GROUP BY $tbl_prefix\_clusters.cluster_ID 
+ORDER BY $tbl_prefix\_clusters.cluster_ID
+";
   }
-  else{ # selecting all spacers
+  else{  # selecting all spacers or DRs
     $query = "
 SELECT
 $tbl_oi.Locus_ID,
 '$tbl_prefix',
 $tbl_oi.$tbl_prefix\_ID,
 'NA',
-$tbl_prefix\_clusters.Rep_sequence
-FROM $tbl_oi, $tbl_prefix\_clusters, loci
+$tbl_oi.$tbl_prefix\_sequence,
+loci.array_sense_strand
+FROM $tbl_oi, loci
 WHERE loci.locus_id = $tbl_oi.locus_id
-AND $tbl_oi.locus_id = $tbl_prefix\_clusters.locus_id
-AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID 
-AND $tbl_prefix\_clusters.cutoff = 1";
+$refine_sql";
   }
-  
-  #$query =~ s/[\n\t]+/ /g;
-  
-  # adding group by  & order if clustering
-  $query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
-    if defined $opts_r->{by_cluster}; # selecting by cluster
-  
-  #print Dumper $query; exit;
-
+    
   # query db #
   my $ret = $dbh->selectall_arrayref($query);
   confess "ERROR: no matching $tbl_prefix entries!\n"
     unless $$ret[0];
-  
-  #print Dumper @$ret; exit;
-  return $ret;
+ 
+  my %fasta;
+  foreach my $row (@$ret){
+    # revcomp sequence if array_sense_strand == -1
+    croak "ERROR: sense strand must be 1 or -1\n"
+      unless $row->[5] == 1 or $row->[5] == -1;
+    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
+    
+    my $seq_name = join("|", @{$row}[0..3] );
+    $fasta{ $seq_name } = $row->[4];
+  }
+
+  return \%fasta;
 }
 
 
@@ -312,12 +315,15 @@ $opts :  hashref of options
 
 =head3 OUT
 
+$%{name}=>seq
+
 =cut
 
 push @EXPORT_OK, 'get_array_seq_preCluster';
 
 sub get_array_seq_preCluster{
-  my ($dbh, $opts_r) = @_;
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+  my $opts_r = shift or confess "ERROR: provide a hashref of options\n";
 
   # checking for opts #
   map{ die "ERROR: cannot find option: '$_'"
@@ -336,13 +342,14 @@ sub get_array_seq_preCluster{
   my $spacer_DR = $dbh->quote($tbl_prefix);
 
   my $query = "SELECT
-b.Locus_ID,
+loci.Locus_ID,
 $spacer_DR,
-b.$tbl_prefix\_ID,
-b.$tbl_prefix\_sequence,
-a.array_sense_strand
-FROM loci a,$tbl_oi b
-WHERE a.locus_id = b.locus_id
+$tbl_oi.$tbl_prefix\_ID,
+'NA',
+$tbl_oi.$tbl_prefix\_sequence,
+loci.array_sense_strand
+FROM loci,$tbl_oi
+WHERE loci.locus_id = $tbl_oi.locus_id
 $opts_r->{'refine_sql'}";
 
   # query db #
@@ -357,11 +364,11 @@ $opts_r->{'refine_sql'}";
   foreach my $row (@$ret){
     # revcomp sequence if array_sense_strand == -1
     croak "ERROR: sense strand must be 1 or -1\n"
-      unless $row->[4] == 1 or $row->[4] == -1;
-    $row->[3] = revcomp($row->[3]) if $row->[4] == -1;
+      unless $row->[5] == 1 or $row->[5] == -1;
+    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
     
-    my $seq_name = join("|", @{$row}[0..2] );
-    $fasta{ $seq_name } = $row->[3];
+    my $seq_name = join("|", @{$row}[0..3] );
+    $fasta{ $seq_name } = $row->[4];
   }
   
   #print Dumper %fasta; exit;
@@ -381,17 +388,32 @@ sub join_query_opts{
 	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
 	}
 
+
+=head2 table_exists
+
+Determine whether table exists in CLdb
+
+=head3 IN
+
+$dbh :  dbh object
+$table :  table name
+
+=head3 OUT
+
+exists ? 1 : 0
+
+=cut
+
+push @EXPORT_OK, 'table_exists';
+
 sub table_exists {
-# checking for the existence of a table #
-	my ($dbh, $table) = @_;
-	confess "ERROR: Provide a DBI database object!\n" if ! defined $dbh;
-	confess "ERROR: Provide a CLdb table name!\n" if ! defined $table;
-	
-	my $res = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", "tbl_name"); 
-	
-	confess "ERROR: '$table' table not found in CLdb!\n" 
-		unless grep(/^$table$/i, keys %$res);
-	}
+  my $dbh = shift or confess "ERROR: provie a dbh object\n";
+  my $table = shift or confess "ERROR: provide a table name\n";
+
+  my $res = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", "tbl_name"); 
+
+  grep(/^$table$/i, keys %$res) ? 1 : 0;  # 1 if exists
+}
 
 sub n_entries {
 # getting number of entries in a table #

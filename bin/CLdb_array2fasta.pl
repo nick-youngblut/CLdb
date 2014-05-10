@@ -68,11 +68,16 @@ Get spacer or direct repeat sequences from the CRISPR database
 and write them to a fasta.
 
 By default, all spacers or direct repeats (if '-r') will be written.
-The query can be refined with many of the flags. 
+The query can be refined with many of the flags (. 
 
-=head2 Output
+The sequences will be oriented base on the array_sense_strand
+field in the loci table. To alter this field, see "CLdb_setSenseStrand.pl".
 
-If not using grouping: ">locus_ID|spacer/DR|elementID|clusterID"
+=head2 Output sequence naming
+
+If -cluster: ">NA|spacer/DR|NA|clusterID"
+
+Else: ">locus_id|spacer/DR|elementID|NA"
 
 =head1 EXAMPLES
 
@@ -130,15 +135,17 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
-	table_exists
-	n_entries
-	join_query_opts
-	get_array_seq/;
+		    table_exists
+		    n_entries
+		    join_query_opts
+		    get_array_seq
+		    get_array_seq_preCluster
+		  /;
 use CLdb::utilities qw/
-	file_exists 
-	connect2db/;
+			file_exists 
+			connect2db/;
 use CLdb::seq qw/
-	revcomp/;
+		  revcomp/;
 
 
 
@@ -180,7 +187,7 @@ table_exists($dbh, "DRs") unless $spacer_DR_b;
 # determining table of interest
 my $tbl_oi = "spacers";
 $tbl_oi = "DRs" if $spacer_DR_b;
-table_exists($dbh, $tbl_oi); 
+table_exists($dbh, $tbl_oi) or die "ERROR: $tbl_oi not found in CLdb\n";
 die "ERROR: no entries in $tbl_oi table!\n" 
 	unless n_entries($dbh, $tbl_oi);
 
@@ -190,7 +197,6 @@ my $join_sql = "";
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
 
 # getting arrays of interest from database #
 ## defining options for query subroutines ##
@@ -202,33 +208,21 @@ my %opts = (
 	);
 
 ## querying CLdb ##
-my $arrays_r = get_array_seq($dbh,\%opts);
-
-print Dumper $arrays_r; exit;
+my $arrays_r;
+my $cluster_tbl = $spacer_DR_b ? "DR_clusters" : "spacer_clusters";
+if( table_exists($dbh, $cluster_tbl) ){
+  $arrays_r =  get_array_seq($dbh,\%opts);
+}
+else{
+  $arrays_r = get_array_seq_preCluster($dbh, \%opts);
+}
 
 # writing fasta #
-write_array_seq($arrays_r, \%opts);
+map{ print join("\n", ">$_", $arrays_r->{$_}),"\n" } keys %$arrays_r;
 
 
 #--- disconnect ---#
 $dbh->disconnect();
 exit;
-
-
-### Subroutines
-sub write_array_seq{
-# writing arrays as fasta
-  my ($arrays_r, $opts_r) = @_;
-  
-  foreach (@$arrays_r){
-    print join("\n", 
-	       join("|", ">$$_[0]", @$_[1..($#$_-1)]), 
-	       $$_[$#$_]), "\n";
-  }
-}
-
-
-
-
 
 
