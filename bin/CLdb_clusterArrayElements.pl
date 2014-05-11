@@ -258,13 +258,12 @@ if($dr_bool){
   $DR_cluster_r = cluster_cutoffs( cluster_cutoff => $cluster_cut_r, 
 				   fasta_file => $fasta_files{DR},
 				   element => 'DRs',  
-				   threads => $threads,
+ 				   threads => $threads,
 				   length => $length,
 				   verbose => $verbose
 				 );
 }
 chdir $curdir or die $!;
-
 
 ## updating db ##
 print STDERR "\nInserting/updating entries in CLdb...\n";

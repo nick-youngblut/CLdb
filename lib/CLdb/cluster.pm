@@ -96,9 +96,10 @@ values(?,?,?,?,?)";
   my $sql = $dbh->prepare($cmd) or confess $dbh->err;
 
   # insert #
+  my %debug;
   my $entry_cnt = 0;
   foreach my $cutoff ( keys %{$h{cluster}} ){
-    foreach my $seq_name ( keys %{$h{cluster}{$cutoff}} ){
+    foreach my $seq_name (sort  keys %{$h{cluster}{$cutoff}} ){
       $sql->bind_param(1, $h{cluster}{$cutoff}{$seq_name}{locus_id});
       $sql->bind_param(2, $h{cluster}{$cutoff}{$seq_name}{element_id});
       $sql->bind_param(3, $cutoff);
@@ -107,10 +108,13 @@ values(?,?,?,?,?)";
      
       $sql->execute() or confess $dbh->err;
       $entry_cnt++;
+
+      $debug{$cutoff}{ $h{cluster}{$cutoff}{$seq_name}{cluster_id} }++;
     }
   }
   $dbh->commit or confess $dbh->err;
 
+  #print Dumper %debug; exit;
   print STDERR "...$entry_cnt $element cluster entries added/updated\n" 
     unless $h{verbose};
 }
@@ -132,6 +136,8 @@ threads => number of threads
 =head3 OUT
 
 $%cluster{cluster_cutoff}=>{seq_name}=>{cat}=>value
+cat = {locus_id|element|element_id|cluster_ID|rep_seq}
+ 
 
 =cut
 
@@ -139,7 +145,8 @@ push @EXPORT_OK, 'cluster_cutoffs';
 
 sub cluster_cutoffs{
   my %h = @_;
-  exists $h{cluster_cutoff} or confess "ERROR: provide a cluster cutoff array ref [start,end,jump]";
+  exists $h{cluster_cutoff} or 
+    confess "ERROR: provide a cluster cutoff array ref [start,end,jump]";
   exists $h{fasta_file} or confess "ERROR: provide a fasta file name";
   exists $h{element} or confess "ERROR: defined element [spacer|DR]";
   $h{threads} = 1 unless exists $h{threads};
@@ -158,11 +165,16 @@ sub cluster_cutoffs{
     ## call cd-hit-est ##
     my $cdhit_out = call_cdhit( \%h, $i );
 
-    ## parsing cdhit clustering file
-    my $cluster_index = ID2clusterID("$cdhit_out.clstr", $h{verbose});
-    
+    ## parsing cdhit cluster report file
+    my $clustReport_r = parse_cdhit_clstr("$cdhit_out.clstr",  # name of cluster file
+		      $h{verbose});
+
     ## parse cd-hit-est cluster representative sequence output ##
-    $cluster{$i} = parse_cdhit_seq($cdhit_out, $cluster_index);    # saving for each cluster cutoff
+    my $clustRepSeq_r = parse_cdhit_seq($cdhit_out, $clustReport_r);    
+
+    ## merging fasta file and cluster report data
+    ## saving for each cluster cutoff
+    $cluster{$i} = merge_cdhit_output($clustRepSeq_r, $clustReport_r);
   }
   
   #print Dumper %cluster; exit;
@@ -210,7 +222,6 @@ sub call_cdhit{
       ($? & 127),  ($? & 128) ? 'with' : 'without';
   }
   else {
-    #die "ERROR: child exited with value %d\n", $? >> 8;
   }
   
   #exit;
@@ -218,19 +229,117 @@ sub call_cdhit{
 }
 
 
-=head2 ID2clusterID
+=head2 merge_cdhit_output
+
+Merging data from fasta and clsuter report output from cd-hit.
+Assuming seq_name formated as: 
+ 'locus_id|element|element|element_id|cluster_id|cutoff'
+
+=head3 IN
+
+$clustRepSeq_r :  cluster_id => [seq_names]
+$clustReport_r :  cluster_id => rep_sequence
+
+=head3 OUT
+
+$%seq_name => {locus_id|element|element_id|cluster_ID|rep_seq} => value 
+
+=cut
+
+sub merge_cdhit_output{
+  my $clustRepSeq_r = shift or confess "Provide a $% of rep sequences";
+  my $clustReport_r = shift or confess "Provide a $% of cluster report entries";
+
+  # making index associating rep_sequence with cluster
+  my %merged;
+  foreach my $clusterID (keys %{$clustReport_r->{clust_name}} ){
+    confess "Cannot find $clusterID in rep sequences"
+      unless exists $clustRepSeq_r->{$clusterID};
+
+    # loading %merged
+    foreach my $seq_name ( @{$clustReport_r->{clust_name}{$clusterID}} ){
+      # checking name
+      confess "Do not recognize $seq_name format"
+	unless $seq_name =~ /[^|]+\|(spacer|DR)\|\d+\|NA\|NA/;
+      my @l = split /\|/, $seq_name;  # locus_id|element|element_id
+      confess "Do not recognize $seq_name format"
+	unless scalar @l == 5;
+
+      $merged{$seq_name}{locus_id} = $l[0];
+      $merged{$seq_name}{element} = $l[1];
+      $merged{$seq_name}{element_id} = $l[2];
+      $merged{$seq_name}{cluster_id} = $clusterID;
+      $merged{$seq_name}{rep_seq} = $clustRepSeq_r->{$clusterID};      
+    }
+  }
+ 
+  #print Dumper %merged; exit;
+  return \%merged;
+}
+
+
+=head2 parse_cdhit_seq
+
+Parsing the output from cd-hit-est
+
+Associating rep sequence ot cluster
+
+=head3 IN
+
+$cdhit_out :  output cluster file for cd-hit-est run
+$cluster_index :  seq_name => cluster_ID  # no '>' 
+
+=head3 OUT
+
+$%cluster_id => rep_sequence
+# sequence_id is just the name of the rep sequene for the cluster
+
+=cut
+
+sub parse_cdhit_seq{
+  my ($cdhit_out, $clustReport_r) = @_;
+ 
+  open IN, $cdhit_out or die $!;
+  my $clust_name;
+  my %seq_cluster;  
+  while(<IN>){
+    chomp;
+    next if /^\s*$/;
+    
+    if(/^>(.+)/){
+      my $seq_name = $1;
+      confess "Cannot find $seq_name in cluster report"
+	unless exists $clustReport_r->{name_clust}{$seq_name};
+      $clust_name = $clustReport_r->{name_clust}{$seq_name}; # cluster_id=>rep_seq
+    }
+    else{
+      $seq_cluster{ $clust_name } .= $_;
+    }
+  }
+  close IN;
+  
+  #print Dumper %seq_cluster; exit;
+  return \%seq_cluster;
+}
+
+
+=head2 parse_cdhit_clstr
 
 Parsing cd-hit cluster report output to make rep-seqid => clusterID index
 
 =head3 IN
 
 $cdhit_out_clst :  cluster report output file name
+$verbose :  verbose bool
 
 =head3 OUT
 
+$%{clust_name}{cluster} => [seq_names]
+$%{name_clust}{seq_name} => clust_id
+
 =cut
 
-sub ID2clusterID{
+sub parse_cdhit_clstr{
   my $cdhit_out_clst = shift or confess "ERROR: provide a cdhit cluster output file\n";
   my $verbose = shift;
 
@@ -246,9 +355,11 @@ sub ID2clusterID{
       $N_clusters{$cluster_id} = 1;
     }
     elsif( /nt,.+>(.+)\.\.\. [a*]/ ){
+      my $seq_name = $1;
       confess "ERROR: cd-hit cluster file not formatted corrrectly\n"
 	unless defined $cluster_id;
-      $cluster_index{ $1} = $cluster_id;
+      push @{$cluster_index{clust_name}{ $cluster_id }}, $seq_name;
+      $cluster_index{name_clust}{$seq_name} = $cluster_id;
     }
     else{ next; }
   }
@@ -258,60 +369,10 @@ sub ID2clusterID{
   printf STDERR "\tNumber of clusters produced: %i\n",
     scalar keys %N_clusters;
 
-  #print Dumper %cluster_index; exit;
+#  print Dumper %cluster_index; exit;
   return \%cluster_index;
 }
 
-
-=head2 parse_cdhit_seq
-
-Parsing the output from cd-hit-est
-
-Assuming sequence name in format: 'locus_id|element|element_id|clusterID'
-
-cluster_id should eq 'NA'
-
-=head3 IN
-
-$cdhit_out :  output cluster file for cd-hit-est run
-$cluster_index :  seq_name => cluster_ID  # no '>' 
-
-=head3 OUT
-
-seq_name => {locus_id|element|element_id|cluster_ID|rep_seq} => value 
-
-=cut
-
-sub parse_cdhit_seq{
-  my ($cdhit_out, $cluster_index) = @_;
- 
-  open IN, $cdhit_out or die $!;
-  my $seq_name;
-  my %seq_cluster;  # seq_name => {locus_id|element|element_id|cluster_ID|rep_seq} => value 
-  while(<IN>){
-    chomp;
-    next if /^\s*$/;
-    
-    if(/^>(.+)/){
-      $seq_name = $1;
-      my @seq_name = split /\|/, $seq_name;
-      confess "ERROR: sequence name '$seq_name' is not formated correctly\n"
-	unless scalar @seq_name == 4;
-      $seq_cluster{$seq_name}{locus_id} = $seq_name[0];
-      $seq_cluster{$seq_name}{element} = $seq_name[1];
-      $seq_cluster{$seq_name}{element_id} = $seq_name[2];
-      $seq_cluster{$seq_name}{cluster_id} = exists $cluster_index->{$seq_name} ?
-	$cluster_index->{$seq_name} : confess "ERROR: cannot find cluster ID for $seq_name\n";
-    }
-    else{
-      $seq_cluster{ $seq_name }{rep_seq} .= $_;
-    }
-  }
-  close IN;
-  
-  #print Dumper %seq_cluster; exit;
-  return \%seq_cluster;
-}
 
 
 =head1 AUTHOR
