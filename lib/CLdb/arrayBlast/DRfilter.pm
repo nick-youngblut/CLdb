@@ -69,9 +69,14 @@ sub make_DR_itree{
     # database 
     my $db =  $DR_r->{$run}{'BlastOutput_db'};
     $db = (File::Spec->splitpath($db))[2];
+    
+    print Dumper $DR_r->{$run} unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};
 
+    next unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};  # next unless 'Iteration'
     foreach my $iter ( @{$DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
-            
+      next unless exists $iter->{'Iteration_hits'} &&
+	$iter->{'Iteration_hits'} !~ /^\s*$/;  # next unless hits to subject
+           
       # iterating through hits
       my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
       foreach my $hit ( @$hits_ref){
@@ -122,9 +127,9 @@ sub make_DR_itree{
   
   # status
   map{ $filter{$_} = 0 unless exists $filter{$_}} qw/total evalue length used/;
-  print STDERR "### filter of 'bad' DR hits ###\n";
+  print STDERR "### Summary for filtering of 'bad' DR hits ###\n";
   print STDERR "Total DR hits: $filter{'total'}\n";
-  print STDERR "DR hits with evalues < $evalue_cut: $filter{'evalue'}\n" if $evalue_cut;
+  print STDERR "DR hits with E-values < $evalue_cut: $filter{'evalue'}\n" if $evalue_cut;
   print STDERR "DR hits with hit lengths (fraction of total) < $len_cut: $filter{'length'}\n";
   print STDERR "DR hits used for filtering: $filter{'used'}\n";
 

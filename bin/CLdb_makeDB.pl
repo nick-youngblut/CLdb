@@ -265,7 +265,7 @@ Spacer_ID	TEXT	NOT NULL,
 Cutoff	REAL	NOT NULL,
 Cluster_ID	INTEGER	NOT NULL,
 Rep_sequence	TEXT	NOT NULL,
-UNIQUE (Locus_ID, Spacer_ID, Cutoff)
+UNIQUE (Locus_ID, Spacer_ID, Cluster_ID, Cutoff)
 ON CONFLICT REPLACE
 );
 

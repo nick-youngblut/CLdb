@@ -8,7 +8,7 @@ CLdb_arrayBlastDRFilter.pl -- filter out spacers hitting CRISPR arrays based on 
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastDRFilter.pl [options] spacer_blast.txt DR_blast.txt > spacer_blast_filtered.txt
+CLdb_arrayBlastDRFilter.pl [options] spacer_blast.srl DR_blast.srl > spacer_blast_filtered.srl
 
 =head2 options
 
@@ -54,7 +54,7 @@ to >= '-DR' direct repeat blast hits.
 
 =head2 Basic Usage:
 
-CLdb_arrayBlastDRFilter.pl spacer_blast.txt repeat_blast.txt > spacer_blast_filter.txt
+CLdb_arrayBlastDRFilter.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
 
 =head1 AUTHOR
 

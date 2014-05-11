@@ -123,30 +123,50 @@ sub seq_from_genome_fasta{
 	return $leader_seq;
 	}
 
+
+=head2 read_fasta
+
+Reading in fasta file
+
+=head3 IN
+
+hash of args:
+file :  file name
+fh  : file handle
+
+=head3 OUT
+
+$%{name}=>seq
+
+=cut
+
 sub read_fasta{
 # loading fasta file as a hash #
-	my ($fasta_in) = @_;
-	if(defined $fasta_in){
-		confess " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
-		open IN, $fasta_in or confess $!;
-		}
-	else{ *IN = *STDIN; }
+  my %h = @_;
+  confess "ERROR: a file name or file handle must be provided\n"
+    unless exists $h{file} or $h{fh};
 
-	my (%fasta, $tmpkey);
-	while(<IN>){
-		chomp;
- 		s/#.+//;
- 		next if  /^\s*$/;	
- 		if(/>.+/){
- 			s/>//;
- 			$fasta{$_} = "";
- 			$tmpkey = $_;	# changing key
- 			}
- 		else{$fasta{$tmpkey} .= $_; }
-		}
-	close IN;
-	return \%fasta;
-	} 
+  # file or file handle
+  my $fh;
+  exists $h{fh} ? $fh = $h{fh} : open $fh, $h{file} or confess $!;
+
+  my (%fasta, $tmpkey);
+  while(<$fh>){
+    chomp;
+    s/#.+//;
+    next if  /^\s*$/;	
+
+    if(/>.+/){
+      s/>//;
+      $fasta{$_} = "";
+      $tmpkey = $_;	# changing key
+    }
+    else{$fasta{$tmpkey} .= $_; }
+  }
+  close $fh;
+  return \%fasta;
+} 
+
 
 sub revcomp{
 # reverse complement of a sequence

@@ -127,18 +127,18 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
-	table_exists
-	list_columns/;
+		    table_exists
+		    list_columns/;
 use CLdb::load qw/
-	load_db_table/;
+		   load_db_table/;
 use CLdb::seq qw/
-	read_fasta
-	seq_from_genome_fasta/;
+		  read_fasta
+		  seq_from_genome_fasta/;
 use CLdb::utilities qw/
-	file_exists 
-	connect2db
-	lineBreaks2unix
-	get_file_path/;
+			file_exists 
+			connect2db
+			lineBreaks2unix
+			get_file_path/;
 use CLdb::load::loadLoci qw/
 			     unix_line_breaks
 			   /;
@@ -195,12 +195,14 @@ my $loci_header_r = just_table_columns($header_r, 'loci');
 load_db_table($dbh, "loci", $loci_header_r, $loci_r);
 
 ## loading leader table ##
+# TODO: update
 my $leader_header_r = just_table_columns($header_r, 'leader');
 $leader_header_r->{"leader_sequence"} = 1;
 my $leader_loci_r = get_leader_seq($loci_r, $db_path);
 load_db_table($dbh, "leaders", $leader_header_r, $leader_loci_r);
 
 ## loading pam table ##
+# TODO: update
 my $pam_header_r = just_table_columns($header_r, 'pam');
 my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
 $pam_header_r->{"pam_sequence"} = 1;
@@ -227,73 +229,73 @@ sub check_locus_id{
 
 sub get_pam_seq{
 # getting pam seq if needed #
-	my ($loci_r, $db_path, $pam_header_r) = @_;
-	
-	if(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}
-		&& exists $pam_header_r->{"pam_sequence"}){
-		print STDERR "### PAM sequence & start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
-		}
-	elsif(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}){
-		print STDERR "### PAM start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
-		}
-	elsif(exists $pam_header_r->{"pam_sequence"}){
-		print STDERR "### PAM sequence column provided. Loading values into PAM table ###\n"
-		}
-	else{
-		print STDERR "### no PAM info provided. Skipping PAM loading ###\n"
-		}
-	
-	# getting pam sequence if possible #
-	my %cp;
-	foreach my $locus_id (keys %$loci_r){
-		if(exists $loci_r->{$locus_id}{'pam_sequence'}){
-			$cp{$locus_id} = $loci_r->{$locus_id};
-			}
-		elsif( exists $loci_r->{$locus_id}{'pam_start'}
-			   && exists $loci_r->{$locus_id}{'pam_start'} 
-			   && exists $loci_r->{$locus_id}{'scaffold'}
-			   && exists $loci_r->{$locus_id}{'fasta_file'}){		# geting sequence 
-			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
-			
-			$loci_r->{$locus_id}{'pam_sequence'} = 
-				seq_from_genome_fasta( $fasta_r, 
-						[$loci_r->{$locus_id}{'scaffold'},
-						$loci_r->{$locus_id}{'pam_start'}, 
-						$loci_r->{$locus_id}{'pam_end'}]
-						);
-			}
-		else{
-			next;
-			}
-		
-	
-		# checking for existence of genome fasta, if yes, extract leader sequence #
-		if(exists $loci_r->{$locus_id}{'fasta_file'}){
-			
-			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
-			
-			$loci_r->{$locus_id}{'leader_sequence'} = 
-				seq_from_genome_fasta( $fasta_r, 
-						[$loci_r->{$locus_id}{'scaffold'},
-						$loci_r->{$locus_id}{'leader_start'}, 
-						$loci_r->{$locus_id}{'leader_end'}]
-						) unless exists $loci_r->{$locus_id}{'leader_sequence'};
-			
-			if($loci_r->{$locus_id}{'pam_sequence'} eq ""){
-				print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
-					"' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
-					". Not loading pam sequence!\n";
-				}
-			else{		# just entries w/ leader sequence #
-				$cp{$locus_id} = $loci_r->{$locus_id};
-				}
-			}
-		}
-
-		#print Dumper %cp; exit;
-	return \%cp;
-	
-	}
+  my ($loci_r, $db_path, $pam_header_r) = @_;
+  
+  if(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}
+     && exists $pam_header_r->{"pam_sequence"}){
+    print STDERR "### PAM sequence & start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
+  }
+  elsif(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}){
+    print STDERR "### PAM start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
+  }
+  elsif(exists $pam_header_r->{"pam_sequence"}){
+    print STDERR "### PAM sequence column provided. Loading values into PAM table ###\n"
+  }
+  else{
+    print STDERR "### no PAM info provided. Skipping PAM loading ###\n"
+  }
+  
+  # getting pam sequence if possible #
+  my %cp;
+  foreach my $locus_id (keys %$loci_r){
+    if(exists $loci_r->{$locus_id}{'pam_sequence'}){
+      $cp{$locus_id} = $loci_r->{$locus_id};
+    }
+    elsif( exists $loci_r->{$locus_id}{'pam_start'}
+	   && exists $loci_r->{$locus_id}{'pam_start'} 
+	   && exists $loci_r->{$locus_id}{'scaffold'}
+	   && exists $loci_r->{$locus_id}{'fasta_file'}){		# geting sequence 
+      my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
+      
+      $loci_r->{$locus_id}{'pam_sequence'} = 
+	seq_from_genome_fasta( $fasta_r, 
+			       [$loci_r->{$locus_id}{'scaffold'},
+				$loci_r->{$locus_id}{'pam_start'}, 
+				$loci_r->{$locus_id}{'pam_end'}]
+			     );
+    }
+    else{
+      next;
+    }
+    
+    
+    # checking for existence of genome fasta, if yes, extract leader sequence #
+    if(exists $loci_r->{$locus_id}{'fasta_file'}){
+      
+      my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
+      
+      $loci_r->{$locus_id}{'leader_sequence'} = 
+	seq_from_genome_fasta( $fasta_r, 
+			       [$loci_r->{$locus_id}{'scaffold'},
+				$loci_r->{$locus_id}{'leader_start'}, 
+				$loci_r->{$locus_id}{'leader_end'}]
+			     ) unless exists $loci_r->{$locus_id}{'leader_sequence'};
+      
+      if($loci_r->{$locus_id}{'pam_sequence'} eq ""){
+	print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
+	  "' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
+	    ". Not loading pam sequence!\n";
+      }
+      else{		# just entries w/ leader sequence #
+	$cp{$locus_id} = $loci_r->{$locus_id};
+      }
+    }
+  }
+  
+  #print Dumper %cp; exit;
+  return \%cp;
+  
+}
 
 sub get_leader_seq{
 # loading leader; pulling out sequence from genome if available #

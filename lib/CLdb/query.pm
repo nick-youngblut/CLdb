@@ -222,6 +222,12 @@ etting spacer or DR cluster repesentative sequence from either table
  refine_sql = refinement sql (part of WHERE; must start with 'AND')
  cutoff = cluster sequenceID cutoff [1]
 
+=head3 OUT
+
+$%{name} => seq
+
+name = 'locus_id|element|element_id|cluster_id|cluster_cutoff'
+
 =cut
 
 push @EXPORT_OK, 'get_array_seq';
@@ -290,7 +296,8 @@ $refine_sql";
       unless $row->[5] == 1 or $row->[5] == -1;
     $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
     
-    my $seq_name = join("|", @{$row}[0..3] );
+    my $seq_name = join("|", @{$row}[0..3], 
+		       $opts_r->{by_cluster} ? $cutoff : 'NA');
     $fasta{ $seq_name } = $row->[4];
   }
 
@@ -316,6 +323,8 @@ $opts :  hashref of options
 =head3 OUT
 
 $%{name}=>seq
+
+name = 'locus_id|element|element_id|cluster_id|cluster_cutoff'
 
 =cut
 
@@ -367,7 +376,7 @@ $opts_r->{'refine_sql'}";
       unless $row->[5] == 1 or $row->[5] == -1;
     $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
     
-    my $seq_name = join("|", @{$row}[0..3] );
+    my $seq_name = join("|", @{$row}[0..3], 'NA' );
     $fasta{ $seq_name } = $row->[4];
   }
   
