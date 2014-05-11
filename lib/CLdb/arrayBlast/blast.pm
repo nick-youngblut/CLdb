@@ -7,6 +7,7 @@ use Carp  qw( carp confess croak );
 use Data::Dumper;
 use File::Spec;
 use Parallel::ForkManager;
+use File::Path qw/rmtree/;
 use IPC::Cmd qw/can_run/;
 
 # export #
@@ -35,6 +36,34 @@ Subroutines for parsing & editing spacer/DR blast files
 =head1 EXPORT_OK
 
 =cut
+
+
+=head2 make_blast_dir
+
+Making blast database directory at $CLdb_HOME/arrayBlast/blast_db/
+
+Any existing directory will be deleted.
+
+=head3 IN
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'make_blast_dir';
+
+sub make_blast_dir{
+  my $db_path = shift;
+
+  my $dir = join("/", $db_path, "arrayBlast");
+  mkdir $dir unless -d $dir;
+
+  $dir = "$dir/blast_db/";
+  rmtree $dir if -d $dir;
+  mkdir $dir;
+
+  return $dir;
+}
 
 
 =head2 call_blastn_short
@@ -67,7 +96,8 @@ sub call_blastn_short{
       my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $ret_r) = @_;
       # status #
       foreach my $out (sort keys %$ret_r){
-        print STDERR "Number of blast hits to $out:\t",
+	my @parts = File::Spec->splitpath($out);   # just db file name needed
+        print STDERR "Number of blast hits to $parts[2]:\t",
           scalar @{$ret_r->{$out}}, "\n";
       }
 
@@ -96,7 +126,7 @@ sub call_blastn_short{
 
 =head2 make_blast_db
 
-Making a blastn database for spacer blast
+Making a blastn database for array blast
 
 =head3 Output
 

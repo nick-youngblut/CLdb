@@ -173,15 +173,15 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::utilities qw/
-	file_exists 
-	connect2db
-	lineBreaks2unix
-	get_file_path/;
+			file_exists 
+			connect2db
+			lineBreaks2unix
+			get_file_path/;
 use CLdb::query qw/
-	table_exists
-	join_query_opts/;
-use CLdb::genbank_get_region qw/
-	genbank_get_region/;
+		    table_exists
+		    join_query_opts/;
+use CLdb::genbank::genbank_get_region qw/
+				 genbank_get_region/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));

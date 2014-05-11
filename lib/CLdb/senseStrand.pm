@@ -187,12 +187,12 @@ sub senseByLeaderLoc{
   }
 
   # status
-  printf STDERR "Setting sense strand for %i %s\n", $status{total}, 
+  printf STDERR "Setting sense strand for %i %s...\n", $status{total}, 
     $status{total} == 1 ? 'locus' : 'loci';
   my $setBySE =  $status{total} - $status{leader};
-  printf STDERR "Sense strand set based on array_start-array_end for %i %s\n",
+  printf STDERR "...sense strand set based on array_start-array_end for %i %s\n",
     $setBySE, $setBySE == 1 ? 'locus' : 'loci';
-  printf STDERR "Sense strand set base on leader region for %i %s\n",
+  printf STDERR "...Sense strand set base on leader region for %i %s\n",
     $status{leader}, $status{leader} == 1 ? 'locus' : 'loci';
 
   return $sense_r;

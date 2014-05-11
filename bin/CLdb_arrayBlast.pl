@@ -8,7 +8,7 @@ CLdb_arrayBlast.pl -- BLASTn-short of spacers and/or DRs against >=1 genome in C
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlast.pl [flags]
+CLdb_arrayBlast.pl [flags] > blast_hits.xml
 
 =head2 Required flags
 
@@ -79,11 +79,19 @@ Genomes are obtained from the 'fasta_file'
 values in the loci table. Any loci without an
 associated fasta file will be skipped.
 
-Fasta files should be in the CLdb_HOME/fasta/ directory 
+Genome files should be in the $CLdb_HOME/fasta/ directory 
 (copied by CLdb_loadLoci.pl).
 
-Spacer and DR groups can be blasted at the same time (combined fasta)
-Athough, it may be best to blast DRs with a higher evalue cutoff.
+Blast databases for each genome will be created
+in $CLdb_HOME/spacer_blast/blast_db/.
+
+The blast output from the blast against each genome
+will be written be in xml format (-outfmt 5) to
+STDOUT.
+
+Spacers and DRs can be blasted against the genomes
+in CLdb or any other Blast database (see 'IF
+PERFORMING BLAST WITHOUT THIS SCRIPT' below).
 
 =head2 IF PERFORMING BLAST WITHOUT THIS SCRIPT:
 
@@ -95,21 +103,21 @@ and set the output format as '-outfmt 5' (xml output)
 
 =head2 Blasting all spacers against all genomes in CLdb
 
-CLdb_array2fasta.pl -g > all_spacer_groups.fna
+CLdb_array2fasta.pl -d CLdb.sqlite -clust > unique_spacers.fna
 
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna
+CLdb_arrayBlast.pl -d CLdb.sqlite -q unique_spacers.fna > blast_hits.xml
 
 =head2 Blasting all DRs against all genomes in CLdb
 
-CLdb_array2fasta.pl -r -g > all_DR_groups.fna
+CLdb_array2fasta.pl -d CLdb.sqlite -r -clust > unique_DRs.fna
 
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_DR_groups.fna
+CLdb_arrayBlast.pl -d CLdb.sqlite -q unique_DRs.fna > blast_hits.xml
 
-=head2 Blasting all spacers against 1 genome
+=head2 Blasting all spacers against 1 genome (taxon_name = 'e.coli')
 
-CLdb_array2fasta.pl -g > all_spacer_groups.fna
+CLdb_array2fasta.pl -d CLdb.sqlite -clust > unique_spacers.fna
 
-CLdb_arrayBlast.pl -d CLdb.sqlite -q all_spacer_groups.fna -taxon_name "e.coli"
+CLdb_arrayBlast.pl -d CLdb.sqlite -q unique_spacers.fna -taxon_name "e.coli"
 
 =head1 AUTHOR
 
@@ -135,24 +143,23 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
-use File::Path qw/rmtree/;
 
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
-	table_exists
-	n_entries
-	join_query_opts/;
+		    table_exists
+		    n_entries
+		    join_query_opts/;
 use CLdb::utilities qw/
-	file_exists 
-	connect2db
-	get_file_path/;
+			file_exists 
+			connect2db
+			get_file_path/;
 use CLdb::arrayBlast::blast qw/
+				make_blast_dir
 				make_blast_db
-				call_blastn_short
-			      /;
+				call_blastn_short/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -204,67 +211,54 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my $subject_loci_r = get_loci_fasta($dbh, $join_sql, $extra_query);
 
 ## making blast directory; blastdb; and blast alias##
+print STDERR "Making BLAST databases...\n";
 my $blast_dir = make_blast_dir($db_path);
 my $blast_dbs_r = make_blast_db($subject_loci_r, $db_path, 
 				$blast_dir, $verbose);
 
 ## blasting ##
+print STDERR "\nBlasting sequences...\n";
 call_blastn_short($blast_dbs_r, $query_file, $blast_params, $fork); 
 
 
 #--- Subroutines ---#
-sub make_blast_dir{
-  my $db_path = shift;
-  
-  my $dir = join("/", $db_path, "spacer_blast");
-  mkdir $dir unless -d $dir;
-  
-  $dir = "$dir/blast_db/";
-  rmtree $dir if -d $dir;
-  mkdir $dir;
-
-  return $dir;
-}
-
-
 sub get_loci_fasta{
 # querying CLdb for fasta files for each select taxon to use for blastdb #
-	my ($dbh, $join_sql, $extra_query) = @_;
-	
-	my $q = "SELECT taxon_name, taxon_id, fasta_file 
+  my ($dbh, $join_sql, $extra_query) = @_;
+  
+  my $q = "SELECT taxon_name, taxon_id, fasta_file 
 FROM loci 
 WHERE locus_id=locus_id 
 $join_sql 
+$extra_query
 GROUP BY taxon_name, taxon_id";
-	
-	$q .= " $extra_query" if $extra_query;
-	
-	my $res = $dbh->selectall_arrayref($q);
-	die " ERROR: no matches found to query!\n"
-		unless @$res;
-
-		#print Dumper @$res; exit;
-	return $res;
-	}
+  
+  my $res = $dbh->selectall_arrayref($q) or die $dbh->err;
+  die " ERROR: no matches found to query!\n"
+    unless @$res;
+  
+  #print Dumper @$res; exit;
+  return $res;
+}
 
 
 sub check_query_fasta{
 # loading fasta file as a hash #
-	my $error = "$query_file not formatted correctly! The query input file should be formatted as: >'locusID'|'spacer/DR'|'spacer/DR_ID'|'groupID'";
-	
-	my ($fasta_in, $query_bool) = @_;
-	open IN, $fasta_in or die $!;
-	while(<IN>){
-		chomp;
- 		s/#.+//;
- 		next if  /^\s*$/;	
- 		if(/>.+/){
- 			# check formating #
- 			my @l = split /\|/;
- 			die " ERROR: $error \n" if $query_bool && $l[1] !~ /(spacer|DR)/i;
- 			die " ERROR: $error \n" if $query_bool && scalar @l < 4; 			
- 			}
-		}
-	close IN;
-	} 
+  my $error = "$query_file not formatted correctly! The query input file should be formatted as: >'locusID'|'spacer/DR'|'spacer/DR_ID'|'groupID'";
+  
+  my ($fasta_in, $query_bool) = @_;
+  open IN, $fasta_in or die $!;
+  while(<IN>){
+    chomp;
+    s/#.+//;
+    next if  /^\s*$/;	
+    if(/>.+/){
+      # check formating #
+      my @l = split /\|/;
+      die " ERROR: $error \n" if $query_bool && $l[1] !~ /(spacer|DR)/i;
+      die " ERROR: $error \n" if $query_bool && scalar @l < 4; 			
+    }
+  }
+  close IN;
+} 
 
