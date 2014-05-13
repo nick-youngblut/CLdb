@@ -47,6 +47,7 @@ region from the genome fasta.
 =head2 get_query_IDs
 
 Getting the IDs of each query sequence. 
+Extracting blast_db: 'BlastOutput_db'.
 
 =head3 IN
 
@@ -54,7 +55,7 @@ spacer blast hit hash ref
 
 =head3 OUT
 
-array of query IDs
+$%{query_ID} => blast_db
 
 =cut 
 
@@ -73,8 +74,14 @@ sub get_query_IDs{
   my %query_IDs;
   foreach my $run (keys %$spacer_r){
     next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};
+    # getting blast db
+    my $blast_db = exists $spacer_r->{$run}{'BlastOutput_db'} ? 
+      $spacer_r->{$run}{'BlastOutput_db'} :
+	confess "Could not find 'BlastOutput_db' for run $run\n";
 
+    # each iteration
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+
       next unless exists $iter->{'Iteration_hits'} and 
 	$iter->{'Iteration_hits'} !~ /^\s*$/;
       # query
@@ -86,16 +93,22 @@ sub get_query_IDs{
     }
   }
 
+
   # status
-  printf STDERR "...Number of unique query IDs extracted: %i\n\n",
+#  foreach my $blast_db (keys %{$query_IDs{db_query}}){
+#    my @parts = File::Spec->splitpath($blast_db);
+#    printf STDERR "...Number of unique queries IDs hitting %s:\t%i\n",
+#      $parts[2], scalar keys %{$query_IDs{db_query}{$blast_db}};
+#  }
+  printf STDERR "...Number of total unique query IDs:\t%i\n",
     scalar keys %query_IDs;
 
- # print Dumper %query_IDs; exit;
+  #print Dumper %query_IDs; exit;
   return [keys %query_IDs];
 }
 
 
-=head2 detect_clustered_spacers
+=head2 detectClusteredSpacers
 
 Detecting which spacers are clusterrs & which are not (single spacers).
 
@@ -107,7 +120,7 @@ If cluster: 'NA|spacer|NA|INT|FLOAT'
 
 =head3 IN
 
-array of spacer IDs
+{blast_db}=>{query_id}=>1 
 
 =head3 OUT
 
@@ -115,13 +128,13 @@ hash of arrays: spacer IDs grouped by single|cluster
 
 =cut
 
-push @EXPORT_OK, 'detect_clustered_spacers';
+push @EXPORT_OK, 'detectClusteredSpacers';
 
-sub detect_clustered_spacers{
-  my $spacer_r = shift || croak "Provide an array_ref of spacer IDs";
+sub detectClusteredSpacers{
+  my $spacerIDs_r = shift || croak "Provide an array_ref of spacer IDs";
 
   my %tmp;
-  foreach my $spacerID ( @$spacer_r ){
+  foreach my $spacerID ( @{$spacerIDs_r} ){
     if( $spacerID =~ /^[^|]+\|spacer\|\d+\|NA\|NA$/ ){  # single
       push @{$tmp{single}}, $spacerID;
     }
@@ -133,9 +146,10 @@ sub detect_clustered_spacers{
     }
   }
   
-  #print Dumper %tmp; exit;
+#  print Dumper %tmp; exit;
   return \%tmp;
 }
+
 
 =head2 queryBySpacer
 
@@ -144,7 +158,7 @@ Query CLdb by ID of spacer
 =head3 IN
 
 $dbh :  dbi connection object
-$spacerIDs_r :  array_ref of spacerIDs
+$spacerIDs_r :  array_ref  of spacerIDs
 
 =head3 OUT
 
@@ -155,6 +169,8 @@ $spacerIDs_r :  array_ref of spacerIDs
 push @EXPORT_OK, 'queryBySpacer';
 
 sub queryBySpacer{
+## TODO: update to queryBySpacerClsuter
+
   my $dbh = shift || croak "Provide a dbh object\n";
   my $spacerIDs_r = shift ||  croak "Provide an array_ref of spacerIDs\n";
 
@@ -226,8 +242,9 @@ $spacerIDs_r :  array_ref of spacerIDs
 push @EXPORT_OK, 'queryBySpacerCluster';
 
 sub queryBySpacerCluster{
-  my $dbh = shift || croak "Provide a dbh object\n";
-  my $spacerIDs_r = shift ||  croak "Provide an array_ref of spacerIDs\n";
+  my $dbh = shift || confess "Provide a dbh object\n";
+  my $spacerIDs_r = shift ||  confess "Provide an array_ref of spacerIDs\n";
+  my $CLdb_info_r = shift || confess "Provide a CLdb_info arg\n";
 
   my $query = <<END;
 SELECT
@@ -275,17 +292,65 @@ END
 	  unless defined $r->[$i];
 	$tmp{ $fields->[$i] } = $r->[$i];  # field => value
       }
-     push @{$spacer_info{$ID}}, \%tmp; 
+      
+      # adding to $CLdb_info 
+      push @{$CLdb_info_r->{$ID}}, \%tmp;
     }
     
   }
  
-  print Dumper %spacer_info; exit;
-  ### clustering is wrong!
-  ### TODO: FIX clustering 
-  #return $ret;
+  #print Dumper %$CLdb_info_r; exit;
 }
     
+
+=head2 addSpacerInfo
+
+Adding spacerInfo back to blast srl DS
+
+=head3 IN
+
+hash of vars:
+blast => blast srl Ds
+spacer_info => ${cluster|single}=>{ID}=>[cat=>value]
+db_query => ${blast_db}=>spacerID
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'addSpacerInfo';
+
+sub addSpacerInfo{
+ my %h = @_;
+  my $spacer_r = exists $h{blast} ? $h{blast} :
+    confess "Provide blast arg";
+  my $CLdb_info_r = exists $h{CLdb_info} ?
+    $h{CLdb_info} : confess "Provide CLdb_info arg";
+
+
+  foreach my $run (keys %$spacer_r){
+    next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};
+
+    # each iteration
+    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+
+      next unless exists $iter->{'Iteration_hits'} and 
+	$iter->{'Iteration_hits'} !~ /^\s*$/;
+
+      # getting query ID
+      my $query_id = exists $iter->{'Iteration_query-def'} ?
+	$iter->{'Iteration_query-def'} :
+	  die "ERROR: no query id in blast run $run\n";
+
+      ## adding CLdb info   
+      $iter->{query_CLdb_info} = exists $CLdb_info_r->{$query_id} ?
+	$CLdb_info_r->{$query_id} : 
+	  confess "ERROR: cannot find $query_id in blast run $run\n";
+    }
+  }
+}
+
+
 
 =head2 groupByFastaFile
 

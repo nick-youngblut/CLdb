@@ -97,11 +97,10 @@ use CLdb::query qw/ table_exists /;
 use CLdb::arrayBlast::sereal qw/ decode_file /;
 use CLdb::arrayBlast::AddcrRNA qw/
 				  get_query_IDs
-				  detect_clustered_spacers
+				  detectClusteredSpacers
 				  queryBySpacer
 				  queryBySpacerCluster
-				  groupByFastaFile
-				  getSpacerRegion
+				  addSpacerInfo
 				 /;
 
 ### args/flags
@@ -135,23 +134,28 @@ my $spacer_r = decode_file( fh => \*STDIN );
 my $spacerIDs_r = get_query_IDs($spacer_r);
 
 # detecting which spacers are clustered reps & which are not 
-$spacerIDs_r = detect_clustered_spacers($spacerIDs_r);
+$spacerIDs_r = detectClusteredSpacers($spacerIDs_r);
 
 # querying CLdb for info on spacer start-end & genome_file
 print STDERR "Getting info on each spacer from CLdb...\n";
-my %ret;
+my %CLdb_info;
 ## single spacers
 if( $spacerIDs_r->{single} ){
-  $ret{single} = queryBySpacer($dbh, $spacerIDs_r->{single});
+  queryBySpacer($dbh, $spacerIDs_r->{single});
 }
 ## cluster spacers
 if( $spacerIDs_r->{cluster} ){
   table_exists($dbh, 'spacer_clusters');
-  $ret{cluster} = queryBySpacerCluster($dbh, $spacerIDs_r->{cluster});
+  queryBySpacerCluster($dbh, $spacerIDs_r->{cluster}, \%CLdb_info);
 }
 
 # adding spacer info back to blast hit srl DS
-#addSpacerInfo
+addSpacerInfo( blast => $spacer_r,
+	       CLdb_info => \%CLdb_info );
+
+# foreach hit: querying blastdb for spacer region
+#####  TODO
+
 
 # grouping spacers by fasta_file entry
 #my $spacers_byGenome = groupByFastaFile( \%ret );
