@@ -170,58 +170,62 @@ $spacerIDs_r :  array_ref  of spacerIDs
 push @EXPORT_OK, 'queryBySpacer';
 
 sub queryBySpacer{
-## TODO: update to queryBySpacerClsuter
+  my $dbh = shift || confess "Provide a dbh object\n";
+  my $spacerIDs_r = shift ||  confess "Provide an array_ref of spacerIDs\n";
+  my $CLdb_info_r = shift || confess "Provide a CLdb_info arg\n";
 
-  my $dbh = shift || croak "Provide a dbh object\n";
-  my $spacerIDs_r = shift ||  croak "Provide an array_ref of spacerIDs\n";
-
-  my $query = <<END;
+  my $query = <<HERE;
 SELECT
-l.locus_id,
 l.fasta_file,
 l.scaffold,
+l.locus_id,
 l.array_sense_strand,
 s.spacer_id,
 s.spacer_start,
-s.spacer_end
+s.spacer_end,
+s.spacer_sequence
 FROM
 loci l, spacers s
 WHERE l.locus_id=s.locus_id
-AND l.locus_id=sc.locus_id
 AND s.locus_id = ?
 AND s.spacer_id = ?
-END
-
+HERE
+ 
+  # prepare & get fields of query
   my $sth = $dbh->prepare($query) or confess $dbh->err;
+  my $fields = $sth->{NAME_lc_hash} or confess $dbh->err;
 
-  # query for each locusID->spacerID
-  ## have to query each locusID->spacerID seperately
-  my @ret;
+  # querying CLdb for each blast query ID
+  my %spacer_info;
   foreach my $ID (@$spacerIDs_r){
-    $ID = "F|spacer|1|NA";
-
-    # getting IDs
     my @l = split /\|/, $ID;
-    die "ERROR: cannot find locus_id in '$ID'\n"
-      unless defined $l[0];
-    die "ERROR: cannot find spacer_id in '$ID'\n"
-      unless defined $l[2];
+    confess "ERROR: cannot find clusterID and/or cluster cutoff in $ID\n"
+      unless defined $l[3] and defined $l[4];
 
-    # adding to sql
     $sth->bind_param(1, $l[0]);  # locus_id
     $sth->bind_param(2, $l[2]);  # spacer_id
-    $sth->execute() or confess $dbh->err;
-
-    # getting results
-    while(my $r = $sth->fetchrow_arrayref()){
-      push @ret, $r;
+    
+    $sth->execute or confess $dbh->err;
+    my $ret = $sth->fetchall_arrayref( ) or confess $dbh->err;
+    
+    # loading CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
+    foreach my $r (@$ret){
+      foreach my $field (keys %$fields){
+	next if $field eq 'fasta_file' or $field eq 'locus_id' 
+	  or $field eq 'spacer_id' or $field eq 'scaffold';
+	$CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+	  { $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
+	  { $r->[$fields->{spacer_id}] }{ $field } = $r->[ $fields->{$field} ];
+      }
+      # adding query_ID to add info back to decoded blast srl
+      $CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+	{ $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
+	  { $r->[$fields->{spacer_id}] }{ query_id } = $ID;
+            
     }
   }
-  
-  die "ERROR: no entries match query! $!"
-    unless scalar @ret; 
-
-  return \@ret;
+ 
+#  print Dumper %$CLdb_info_r; exit;
 }
 
 
@@ -247,7 +251,7 @@ sub queryBySpacerCluster{
   my $spacerIDs_r = shift ||  confess "Provide an array_ref of spacerIDs\n";
   my $CLdb_info_r = shift || confess "Provide a CLdb_info arg\n";
 
-  my $query = <<END;
+  my $query = <<HERE;
 SELECT
 l.fasta_file,
 l.scaffold,
@@ -265,7 +269,7 @@ AND l.locus_id=sc.locus_id
 AND s.spacer_id=sc.spacer_id
 AND sc.cluster_id = ?
 AND sc.cutoff = ?
-END
+HERE
  
   # prepare & get fields of query
   my $sth = $dbh->prepare($query) or confess $dbh->err;

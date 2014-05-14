@@ -45,7 +45,8 @@ perldoc CLdb_arrayBlastAddcrRNA.pl
 =head1 DESCRIPTION
 
 For each spacer, extracting spacer & adjacent 
-sequence from its genome location in order
+sequence (defined by '-extension') 
+from its genome location in order
 to make the crRNA (actually the crDNA sequence).
 This can then be aligned to the protospacer region
 in order to determine the PAM, protospacer,
@@ -53,8 +54,9 @@ and SEED sequence.
 
 The spacer sequence ID is used to query
 CLdb and get the genome position (and genome
-file location). The sequence is then extracted 
-from the genome.
+fasta file location). 
+The 'crRNA' sequence is then extracted from the genome
+and added to the blast hit srl file.
 
 =head1 EXAMPLES
 
@@ -119,6 +121,9 @@ GetOptions(
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
 my $CLdb_HOME = get_file_path($database_file);
+die "'-extension' must be an integer >=0"
+  unless $ext >= 0;
+
 
 #--- MAIN ---#
 # connect 2 db #
@@ -142,6 +147,7 @@ print STDERR "Getting info from CLdb on each blast query spacer...\n";
 my %CLdb_info;
 ## single spacers
 if( $spacerIDs_r->{single} ){
+  # TODO: test this subroutine
   queryBySpacer($dbh, $spacerIDs_r->{single});
 }
 ## cluster spacers
