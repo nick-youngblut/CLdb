@@ -100,7 +100,8 @@ use CLdb::arrayBlast::AddcrRNA qw/
 				  detectClusteredSpacers
 				  queryBySpacer
 				  queryBySpacerCluster
-				  addSpacerInfo
+				  getSpacerRegion
+				  addcrDNAtoBlast
 				 /;
 
 ### args/flags
@@ -130,14 +131,14 @@ table_exists($dbh, 'spacers');
 # decoding spacer and DR srl
 my $spacer_r = decode_file( fh => \*STDIN );
 
-# getting spacer IDs
+# getting spacer IDs (either sequence or rep sequence name)
 my $spacerIDs_r = get_query_IDs($spacer_r);
 
 # detecting which spacers are clustered reps & which are not 
 $spacerIDs_r = detectClusteredSpacers($spacerIDs_r);
 
 # querying CLdb for info on spacer start-end & genome_file
-print STDERR "Getting info on each spacer from CLdb...\n";
+print STDERR "Getting info from CLdb on each blast query spacer...\n";
 my %CLdb_info;
 ## single spacers
 if( $spacerIDs_r->{single} ){
@@ -149,31 +150,16 @@ if( $spacerIDs_r->{cluster} ){
   queryBySpacerCluster($dbh, $spacerIDs_r->{cluster}, \%CLdb_info);
 }
 
-# adding spacer info back to blast hit srl DS
-addSpacerInfo( blast => $spacer_r,
-	       CLdb_info => \%CLdb_info );
-
-# foreach hit: querying blastdb for spacer region
-#####  TODO
-
-
-# grouping spacers by fasta_file entry
-#my $spacers_byGenome = groupByFastaFile( \%ret );
 
 # getting spacer region from each genome
-#print STDERR "Getting spacer regions each blast db...\n";
-#getSpacerRegion( #blast => $spacer_r, 
-#		byGenome => $spacers_byGenome, 
-#		CLdb_HOME => $CLdb_HOME, 
-#		extension => $ext );
+print STDERR "Getting spacer regions from each genome...\n";
+my $byQuery_r = getSpacerRegion(
+		CLdb => \%CLdb_info, 
+		CLdb_HOME => $CLdb_HOME, 
+		extension => $ext );
 
-# adding to *srl data structure
-## {BlastOutput_iterations}=>{Iteration}=>
-##  [ 'Iteration_crRNA'=>{fasta_file}=>
-##    {scaffold|strand|spacer_start|spacer_end|spacer_seq|
-##     region_start|region_end|region_seq|ext} ]
-
-
+# adding crRNA info to *srl data structure
+addcrDNAtoBlast($spacer_r, $byQuery_r);
 
 # encoding
 print encode_sereal( $spacer_r );
@@ -181,5 +167,3 @@ print encode_sereal( $spacer_r );
 # disconnecting from CLdb
 $dbh->disconnect;
 
-
-#--- Subroutines ---#

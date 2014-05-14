@@ -7,6 +7,7 @@ use Carp  qw( carp confess croak );
 use Data::Dumper;
 use File::Spec;
 use DBI;
+use IPC::Cmd qw/can_run run/;
 use CLdb::seq qw/
 		  read_fasta
 		  revcomp
@@ -235,7 +236,7 @@ $spacerIDs_r :  array_ref of spacerIDs
 
 =head3 OUT
 
-@@ of CLdb entries; 1 more column than queryBySapcer
+CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
 
 =cut
 
@@ -248,13 +249,15 @@ sub queryBySpacerCluster{
 
   my $query = <<END;
 SELECT
-l.locus_id,
+l.fasta_file,
 l.scaffold,
+l.locus_id,
 l.array_sense_strand,
 s.spacer_id,
 s.spacer_start,
 s.spacer_end,
-s.spacer_sequence
+s.spacer_sequence,
+sc.cluster_id
 FROM
 loci l, spacers s, spacer_clusters sc
 WHERE l.locus_id=s.locus_id
@@ -266,7 +269,7 @@ END
  
   # prepare & get fields of query
   my $sth = $dbh->prepare($query) or confess $dbh->err;
-  my $fields = $sth->{NAME_lc} or confess $dbh->err;
+  my $fields = $sth->{NAME_lc_hash} or confess $dbh->err;
 
   # querying CLdb for each blast query ID
   my %spacer_info;
@@ -279,134 +282,38 @@ END
     $sth->bind_param(2, $l[4]);  # cluster cutoff
     
     $sth->execute or confess $dbh->err;
-    my $ret = $sth->fetchall_arrayref() or confess $dbh->err;
+    my $ret = $sth->fetchall_arrayref( ) or confess $dbh->err;
     
-    confess "ERROR: no entries match query for $ID! $!"
-      unless scalar @$ret; 
-    
-    # loading hash of spacer info
-    foreach my $r ( @$ret ){  # each spacer
-      my %tmp;
-      foreach my $i (0..$#$fields){
-	confess "ERROR: cannot find field $i for entry from $ID\n"
-	  unless defined $r->[$i];
-	$tmp{ $fields->[$i] } = $r->[$i];  # field => value
+    # loading CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
+    foreach my $r (@$ret){
+      foreach my $field (keys %$fields){
+	next if $field eq 'fasta_file' or $field eq 'locus_id' 
+	  or $field eq 'spacer_id' or $field eq 'scaffold';
+	$CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+	  { $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
+	  { $r->[$fields->{spacer_id}] }{ $field } = $r->[ $fields->{$field} ];
       }
-      
-      # adding to $CLdb_info 
-      push @{$CLdb_info_r->{$ID}}, \%tmp;
+      # adding query_ID to add info back to decoded blast srl
+      $CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+	{ $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
+	  { $r->[$fields->{spacer_id}] }{ query_id } = $ID;
+            
     }
-    
   }
  
-  #print Dumper %$CLdb_info_r; exit;
+#  print Dumper %$CLdb_info_r; exit;
 }
     
-
-=head2 addSpacerInfo
-
-Adding spacerInfo back to blast srl DS
-
-=head3 IN
-
-hash of vars:
-blast => blast srl Ds
-spacer_info => ${cluster|single}=>{ID}=>[cat=>value]
-db_query => ${blast_db}=>spacerID
-
-=head3 OUT
-
-=cut
-
-push @EXPORT_OK, 'addSpacerInfo';
-
-sub addSpacerInfo{
- my %h = @_;
-  my $spacer_r = exists $h{blast} ? $h{blast} :
-    confess "Provide blast arg";
-  my $CLdb_info_r = exists $h{CLdb_info} ?
-    $h{CLdb_info} : confess "Provide CLdb_info arg";
-
-
-  foreach my $run (keys %$spacer_r){
-    next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};
-
-    # each iteration
-    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
-
-      next unless exists $iter->{'Iteration_hits'} and 
-	$iter->{'Iteration_hits'} !~ /^\s*$/;
-
-      # getting query ID
-      my $query_id = exists $iter->{'Iteration_query-def'} ?
-	$iter->{'Iteration_query-def'} :
-	  die "ERROR: no query id in blast run $run\n";
-
-      ## adding CLdb info   
-      $iter->{query_CLdb_info} = exists $CLdb_info_r->{$query_id} ?
-	$CLdb_info_r->{$query_id} : 
-	  confess "ERROR: cannot find $query_id in blast run $run\n";
-    }
-  }
-}
-
-
-
-=head2 groupByFastaFile
-
-grouping spacers by which fasta file they belong to
-
-=head3 IN
-
-%{single|cluster} => @@(CLdb entries)
-
-=head3 OUT
-
-%{single|cluster} => genome => locus_id => spacer_id => {cat} => value
-
-=cut
-
-push @EXPORT_OK, 'groupByFastaFile';
-
-sub groupByFastaFile{
-  my $ret = shift || die "ERROR: provide a %@@ of CLdb spacer entries\n";
-
-  my %byGenome;
-  foreach my $cat (keys %$ret){   # cluster or single
-    my $fields_r = shift @{$ret->{$cat}} or last;   # fields of entries
-    #my $fasta_file = shift @$fields_r or confess $!;
-
-    # converting each CLdb entry returned by query
-    foreach my $r ( @{$ret->{$cat}} ){  
-      my %entry;
-      for my $i (1..$#$fields_r){  # skipping fasta file
-	confess "ERROR: cannot find field %s in entry\n", $fields_r->[$i]
-	  unless defined $r->[$i];
-	$entry{ $fields_r->[$i] } = $r->[$i];
-      }
-      my $fasta_file = $r->[0];
-      push @{$byGenome{$fasta_file}}, \%entry;  # {blast_db}=>[field=>value]
-    }
-  }
-
-#  print Dumper %byGenome; exit;
-  return \%byGenome;
-}
-
 
 =head2 getSpacerRegion
 
-# adding to *srl data structure
-## {BlastOutput_iterations}=>{Iteration}=>
-##  [ 'Iteration_crRNA'=>{fasta_file}=>
-##    {scaffold|strand|spacer_start|spacer_end|spacer_seq|
-##     region_start|region_end|region_seq|ext} ]
+Getting spacer region (crRNA region) for each
+spacer query (dereplicated spacers if blasted
+with the representative sequence).
 
 =head3 IN
 
-$byGenome_r :  $%{fasta_file}=>[ field => value ]
-# each in array is a hit
-# Datastructure produced by groubByFastaFile()
+$CLdb_info_r :  {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
 $CLdb_HOME :  home directory of CLdb.sqlite
 $extension :  bp to extend spacer reion on either end 
 
@@ -418,71 +325,123 @@ push @EXPORT_OK, 'getSpacerRegion';
 
 sub getSpacerRegion{
   my %h = @_;
-#  my $spacers_r = exists $h{blast} ? $h{blast} :
-#    confess "ERROR: provide the decoded blast .srl variable\n";
-  my $byGenome_r = exists $h{byGenome} ? $h{byGenome} :
-    confess "ERROR: provide a %%@% of hits by genome\n";
+  my $CLdb_info_r = exists $h{CLdb} ? $h{CLdb} :
+    confess "Provide CLdb info as $%%%";
   my $CLdb_HOME = exists $h{CLdb_HOME} ? $h{CLdb_HOME} : 
-    confess "ERROR: provide \$CLdb_HOME\n";
+    confess "Provide \$CLdb_HOME\n";
   my $ext = exists $h{extension} ? $h{extension} : 
-    confess "ERROR: provide spacer region extension";
+    confess "Provide spacer region extension";
   
 
   # checking for directory of genome fasta files
   my $fasta_dir = "$CLdb_HOME/fasta";
   confess "ERROR: cannot find '$fasta_dir'" unless -d $fasta_dir;
 
-  # parsing out spacers for each hit
-  foreach my $fasta_file (keys %$byGenome_r){
+  # spacers by genome 
+  my %byQuery;  # {queryID}=>[ {field} => {value} ]
+  foreach my $fasta_file (keys %$CLdb_info_r){
     confess "ERROR: cannot find '$fasta_file'\n"
       unless -e "$fasta_dir/$fasta_file";
 
     # status
     print STDERR "...parsing from genome: $fasta_file\n";
 
-
     # loading genome fasta as hashref
-    my $genome_fasta = read_fasta(file => "$fasta_dir/$fasta_file");
-    
-    # subsetting each spacer sequence
-    foreach my $hit (@{$byGenome_r->{$fasta_file}}){
-      my $scaf = $hit->{scaffold};
-      # sanity checks
-      confess "ERROR: cannot find scaffold '$scaf'\n"
-	unless exists $genome_fasta->{$scaf};  # scaffold must exist in genome fasta
-      confess "ERROR: spacer_start > spacer_End\n"
-	unless $hit->{spacer_start} <= $hit->{spacer_end};  # assuming stary-end on + strand
+    my $genome = read_fasta(file => "$fasta_dir/$fasta_file");
+
+    # substr each spacer region sequence
+    foreach my $scaffold (keys %{$CLdb_info_r->{$fasta_file}}){
+      # checking for existence of scaffold in genome
+      confess "Cannot find scaffold '$scaffold' in $fasta_file"
+	unless exists $genome->{$scaffold};
+      my $scaf_len = length $genome->{$scaffold};
+
+      foreach my $locus_id (keys %{$CLdb_info_r->{$fasta_file}{$scaffold}}){
+	foreach my $spacer_id (keys %{$CLdb_info_r->{$fasta_file}{$scaffold}{$locus_id}}){
+	  my $info_r = $CLdb_info_r->{$fasta_file}{$scaffold}{$locus_id}{$spacer_id};
+	  
+	  # checking for required fields 
+	  map{confess "Cannot find $_ for $locus_id->$spacer_id" unless 
+		exists $info_r->{$_} } qw/spacer_start spacer_end array_sense_strand/;	  
+
+	  # floor & ceiling (1-indexing)
+	  my $region_start = $info_r->{spacer_start} - $ext;
+	  $region_start = 1 if $region_start < 1;
+
+	  my $region_end = $info_r->{spacer_end} + $ext;
+	  $region_end = $scaf_len if $region_end > $scaf_len; 
+
+	  # spacer crDNA
+	  my $crDNA = substr($genome->{$scaffold},
+			     $region_start - 1,   # 0-indexing for substr
+			     $region_end - $region_start  # 0-indexing
+			    );
+
+	  # revcomp if array_sense_strand == -1
+	  $crDNA = revcomp($crDNA) if $info_r->{array_sense_strand} == -1;
+
+	  # loading values
+	  $info_r->{region_start} = $region_start;
+	  $info_r->{region_end} = $region_end;
+	  $info_r->{crDNA} = $crDNA;
+	  push @{$byQuery{ $info_r->{query_id} }}, $info_r;
+		     
+	}
+      }
+    }
+  }
+
+  #print Dumper %byQuery; exit;
+  return \%byQuery;
+}
+
+
+=head2 addcrDNAtoBlast
+
+Adding info on crRNA (DNA) back to decoded blast srl.
+
+=head3 IN
+
+$spacer_r :  decoded blast srl
+$byQuery_r :  {query_id}=>[ {field}=>value ]
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'addcrDNAtoBlast';
+
+sub addcrDNAtoBlast{
+  my $spacer_r = shift or confess "Provide a decoded blast srl.";
+  my $byQuery_r = shift or confess "Provide the crRNA info grouped by query";
+
+  foreach my $run (keys %$spacer_r){
+    next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};
+
+    # getting blastdbfile
+    my $blastdbfile = exists $spacer_r->{$run}{'BlastOutput_db'} ? 
+      $spacer_r->{$run}{'BlastOutput_db'} :
+	confess "Cannot find BlastOutput_db in run $run";
+
+    # each iteration
+    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+
+      # skipping iterations without hits
+      next unless exists $iter->{'Iteration_hits'} and 
+	$iter->{'Iteration_hits'} !~ /^\s*$/;
       
-      # floor & ceiling for extension; 1-indexed
-      my $region_start = $hit->{spacer_start} - $ext;
-      $region_start = 1 if $region_start < 1;
-      my $region_end = $hit->{spacer_end} + $ext;
-      my $scaf_len = length($genome_fasta->{$scaf});
-      $region_end = $scaf_len if $region_end > $scaf_len; 
+      # making sure query_ID found in $byQuery_r
+      my $query_id = $iter->{'Iteration_query-def'};
 
-      # spacer crDNA
-      my $crDNA = substr($genome_fasta->{$scaf},
-			 $region_start - 1,   # 0-indexing for substr
-			 $region_end - $region_start  # 0-indexing
-			 );
-
-      # revcomp if array_sense_strand == -1
-      $crDNA = revcomp($crDNA) if $hit->{array_sense_strand} == -1;
-
-      # revcomp spacer sequence if array_sense_strand == -1
-      $hit->{spacer_sequence} = revcomp($hit->{spacer_sequence})
-	if $hit->{array_sense_strand} == -1;
-
-      # adding info to $byGenome
-      $hit->{region_start} = $region_start;
-      $hit->{region_end} = $region_end;
-      $hit->{region_seq} = $crDNA;
-      $hit->{ext} = $ext;
-
+      # adding crRNA info
+      $iter->{crRNA_info} = exists $byQuery_r->{ $query_id } ?
+	$byQuery_r->{ $query_id } :
+	confess "Cannot find queryID '$query_id' in decoded blast srl";
+      
     }
   }
  
-#  print Dumper %$byGenome_r; exit;
+  #print Dumper $spacer_r; exit;
 }
 
 
