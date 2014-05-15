@@ -68,16 +68,16 @@ Get spacer or direct repeat sequences from the CRISPR database
 and write them to a fasta.
 
 By default, all spacers or direct repeats (if '-r') will be written.
-The query can be refined with many of the flags (. 
+The query can be refined with many of the flags. 
 
 The sequences will be oriented base on the array_sense_strand
 field in the loci table. To alter this field, see "CLdb_setSenseStrand.pl".
 
 =head2 Output sequence naming
 
-If -cluster: ">NA|spacer/DR|NA|clusterID"
+If -cluster: ">NA|spacer/DR|NA|clusterID|cluster_cutoff"
 
-Else: ">locus_id|spacer/DR|elementID|NA"
+Else: ">locus_id|spacer/DR|elementID|NA|NA"
 
 =head1 EXAMPLES
 

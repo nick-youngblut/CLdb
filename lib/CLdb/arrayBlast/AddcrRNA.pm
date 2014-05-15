@@ -96,11 +96,6 @@ sub get_query_IDs{
 
 
   # status
-#  foreach my $blast_db (keys %{$query_IDs{db_query}}){
-#    my @parts = File::Spec->splitpath($blast_db);
-#    printf STDERR "...Number of unique queries IDs hitting %s:\t%i\n",
-#      $parts[2], scalar keys %{$query_IDs{db_query}{$blast_db}};
-#  }
   printf STDERR "...Number of total unique query IDs:\t%i\n",
     scalar keys %query_IDs;
 
@@ -136,10 +131,10 @@ sub detectClusteredSpacers{
 
   my %tmp;
   foreach my $spacerID ( @{$spacerIDs_r} ){
-    if( $spacerID =~ /^[^|]+\|spacer\|\d+\|NA\|NA$/ ){  # single
+    if( $spacerID =~ /^[^|]+\|spacer\|\d+\|NA\|[0-9-]+$/ ){  # single
       push @{$tmp{single}}, $spacerID;
     }
-    elsif( $spacerID =~ /^NA\|spacer\|NA\|\d+\|[0-9.]+$/){  # cluster
+    elsif( $spacerID =~ /^NA\|spacer\|NA\|\d+\|[0-9-]+$/){  # cluster
       push @{$tmp{cluster}}, $spacerID;
     }
     else{
@@ -160,10 +155,11 @@ Query CLdb by ID of spacer
 
 $dbh :  dbi connection object
 $spacerIDs_r :  array_ref  of spacerIDs
+$CLdb_info :  $%
 
 =head3 OUT
 
-@@ of CLdb entries
+#loading CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
 
 =cut
 
@@ -237,6 +233,7 @@ Query CLdb by ID of spacer cluster rep
 
 $dbh :  dbi connection object
 $spacerIDs_r :  array_ref of spacerIDs
+$CLdb_info :  $%
 
 =head3 OUT
 
@@ -381,15 +378,21 @@ sub getSpacerRegion{
 			     $region_end - $region_start  # 0-indexing
 			    );
 
-	  # revcomp if array_sense_strand == -1
-	  $crDNA = revcomp($crDNA) if $info_r->{array_sense_strand} == -1;
+	  # revcomp crDNA & spacer sequence if array_sense_strand == -1
+	  if($info_r->{array_sense_strand} == -1){
+	    $crDNA = revcomp($crDNA);
+	    $info_r->{spacer_sequence} = exists $info_r->{spacer_sequence} ?
+	      revcomp($info_r->{spacer_sequence}) : 
+		confess "Cannot find 'spacer_sequence' for $genome->$scaffold->$locus_id\n";
+	  }
 
 	  # loading values
 	  $info_r->{region_start} = $region_start;
 	  $info_r->{region_end} = $region_end;
 	  $info_r->{crDNA} = $crDNA;
-	  push @{$byQuery{ $info_r->{query_id} }}, $info_r;
-		     
+	  $info_r->{scaffold} = $scaffold;
+	  $info_r->{genome_fasta} = $fasta_file;
+	  push @{$byQuery{ $info_r->{query_id} }}, $info_r;		     
 	}
       }
     }

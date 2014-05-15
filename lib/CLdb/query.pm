@@ -292,10 +292,12 @@ $refine_sql";
   my %fasta;
   foreach my $row (@$ret){
     # revcomp sequence if array_sense_strand == -1
+    ## ACTUALLY: don't need to revcomp because cluster rep sequences already rev-comped
     croak "ERROR: sense strand must be 1 or -1\n"
       unless $row->[5] == 1 or $row->[5] == -1;
-    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
     
+#    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;  # flip to - strand
+
     my $seq_name = join("|", @{$row}[0..3], 
 		       $opts_r->{by_cluster} ? $cutoff : 'NA');
     $fasta{ $seq_name } = $row->[4];
