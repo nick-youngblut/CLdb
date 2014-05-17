@@ -7,6 +7,7 @@ use Carp  qw( carp confess croak );
 use Data::Dumper;
 use List::Util qw/max/;
 use IPC::Cmd qw/can_run run/;
+use Parallel::ForkManager;
 
 # CLdb
 use CLdb::seq qw/ read_fasta /;
@@ -58,12 +59,14 @@ sub queryBlastDBs{
     confess "Provide a decoded blast srl as $%";
   my $ext = exists $h{extension} ? $h{extension} :
     confess "Provide the protospacer extension (bp)";
+  my $fork = exists $h{fork} ? $h{fork} : confess "Provide 'fork'";
   my $verbose = $h{verbose};
 
   # checking for blastdbcmd in path
   can_run('blastdbcmd') or confess "Cannot find 'blastdbcmd' in \$PATH";
 
-#  print Dumper $spacer_r; exit;
+  # parallel queries by hit
+  my $pm = new Parallel::ForkManager($fork);
 
   # getting blast db file name
   foreach my $run (keys %$spacer_r){
@@ -99,6 +102,15 @@ sub queryBlastDBs{
       foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
 	next unless exists $hit->{Hit_hsps}{Hsp};
 
+	# collecting updated Hsps 
+	my @Hsps;
+	$pm->run_on_finish(
+	   sub{ 
+	     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $hsp) = @_;
+	     push @Hsps, $hsp;			     
+	   });
+
+
 	# getting subject scaffold
 	my $sub_scaf = exists $hit->{Hit_id} ? 
 	  $hit->{Hit_id} : confess "Cannot find 'Hit_id'";
@@ -108,16 +120,26 @@ sub queryBlastDBs{
 	# iterating through each hsp
 	## adding protospacer & info to $hsp
 	foreach my $hsp ( @{$hit->{Hit_hsps}{Hsp}} ){
+	  $pm->start and next;
+
 	  addProtoCoords( hsp => $hsp, 
 			  query_len => $query_len, 
 			  extension => $ext,
 			  subject_scaffold => $sub_scaf,
 			  scaffold_len => $sub_scaf_len);
 	  getProtoFromDB( hsp => $hsp,
-			  blastdb => $blastdbfile );
-	}		
-      }
+			  blastdb => $blastdbfile );	 
+	  #print Dumper $hsp; exit;
+	  $pm->finish(0, $hsp);
+	}	
+	$pm->wait_all_children;
+
+	# replacing old Hsps with udpates
+	$hit->{Hit_hsps}{Hsp} = \@Hsps;
+      }      
     }
+    # time testing: exit after 1st run
+    exit; 
   }
 }
 
