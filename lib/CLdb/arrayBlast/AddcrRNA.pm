@@ -394,13 +394,14 @@ sub getSpacerRegion{
 	  $info_r->{genome_fasta} = $fasta_file;
 	  $info_r->{spacer_id} = $spacer_id;
 	  $info_r->{locus_id} = $locus_id;
-	  push @{$byQuery{ $info_r->{query_id} }}, $info_r;		     
+	  my $uID = join("|", $info_r->{locus_id}, $info_r->{spacer_id}); # unique ID for spacer query (locus_id-spacer_ID)
+	  $byQuery{ $info_r->{query_id} }{$uID} = $info_r;
 	}
       }
     }
   }
 
-#  print Dumper %byQuery; exit;
+  #print Dumper %byQuery; exit;
   return \%byQuery;
 }
 
@@ -450,7 +451,7 @@ sub addcrDNAtoBlast{
     }
   }
  
-  #print Dumper $spacer_r; exit;
+#  print Dumper $spacer_r; exit;
 }
 
 

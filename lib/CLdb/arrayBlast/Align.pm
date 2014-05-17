@@ -71,7 +71,7 @@ sub alignProto{
 
     # status
     my @parts = File::Spec->splitpath($blastdbfile);
-    print STDERR "Retrieving sequences from blast db: '$parts[2]'\n"
+    print STDERR "Aligning protospacers from blast db: '$parts[2]'\n"
       unless $verbose;
 
     # each iteration
@@ -84,8 +84,6 @@ sub alignProto{
       my $crRNA_info = exists $iter->{crRNA_info} ?
 	$iter->{crRNA_info} : next;
 
-#      print Dumper $crRNA_info; exit;
-
       # iterating through hits
       foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
         next unless exists $hit->{Hit_hsps}{Hsp};
@@ -97,18 +95,21 @@ sub alignProto{
 	  next unless exists $hsp->{protoFullXSeq};
 
 	  # aligning for each crDNA
-	  foreach my $q (@{$crRNA_info}){
-	    confess "Cannot find 'crDNA'" unless exists $q->{crDNA};
+	  foreach my $q (keys %$crRNA_info){
+	    confess "Cannot find 'crDNA'" unless exists $crRNA_info->{$q}{crDNA};
 	    
 	    # call clustalw
-	    my $fasta_aln = alignSeqs( 'crDNA', $q->{crDNA}, 
+	    my $fasta_aln = alignSeqs( 'crDNA', $crRNA_info->{$q}{crDNA}, 
 		       'proto', $hsp->{protoFullXSeq});
 	    
 	    # set protospacer extensions to lower case 
 	    setProtoXLower($fasta_aln, $hsp);
 
 	    # set DR portions of crDNA to lower case
-	    setcrDNALower($fasta_aln, $q)
+	    setcrDNALower($fasta_aln, $crRNA_info->{$q});
+
+	    # adding alignment to hsp
+	    $hsp->{$q} = $fasta_aln;	    
 	  }
 	}
       }

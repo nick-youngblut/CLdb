@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_arrayBlastAlignProto.pl -- aligning protospacer & crDNA 
+CLdb_arrayBlastGetAlign.pl -- making fasta alignment of crDNA & protospacer
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastAlignProto.pl [flags] < blast_hits_crDNA_proto.srl > spacer_blast_crDNA_proto_align.srl
+CLdb_arrayBlastGetAlign.pl [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
 
 =head2 Required flags
 
@@ -19,6 +19,20 @@ CLdb_arrayBlastAlignProto.pl [flags] < blast_hits_crDNA_proto.srl > spacer_blast
 =head2 Optional flags
 
 =over
+
+=item -database  <char>
+
+CLdb sqlite file name 
+(if getting metadata on spacer sequences. eg., taxon_name)
+
+=item -outfmt  <char>
+
+Output columns added to spacer-protospacer alignments.
+The first 3 columns are always 'locus_id', 'spacer_id' 
+
+=item array  <bool>
+
+Write out alignments from the array? 
 
 =item -verbose  <bool>
 
@@ -32,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc CLdb_arrayBlastAlignProto.pl
+perldoc CLdb_arrayBlastGetAlign.pl
 
 =head1 DESCRIPTION
 
