@@ -8,7 +8,7 @@ CLdb_arrayBlastAddcrRNA.pl -- recreate crRNA extracting spacer & part of its adj
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastAddcrRNA.pl [flags] spacer_blast.txt > spacer_blast_filtered.txt
+CLdb_arrayBlastAddcrRNA.pl [flags] < blast_hits.srl > blast_hits_crRNA.srl
 
 =head2 Required flags
 
