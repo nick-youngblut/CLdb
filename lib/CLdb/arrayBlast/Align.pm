@@ -8,6 +8,8 @@ use Data::Dumper;
 use List::MoreUtils qw/all/;
 use Bio::Tools::Run::Alignment::Clustalw;
 use IO::String;
+use Data::Uniqid qw/ uniqid /;
+use Clone  qw/ clone /;
 
 # CLdb
 use CLdb::seq qw/ read_fasta /;
@@ -90,7 +92,7 @@ sub alignProto{
 
         # iterating through each hsp
         ## adding protospacer & info to $hsp
-        foreach my $hsp ( @{$hit->{Hit_hsps}{Hsp}} ){
+        while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
 	  # checking for needed info
 	  next unless exists $hsp->{protoFullXSeq};
 
@@ -109,7 +111,7 @@ sub alignProto{
 	    setcrDNALower($fasta_aln, $crRNA_info->{$q});
 
 	    # adding alignment to hsp
-	    $hsp->{$q} = $fasta_aln;	    
+	    $hsp->{$q} = $fasta_aln; 
 	  }
 	}
       }

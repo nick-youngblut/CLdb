@@ -103,11 +103,11 @@ sub queryBlastDBs{
 	next unless exists $hit->{Hit_hsps}{Hsp};
 
 	# collecting updated Hsps 
-	my @Hsps;
+	my %Hsps;
 	$pm->run_on_finish(
 	   sub{ 
-	     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $hsp) = @_;
-	     push @Hsps, $hsp;			     
+	     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $ret_r) = @_;
+	      $Hsps{$ret_r->[0]} = $ret_r->[1];   # UID -> hsp			     
 	   });
 
 
@@ -119,7 +119,7 @@ sub queryBlastDBs{
 	
 	# iterating through each hsp
 	## adding protospacer & info to $hsp
-	foreach my $hsp ( @{$hit->{Hit_hsps}{Hsp}} ){
+	while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
 	  $pm->start and next;
 
 	  addProtoCoords( hsp => $hsp, 
@@ -130,12 +130,12 @@ sub queryBlastDBs{
 	  getProtoFromDB( hsp => $hsp,
 			  blastdb => $blastdbfile );	 
 	  #print Dumper $hsp; exit;
-	  $pm->finish(0, $hsp);
+	  $pm->finish(0, [$hspUID, $hsp]);
 	}	
 	$pm->wait_all_children;
 
 	# replacing old Hsps with udpates
-	$hit->{Hit_hsps}{Hsp} = \@Hsps;
+	$hit->{Hit_hsps}{Hsp} = \%Hsps;
       }      
     }
   }

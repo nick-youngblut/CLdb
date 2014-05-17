@@ -31,10 +31,12 @@ perldoc blast-xml2srl.pl
 =head1 DESCRIPTION
 
 Simple script for converting blast output in xml format
-(-outfmt 5) to a binary serialization format.
+(-outfmt 5) to a perl binary serialization format.
 
 Multiple concatenated blast xml output files can be 
-provided via STDIN.
+provided via STDIN. 
+
+Each blast hit->hsp will get a unique identifier.
 
 =head1 EXAMPLES
 
@@ -84,7 +86,6 @@ GetOptions(
 
 
 #--- MAIN ---#
-
 my %blast;
 my $run_cnt = 0;
 while(<>){

@@ -70,7 +70,7 @@ sub make_DR_itree{
     my $db =  $DR_r->{$run}{'BlastOutput_db'};
     $db = (File::Spec->splitpath($db))[2];
     
-    print Dumper $DR_r->{$run} unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};
+   # print Dumper $DR_r->{$run} unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};
 
     next unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};  # next unless 'Iteration'
     foreach my $iter ( @{$DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
@@ -86,7 +86,7 @@ sub make_DR_itree{
 
 	# iterating through hsp
 	my $hsp_ref = $hit->{Hit_hsps}{Hsp};	
-	foreach my $hsp (@{$hsp_ref}){
+	while( my($hspUID, $hsp) = each %$hsp_ref){
 	  # hsp values
 	  my $sstart = $hsp->{'Hsp_hit-from'};
 	  my $send = $hsp->{'Hsp_hit-to'};
@@ -184,7 +184,7 @@ sub DR_filter_blast{
 
 	# iterating through hsp
 	my $hsp_ref = $hit->{Hit_hsps}{Hsp};	
-	foreach my $hsp (@{$hsp_ref}){
+	while( my ($hspUID, $hsp) = each %$hsp_ref ){
 	  $filter{'total'}++;
 
 	  # hsp values

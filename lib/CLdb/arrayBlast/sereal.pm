@@ -5,6 +5,8 @@ use strict;
 use warnings FATAL => 'all';
 use Data::Dumper;
 use Carp qw/carp croak/;
+use Clone qw/clone/;
+use Data::Uniqid qw/uniqid/;
 
 use base 'Exporter';
 our @EXPORT_OK = '';
@@ -100,28 +102,34 @@ sub blast_all_array{
     # multiple hits or just 1?
     if(ref $hits_ref eq 'ARRAY'){ # multiple
       foreach my $hit ( @$hits_ref){
-        make_hsp_array($blast_r, $iter, $hit);
+        make_hsp_hash($blast_r, $iter, $hit);
       }
     }
     else{ # making array
-      make_hsp_array($blast_r, $iter, $hits_ref);
+      make_hsp_hash($blast_r, $iter, $hits_ref);
       $iter->{'Iteration_hits'}{'Hit'} = [$hits_ref]
     }
 
-    # make blast output row of field values
-    sub make_hsp_array{
+    # making a unique ID for each hsp (each 'blast hit' has a unique ID)
+    sub make_hsp_hash{
       my ($blast_r, $iter, $hit) = @_;
 
       # multiple hsp or just 1?
       if( ref $hit->{Hit_hsps}{Hsp} eq 'ARRAY' ){
-	# nothing needed
+	my %hsp_byUID;
+	foreach my $hsp (@{$hit->{Hit_hsps}{Hsp}}){
+	  my $UID = uniqid;
+	  $hsp_byUID{$UID} = clone( $hsp );	  
+	}
+	$hit->{Hit_hsps}{Hsp} = \%hsp_byUID;
       }
-      else{ # making array
-	$hit->{Hit_hsps}{Hsp} = [$hit->{Hit_hsps}{Hsp}];
+      else{ # just hash ref
+	my $UID = uniqid;
+	$hit->{Hit_hsps}{Hsp} = {$UID => $hit->{Hit_hsps}{Hsp}};
       }
     }
   }
- #print Dumper $blast_r; exit;
+# print Dumper $blast_r; exit;
 }
 
 
