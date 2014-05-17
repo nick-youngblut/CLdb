@@ -138,8 +138,6 @@ sub queryBlastDBs{
 	$hit->{Hit_hsps}{Hsp} = \@Hsps;
       }      
     }
-    # time testing: exit after 1st run
-    exit; 
   }
 }
 

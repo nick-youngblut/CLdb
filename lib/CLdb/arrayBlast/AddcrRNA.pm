@@ -392,13 +392,15 @@ sub getSpacerRegion{
 	  $info_r->{crDNA} = $crDNA;
 	  $info_r->{scaffold} = $scaffold;
 	  $info_r->{genome_fasta} = $fasta_file;
+	  $info_r->{spacer_id} = $spacer_id;
+	  $info_r->{locus_id} = $locus_id;
 	  push @{$byQuery{ $info_r->{query_id} }}, $info_r;		     
 	}
       }
     }
   }
 
-  #print Dumper %byQuery; exit;
+#  print Dumper %byQuery; exit;
   return \%byQuery;
 }
 
