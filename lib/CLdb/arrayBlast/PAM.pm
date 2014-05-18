@@ -169,8 +169,8 @@ sub getPAM{
     # selecting upstream or downstream extension
     my $ext;
     if( $pam_index_r->[2] eq 'up'){  # upstream sequence, reversing before substr
-      $fasta_r->{$seqName} = reverse $fasta_r->{$seqName};
       $ext = $ext[0];
+      $ext = reverse $ext;
     }
     elsif( $pam_index_r->[2] eq 'down' ){
       $ext = $ext[1];
@@ -184,9 +184,14 @@ sub getPAM{
     $pam_end = $ext_len if $pam_end > $ext_len; 
   
     # substr out pam
-    $fasta_r->{$seqName} = substr($fasta_r->{$seqName},
+    $fasta_r->{$seqName} = substr($ext,
 				  $pam_start - 1,  # 0 index
 				  $pam_end - $pam_start + 1);    
+
+    # flipping back if 'down'
+    $fasta_r->{$seqName} = reverse $fasta_r->{$seqName}
+      if $pam_index_r->[2] eq 'up';
+
   }
 
 #  print Dumper %$fasta_r; exit;

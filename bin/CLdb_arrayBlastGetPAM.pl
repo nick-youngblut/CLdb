@@ -35,7 +35,7 @@ Tab-delim table containing the protospacer sequence
 =item -PAM  <int>
 
 start-stop of the PAM region (2 values required). 
-See DESCRIPTION for details. [1 3]
+See DESCRIPTION for details. [-3 -1]
 
 =item -revcomp  <bool>
 
@@ -71,18 +71,11 @@ The flag designates the region (relative to the
 protospacer) containing the PAM. Negative 
 values = upstream from the proto, while
 positive values = downstream. 
-So, the default [1 3] will select the 3bp
-immediately downstream of the protospacer.
-should not extend beyond the length of extensions
-on the protospacer (default: 10bp)! 
+So, the default [-3 -1] will select the 3bp
+immediately upstream of the protospacer.
+'-PAM 1 2' would select the 2bp immediately
+upstream of the protospacer.
 
-=head2 -SEED
-
-The flag designates the region (relative to
-the protospacer) containing the SEED sequence.
-Negative values bp from the END of the protospacer.
-So, the default [-8] will select the last 8bp
-of the protospacer.
 
 =head1 EXAMPLES
 
@@ -112,7 +105,7 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
-use Sereal qw/ encode_sereal /;
+
 
 ### CLdb
 use CLdb::arrayBlast::PAM qw/ make_pam_index
@@ -125,7 +118,7 @@ use CLdb::seq qw/read_fasta/;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $revcomp_b);
-my @PAM = (-3,-1);
+my @PAM;
 my ($fasta_in, $table_in); 
 GetOptions(
 	   "PAM=i{2,2}" => \@PAM,	   
@@ -138,6 +131,7 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 # pam index
+@PAM = (-3, -1) unless @PAM;
 my $pam_index_r = make_pam_index(\@PAM);
 # fasta or table from STDIN?
 die "Provide either -fasta or -table\n"
