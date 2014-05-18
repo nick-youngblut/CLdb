@@ -7,6 +7,9 @@ use Carp  qw( carp confess croak );
 use Data::Dumper;
 use List::MoreUtils qw/any/;
 
+## CLdb
+use CLdb::seq qw/revcomp/;
+
 # export #
 use base 'Exporter';
 our @EXPORT_OK = ();
@@ -153,6 +156,7 @@ blast :  blast srl Ds
 outfmt :  outfmt values
 queries :  \%{locus_id}{spacer_id}{field} = value; used for selecting specific hits
 array :  just alignments of hit to spacers in arrays? [FALSE]
+crRNA_ori :  orient by crRNA? [FALSE]
 verbose :  verbose [TRUE}
 
 =head3 OUT
@@ -173,6 +177,8 @@ sub get_alignProto{
     $h{queries} : confess "Provide 'queries'";
   my $array = exists $h{array} ? 
     $h{array} : confess "Provide 'array'";
+  my $crDNA_ori = exists $h{crDNA_ori} ?
+    $h{crDNA_ori} : confess "Provide 'crDNA_ori'";
   my $verbose = $h{verbose};
   
   foreach my $run (keys %$spacer_r){
@@ -187,7 +193,7 @@ sub get_alignProto{
 
     # status
     print STDERR "Retrieving sequences from blast db: '$blastdbfile'\n"
-      unless $verbose;
+      if $verbose;
 
     # each iteration
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
@@ -204,12 +210,17 @@ sub get_alignProto{
         next unless exists $hit->{Hit_hsps}{Hsp};
 
 	foreach my $hspUID (keys %{$hit->{Hit_hsps}{Hsp}}){
-	  #print Dumper $hit->{Hit_hsps}{Hsp}{$hspUID}; exit;
-	  
-	  # next unless alignment
+	  # filtering 	  
+	  ## next unless alignment
 	  my $aln_r = exists $hit->{Hit_hsps}{Hsp}{$hspUID}{aln} ?
 	    $hit->{Hit_hsps}{Hsp}{$hspUID}{aln} : next;	    
-	  	  	  
+	  ## if CLdb_array-hit: skip if 
+	  if( exists $hit->{Hit_hsps}{Hsp}{$hspUID}{'CLdb_array-hit'} ){
+	    # if -array; just keeping hits to array
+	    next if $array and $hit->{Hit_hsps}{Hsp}{$hspUID}{'CLdb_array-hit'} == -1;
+	    # if ! -array; just keeping hits to protospacer
+	    next if ! $array and $hit->{Hit_hsps}{Hsp}{$hspUID}{'CLdb_array-hit'} == 1;
+	  }	  	  	  
 
 	  # foreach alignment, writing sequence
 	  foreach my $locus_spacer (keys %$aln_r){
@@ -268,6 +279,12 @@ sub get_alignProto{
 				      sort{$columns{$a} cmp $columns{$b}}
 					     keys %columns),
 				);
+
+	      # by default, sequences oriented by blast hit (crDNA)
+	      ## orienting by protospacer unless $crRNA_ori 
+	      $aln_r->{$locus_spacer}{$ele} = revcomp($aln_r->{$locus_spacer}{$ele})
+		unless $crDNA_ori;
+
 	      print join("\n", $seqName, 
 			 $aln_r->{$locus_spacer}{$ele}), "\n";
 	    }

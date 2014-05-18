@@ -417,6 +417,9 @@ $opts_r->{'refine_sql'}";
   # making fasta #
   my %fasta;
   foreach my $row (@$ret){
+    croak "\nERROR: array_sense_strand not set for all entries! Set with 'CLdb_setSenseStrand.pl'\n\n"
+      unless defined $row->[5];  # array_sense_strand must exist
+
     # revcomp sequence if array_sense_strand == -1
     croak "ERROR: sense strand must be 1 or -1\n"
       unless $row->[5] == 1 or $row->[5] == -1;

@@ -52,14 +52,18 @@ See DESCRIPTION for more details.
 
 =head3 Other
 
-=item array  <bool>
+=item -crDNA  <bool>
+
+Orient by crDNA instead of protospacer? [FALSE]
+
+=item -array  <bool>
 
 Write out hits to spacers in CRISPR arrays (instead of
 hits to protospacers)? [FALSE]
 
 =item -verbose  <bool>
 
-Verbose output. [TRUE]
+Verbose output. [FALSE]
 
 =item -help  <bool>
 
@@ -77,6 +81,9 @@ CLdb_arrayBlastAlignProto.pl must be
 run before this script!
 
 Get alignments of crDNA & protospacer.
+
+The alignment is oriented to the protospacer by
+default.
 
 =head2 -outfmt
 
@@ -189,12 +196,13 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose);
 my $database_file;
 my $outfmt;
-my $array;
+my ($array, $crDNA_ori);
 my $query = "";
 my (@subtype, @taxon_id, @taxon_name);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "array" => \$array,
+	   "crDNA" => \$crDNA_ori,
 	   "outfmt=s" => \$outfmt,
            "subtype=s{,}" => \@subtype,
            "taxon_id=s{,}" => \@taxon_id,
@@ -239,6 +247,7 @@ get_alignProto( blast => $spacer_r,
 		outfmt => $outfmt_r,
 		queries => $queries_r,
 		array => $array,
+		crDNA_ori => $crDNA_ori,
 		verbose => $verbose );
 
 # encoding

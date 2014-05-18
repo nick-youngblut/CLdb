@@ -60,23 +60,27 @@ sub genbank2fasta{
 # getting fasta from genbank unless -e fasta #
   my ($loci_r, $db_path, $header_r) = @_;
 
-  print STDERR "### checking for existence of genome fasta ###\n";
+  print STDERR "### Checking for existence of genome fasta ###\n";
 
   foreach my $locus_id (keys %$loci_r){
-    next unless exists $loci_r->{$locus_id}{'genbank_file'};            # cannot do w/out genbank
-
     print STDERR "### Processing locus: \"$locus_id\" ###\n";
 
-    if(! exists $loci_r->{$locus_id}{'fasta_file'} ){
+    if(! exists $loci_r->{$locus_id}{'fasta_file'} || $loci_r->{$locus_id}{'fasta_file'} =~ /^\s*$/ ){
       print STDERR "  No genome fasta for locus_id: \"$locus_id\"! Trying to extract sequence from genbank...\n";
       $loci_r->{$locus_id}{'fasta_file'} =
-        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");
+        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, 
+			      $db_path, "$db_path/fasta/", $locus_id);
     }
     elsif( ! -e "$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}"){
       my $fasta_name = $loci_r->{$locus_id}{'fasta_file'};
       print STDERR "  WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
       $loci_r->{$locus_id}{'fasta_file'} =
-        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, $db_path, "$db_path/fasta/");
+        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, 
+			      $db_path, "$db_path/fasta/", $locus_id);
+    }
+    else{ 
+      printf STDERR " The fasta_file field %s was provided for locus %s\n",
+	    $loci_r->{$locus_id}{'fasta_file'}, $locus_id; 
     }
   }
 
@@ -99,7 +103,15 @@ $genbank_file :  genbank file name
 =cut
 
 sub genbank2fasta_extract{
-  my ($genbank_file, $db_path, $fasta_dir) = @_;
+  my ($genbank_file, $db_path, $fasta_dir, $locus_id) = @_;
+
+  # genbank file must exist in order to extract fasta from it
+  unless( defined $genbank_file ){
+    print STDERR " WARNING: no genbank file name provided for locus '$locus_id'.";
+    print STDERR " Cannot extract the genome sequence to make a fasta. Skipping\n";
+    return undef;
+  }            # cannot do w/out genbank
+
 
   # making fasta dir if not present #
   mkdir $fasta_dir unless -d $fasta_dir;
@@ -115,7 +127,7 @@ sub genbank2fasta_extract{
   }
   
   # sanity check #
-  die " ERROR: cannot find $genbank_file!\n"
+  croak " ERROR: cannot find $genbank_file!\n"
     unless -e "$db_path/genbank/$genbank_file";
   
   # I/O #
@@ -140,7 +152,7 @@ sub genbank2fasta_extract{
     return 0;
   }
   else{
-    print STDERR "   Success! fasta file extracted from $genbank_file, written: $fasta_out\n";
+    print STDERR "   Success! fasta file extracted from $genbank_file.\n   File written to: $fasta_out\n";
     return $parts[2];                   # just fasta name
   }
 }
