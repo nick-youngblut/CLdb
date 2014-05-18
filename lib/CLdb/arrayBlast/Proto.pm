@@ -1,4 +1,4 @@
-package CLdb::arrayBlast::AddProto;
+package CLdb::arrayBlast::Proto;
 
 # module use #
 use strict;
@@ -18,7 +18,7 @@ our @EXPORT_OK = ();
 	
 =head1 NAME
 
-CLdb::arrayBlast::AddProto
+CLdb::arrayBlast::Proto
 
 =head1 VERSION
 
@@ -30,7 +30,7 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Subroutines for editing sequence data
+Subroutines for getting & adding protospacers
 
 =cut
 
@@ -300,6 +300,137 @@ sub getProtoFromDB{
   #print Dumper $hsp; exit;
 }
 
+
+=head2 getProto
+
+Getting protospacer sequence. Bare bones selection.
+
+=head3 IN
+
+spacer => blast srl
+verbose => verbose output
+
+=head3 OUT
+
+txt-file writen to STDOUT
+
+=cut 
+
+push @EXPORT_OK, 'getProto';
+
+sub getProto{
+  my %h = @_;
+  my $spacer_r = exists $h{blast} ? $h{blast} : 
+    confess "Provide a decoded blast srl as $%";
+  my $verbose = $h{verbose};
+
+  # table header
+  my @columns = qw/protoFullXSeq queryID blastdbfile subjectScaffold 
+		   protoFullStart protoFullEnd protoFullXStart protoFullXEnd
+		   subjectStrand Hsp_identity Hsp_bit-score Hsp_evalue Hsp_ID/;
+  print join("\t", @columns);
+
+
+  # getting blast db file name
+  foreach my $run (keys %$spacer_r){
+    next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};  # must have hit
+
+    # getting blastdbfile
+    my $blastdbfile = exists $spacer_r->{$run}{'BlastOutput_db'} ?
+      $spacer_r->{$run}{'BlastOutput_db'} :
+        confess "Cannot find BlastOutput_db in run $run";
+    my @parts = File::Spec->splitpath($blastdbfile);
+    $blastdbfile = $parts[2];
+
+   
+    # each iteration
+    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+      
+      # getting queryID
+      my $queryID = exists $iter->{'Iteration_query-def'} ?
+	$iter->{'Iteration_query-def'} :
+	  confess "Cannot find Iteration_query-def\n";
+      
+
+      # skipping iterations without hits
+      next unless exists $iter->{Iteration_hits} and
+        $iter->{Iteration_hits} !~ /^\s*$/;
+      next unless exists $iter->{Iteration_hits}{Hit};
+
+      # assuming no crRNA info
+      
+      # iterating through hits
+      foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
+	next unless exists $hit->{Hit_hsps}{Hsp};
+	
+	# iterating through hsp
+	foreach my $hspUID ( keys %{$hit->{Hit_hsps}{Hsp}} ){
+	  my $hsp = $hit->{Hit_hsps}{Hsp}{$hspUID};
+	  $hsp->{queryID} = $queryID;
+	  $hsp->{blastdbfile} = $blastdbfile;
+	  $hsp->{Hsp_ID} = $hspUID;
+
+	  # hsp_identity
+	  $hsp->{Hsp_identity} = sprintf('%.2f', 
+				     $hsp->{Hsp_identity} / 
+				     $hsp->{'Hsp_align-len'} * 100);
+
+	  # extensions to lowercase
+	  setProtoExtLower($hsp);
+
+	  # writing row of table
+	  map{ $hsp->{$_} = 'NA' unless exists $hsp->{$_} } @columns;
+	  print join("\t", @{$hsp}{@columns} ), "\n";
+	}	
+      }
+    }
+  }
+}
+
+
+=head2 setProtoExtLower
+
+Setting protospacer extension to lowercase.
+Assuming protospacer oriented to query.
+
+=head3 IN
+
+=head3 OUT
+
+=cut
+
+sub setProtoExtLower{
+  my $hsp = shift || confess "Provide an \$hsp hash ref";
+  
+  # IO check
+  return undef unless exists $hsp->{protoFullXSeq};
+  map{ confess "Cannot find '$_'" unless exists $hsp->{$_} }
+    qw/protoFullStart protoFullEnd protoFullXStart protoFullXEnd
+      protoFullXSeq subjectStrand/;
+
+  $hsp->{protoFullXSeq} =~ tr/a-z/A-Z/;   # all starting at uppercase
+  
+
+  # determining lenght of extension up & downstream of proto (pos strand)
+  my $upX = $hsp->{protoFullStart} - $hsp->{protoFullXStart};
+  my $downX = $hsp->{protoFullXEnd} - $hsp->{protoFullEnd};
+
+
+  # flipping up & down if subjectStrand strand (all to + strand orientation)
+  ## is this needed???
+  ($upX, $downX) = ($downX, $upX) if $hsp->{subjectStrand} == -1;
+  
+  # to lower case
+  ## upstream
+  $hsp->{protoFullXSeq} =~ s/([A-Z])/\L$1/ for(1..$upX);
+  ## downstream
+  my $rev = reverse $hsp->{protoFullXSeq};
+  $rev =~ s/([A-Z])/\L$1/ for(1..$downX);
+  $hsp->{protoFullXSeq} = reverse $rev;
+
+}
+
+
 =head1 AUTHOR
 
 Nick Youngblut, C<< <nyoungb2 at illinois.edu> >>
@@ -315,7 +446,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc CLdb::arrayBlast::AddProto
+    perldoc CLdb::arrayBlast::Proto
 
 
 You can also look for information at:

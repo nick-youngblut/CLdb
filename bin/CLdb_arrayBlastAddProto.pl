@@ -8,7 +8,7 @@ CLdb_arrayBlastAddProto.pl -- adding protospacer to blast srl file
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastAddProto.pl [flags] < blast_hits.srl > spacer_blast_proto.txt
+CLdb_arrayBlastAddProto.pl [flags] < blast_hits.srl > spacer_blast_proto.srl
 
 =head2 Required flags
 
@@ -101,7 +101,7 @@ use CLdb::utilities qw/
 		      /;
 use CLdb::query qw/ table_exists /;
 use CLdb::arrayBlast::sereal qw/ decode_file /;
-use CLdb::arrayBlast::AddProto qw/ queryBlastDBs /;
+use CLdb::arrayBlast::Proto qw/ queryBlastDBs /;
 
 
 ### args/flags
