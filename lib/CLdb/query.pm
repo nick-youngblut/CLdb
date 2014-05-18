@@ -102,6 +102,50 @@ HERE
 }
 
 
+=head2 getLociSpacerInfo
+
+Querying CLdb with join on loci & spacers
+
+=head3 IN
+
+hash of args:
+dbh :  $; dbh objeckt
+extra_sql :  $; refine sql query
+columns  :  \@; columns to return
+
+=cut
+
+push @EXPORT_OK, 'getLociSpacerInfo';
+
+sub getLociSpacerInfo{
+  my %h = @_;
+  my $dbh = exists $h{dbh} ? $h{dbh} : confess "Provide a dbh object";
+  my $extra_sql = exists $h{extra_sql} ?
+    $h{extra_sql} : "";
+  my $columns_r = exists $h{columns} ? 
+    $h{columns} : confess "Provide columns to select";
+  
+  # manditory columns
+  unshift @$columns_r, 'loci.locus_id';
+  unshift @$columns_r, 'spacers.spacer_id';
+
+  my $sql = join(" ", 
+		 "SELECT", 
+		 join(",",  @$columns_r),
+		 "FROM loci, spacers",
+		 "WHERE loci.locus_id = spacers.locus_id",
+		 $extra_sql
+		 );
+  
+  # querying
+  $dbh->{FetchHashKeyName} = 'NAME_lc';
+  my $sth = $dbh->prepare($sql) or confess $dbh->err;
+  $sth->execute;
+  my $ret_r = $sth->fetchall_hashref(['locus_id', 'spacer_id']);
+
+  # print Dumper $ret_r; exit;
+  return $ret_r;
+}
 
 =head2 list_columns
 

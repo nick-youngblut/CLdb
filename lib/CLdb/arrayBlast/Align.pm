@@ -111,7 +111,7 @@ sub alignProto{
 	    setcrDNALower($fasta_aln, $crRNA_info->{$q});
 
 	    # adding alignment to hsp
-	    $hsp->{$q} = $fasta_aln; 
+	    $hsp->{aln}{$q} = $fasta_aln; 
 	  }
 	}
       }
@@ -246,6 +246,8 @@ sub alignSeqs{
 #  print Dumper %fasta; exit;
   return \%fasta;
 }
+
+
 
 =head1 AUTHOR
 

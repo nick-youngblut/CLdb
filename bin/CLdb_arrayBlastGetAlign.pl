@@ -25,14 +25,37 @@ CLdb_arrayBlastGetAlign.pl [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
 CLdb sqlite file name 
 (if getting metadata on spacer sequences. eg., taxon_name)
 
+=head3 If -database provided:
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine CLdb query (must start with 'AND').
+
+=head3 Output
+
 =item -outfmt  <char>
 
 Output columns added to spacer-protospacer alignments.
-The first 3 columns are always 'locus_id', 'spacer_id' 
+See DESCRIPTION for more details.
+
+=head3 Other
 
 =item array  <bool>
 
-Write out alignments from the array? 
+Write out hits to spacers in CRISPR arrays (instead of
+hits to protospacers)? [FALSE]
 
 =item -verbose  <bool>
 
@@ -50,21 +73,73 @@ perldoc CLdb_arrayBlastGetAlign.pl
 
 =head1 DESCRIPTION
 
-SCRIPTS TO RUN PRIOR TO THIS ONE: 
-CLdb_arrayBlastAddcrRNA.pl &
-CLdb_arrayBlastAddProto.pl 
+CLdb_arrayBlastAlignProto.pl must be
+run before this script!
 
-Any query-hit without a crDNA 
-sequence for the query and a protospacer 
-sequence for the hit will be skipped.
+Get alignments of crDNA & protospacer.
 
-The crDNA & protospacer will be aligned
-with clustalw, and the extension sequences
-flanking the protospacer will be set to lower
-case, which will help for determining the PAM.
+=head2 -outfmt
 
-The alignment will be added to the *.srl
-data structure.
+This flag designates the format
+of each sequence in the output fasta.
+The first 4 columns are always:
+'crDNA/protospacer', 'locus_id', 'spacer_id', 'hsp_id'.
+These are the unique ID for the spacer blast hit. 
+
+Additional columns can be designated with a
+comma-seperated list.
+
+Example output (no '-outfmt'): 
+">crRNA|1|10|l2puealx43xU"
+
+'crRNA' = crRNA (not protospacer)
+
+'1' = locus_id
+
+'10' = spacer_id (for that locus)
+
+'l2puealx43xU' = blast hsp unique ID
+
+
+=head3 Support columns:
+
+=over
+
+=item * subtype
+
+=item * taxon_name
+
+=item * taxon_id
+
+=item * scaffold   (of spacer/crDNA)
+
+=item * crDNA_start
+
+=item * crDNA_end
+
+=item * array_sense_strand
+
+=item * blastdb
+
+=item * subject_scaffold
+
+=item * proto_start
+
+=item * proto_end
+
+=item * protoX_start  (X = proto + extension)
+
+=item * protoX_end
+
+=item * proto_strand
+
+=item * identity
+
+=item * evalue
+
+=item * bitscore
+
+=back
 
 =head1 EXAMPLES
 
@@ -98,29 +173,74 @@ use Sereal qw/ encode_sereal /;
 
 ### CLdb
 use CLdb::arrayBlast::sereal qw/ decode_file /;
-use CLdb::arrayBlast::Align qw/ alignProto /;
+use CLdb::arrayBlast::GetAlign qw/ get_alignProto 
+				   parse_outfmt/;
+use CLdb::query qw/ table_exists
+		    n_entries
+		    join_query_opts
+		    getLociSpacerInfo/;
+use CLdb::utilities qw/ file_exists
+			connect2db/;
 
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
+my $database_file;
+my $outfmt;
+my $array;
+my $query = "";
+my (@subtype, @taxon_id, @taxon_name);
 GetOptions(
+	   "database=s" => \$database_file,
+	   "array" => \$array,
+	   "outfmt=s" => \$outfmt,
+           "subtype=s{,}" => \@subtype,
+           "taxon_id=s{,}" => \@taxon_id,
+           "taxon_name=s{,}" => \@taxon_name,	   
+	   "query=s" => \$query,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 #--- I/O error & defaults ---#
-
+file_exists($database_file, 'database') if defined $database_file;
+my $outfmt_r = parse_outfmt($outfmt);
 
 #--- MAIN ---#
 # decoding spacer and DR srl
 my $spacer_r = decode_file( fh => \*STDIN );
 
+
+# if database: connect & query
+my $queries_r;   # 
+if(defined $database_file){
+  my $dbh = connect2db($database_file);
+  table_exists($dbh, 'loci');
+  table_exists($dbh, 'spacers');
+
+  my $join_sql = "";
+  $join_sql .= join_query_opts(\@subtype, 'subtype');
+  $join_sql .= join_query_opts(\@taxon_id, 'taxon_id');
+  $join_sql .= join_query_opts(\@taxon_name, 'taxon_name');
+  
+  $queries_r = getLociSpacerInfo(dbh => $dbh, 
+		    extra_sql => join(" ", $join_sql, $query), 
+		    columns => [keys %{$outfmt_r->{CLdb}}]
+		   );
+
+  $dbh->disconnect;
+}
+
+
 # querying blastDBs for proteospacers
-alignProto( blast => $spacer_r,
-	    verbose => $verbose );
+get_alignProto( blast => $spacer_r,
+		outfmt => $outfmt_r,
+		queries => $queries_r,
+		array => $array,
+		verbose => $verbose );
 
 # encoding
-print encode_sereal( $spacer_r );
+#print encode_sereal( $spacer_r );
 
