@@ -84,11 +84,6 @@ use File::Spec;
 use Sereal qw/ encode_sereal /;
 
 ### CLdb
-use CLdb::utilities qw/
-			file_exists
-			get_file_path
-		      /;
-use CLdb::query qw/ table_exists /;
 use CLdb::arrayBlast::sereal qw/ decode_file /;
 use CLdb::arrayBlast::Proto qw/ getProto /;
 
