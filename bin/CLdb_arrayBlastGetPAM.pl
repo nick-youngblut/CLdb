@@ -8,7 +8,7 @@ CLdb_arrayBlastGetPAM.pl -- getting PAM for each protospacer
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastGetPAM.pl [flags] < proto.fasta > PAMs.fasta
+CLdb_arrayBlastGetPAM.pl [flags] > PAMs
 
 =head2 Required flags
 
