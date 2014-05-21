@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CLdb_arrayBlastGetPAM.pl -- getting PAM for each protospacer
+CLdb_arrayBlastSEEDstats.pl -- getting mismatch stats on the seed region
 
 =head1 SYNOPSIS
 
-CLdb_arrayBlastGetPAM.pl [flags] < proto.fasta > PAMs.fasta
+CLdb_arrayBlastSEEDstats.pl [flags] < proto.fasta
 
 =head2 Required flags
 
@@ -21,16 +21,18 @@ CLdb_arrayBlastGetPAM.pl [flags] < proto.fasta > PAMs.fasta
 
 =over
 
+=item -prefix  <char>
+
+Output file prefix. [SEED]
+
 =item -SEED  <char>
 
 start-stop of the SEED region. (2 values required) 
 See DESCRIPTION for details. [-8 -1]
 
-=item -revcomp  <bool>
+=item -gap  <bool>
 
-Reverse complement protospacer sequence
-before extracting PAM (if protospacer
-is not oriented on the correct strand). [FALSE]
+Define a gaps in the alignments as mismatches? [TRUE]
 
 =item -verbose  <bool>
 
@@ -44,9 +46,48 @@ This help message.
 
 =head2 For more information:
 
-perldoc CLdb_arrayBlastGetPAM.pl
+perldoc CLdb_arrayBlastSEEDstats.pl
 
 =head1 DESCRIPTION
+
+Sum up the mismatches in all
+protospacer-crDNA alignments provided
+(as fasta via STDIN). 
+
+The mismatches are normalized by total
+number of alignment positions 
+('mismatch_norm' columns). This accounts
+for varying length of alignments.
+
+Mismatches are grouped by region:
+
+=over
+
+=item SEED: just the SEED region
+
+=item nonSEED: positions in the protospacer that are not SEED
+
+=item protospacer: the entire protospacer
+
+=back
+
+=head2 Output
+
+2 output files are produced. Both are
+tab-delimited tables (with headers). The prefix for
+both file names is defined by -prefix.
+
+=head3 *_sum.txt
+
+Summing the number of mismatches by region for each
+alignment.
+
+=head3 *_byPos.txt
+
+Summing the number of mismatches by position across
+all alignments. The alignment position is
+defined relative to the start of the SEED region
+(accounts for alignments with different lengths).
 
 =head2 -SEED
 
@@ -91,22 +132,27 @@ use File::Spec;
 
 
 ### CLdb
+use CLdb::seq qw/read_fasta
+		 revcomp/;
 use CLdb::arrayBlast::PAM qw/ make_pam_index/;
 use CLdb::arrayBlast::SEED qw/ read_proto_aln
-			       parseProtoBySEED/;
-use CLdb::seq qw/read_fasta/;
+			       parseProtoBySEED
+			       write_sum_table
+			       write_byPos_table/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $revcomp_b);
+my ($verbose, $no_gap);
 my @SEED;
 my ($fasta_in, $table_in); 
+my $prefix = "SEED";
 GetOptions(
 	   "SEED=i{2,2}" => \@SEED,	   
+	   "prefix=s" => \$prefix,
 	   "fasta=s" => \$fasta_in,
 	   "table=s" => \$table_in,
-	   "revcomp" => \$revcomp_b,
+	   "gap" => \$no_gap,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -121,7 +167,19 @@ my $seed_index_r = make_pam_index(\@SEED);  # actually making SEED index
 # getting fasta if fasta
 my $fasta_r = read_proto_aln(fh => \*STDIN);
 
+# revcomp all alignments to orient by protospacer
+foreach my $pair (keys %$fasta_r){
+  map{ revcomp($fasta_r->{$pair}{$_}) } keys %{$fasta_r->{$pair}};
+}
+
+
 # parsing proto-crDNA alignment by SEED
-my $aln_r = parseProtoBySEED( $fasta_r, $seed_index_r);
+my ($mismatchSum_r, $mismatchByPos_r) = parseProtoBySEED( $fasta_r, 
+							  $seed_index_r, 
+							  $no_gap);
 
-
+# output
+## writing out summary table
+write_sum_table($prefix, $mismatchSum_r);
+## writing out count by position table
+write_byPos_table($prefix, $mismatchByPos_r);
