@@ -25,32 +25,30 @@ CLdb_arrayBlastGetAlign.pl [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
 CLdb sqlite file name 
 (if getting metadata on spacer sequences. eg., taxon_name)
 
-=head3 If -database provided:
-
 =item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
+Only works with -database.
 
 =item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
+Only works with -database.
 
 =item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
+Only works with -database.
 
 =item -query  <char>
 
 Extra sql to refine CLdb query (must start with 'AND').
-
-=head3 Output
+Only works with -database.
 
 =item -outfmt  <char>
 
 Output columns added to spacer-protospacer alignments.
 See DESCRIPTION for more details.
-
-=head3 Other
 
 =item -crDNA  <bool>
 
@@ -96,7 +94,8 @@ These are the unique ID for the spacer blast hit.
 Additional columns can be designated with a
 comma-seperated list.
 
-Example output (no '-outfmt'): 
+=head3 Example output (no '-outfmt'): 
+
 ">crRNA|1|10|l2puealx43xU"
 
 'crRNA' = crRNA (not protospacer)
@@ -129,6 +128,10 @@ Example output (no '-outfmt'):
 =item * blastdb
 
 =item * subject_scaffold
+
+=item * subject_def
+
+=item * subject_accession
 
 =item * proto_start
 

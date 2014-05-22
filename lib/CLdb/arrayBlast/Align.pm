@@ -79,8 +79,6 @@ sub alignProto{
     # each iteration
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
 
-      print Dumper $iter; exit;
-
       # skipping iterations without hits or crRNA_info
       next unless exists $iter->{Iteration_hits} and
         $iter->{Iteration_hits} !~ /^\s*$/;

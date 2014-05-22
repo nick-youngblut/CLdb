@@ -14,7 +14,7 @@ CLdb_arrayBlastGetPAM.pl [flags] > PAMs
 
 =over
 
-=head3 Use either -fasta OR -table
+=head3 NOTE: Use either -fasta OR -table
 
 =item -fasta  <char>
 

@@ -30,19 +30,21 @@ A fasta of either spacer and/or DR group sequences (use: CLdb_array2fasta.pl -g 
 
 =item -subtype  <char>
 
-Refine query to specific a subtype(s) (>1 argument allowed).
+Refine blast subject genomes those containing 
+CRISPRs with a subtype(s) (>1 argument allowed).
 
 =item -taxon_id  <char>
 
-Refine query to specific a taxon_id(s) (>1 argument allowed).
+Refine blast subject genomes to a specific taxon_id(s) (>1 argument allowed). 
 
 =item -taxon_name  <char>
 
-Refine query to specific a taxon_name(s) (>1 argument allowed).
+Refine blast subject genomes to a specific taxon_name(s) (>1 argument allowed). 
 
 =item -extra  <char>
 
-Extra sql to refine which sequences are returned.
+Extra sql to refine which genomes are used
+as blast DBs. ['']
 
 =item -blast  <char>
 
@@ -79,8 +81,9 @@ Genomes are obtained from the 'fasta_file'
 values in the loci table. Any loci without an
 associated fasta file will be skipped.
 
-Genome files should be in the $CLdb_HOME/fasta/ directory 
-(copied by CLdb_loadLoci.pl).
+Genome fasta files should be in the $CLdb_HOME/fasta/ directory 
+(added by CLdb_loadLoci.pl if genbank files were 
+originally used to make the CLdb).
 
 Blast databases for each genome will be created
 in $CLdb_HOME/spacer_blast/blast_db/.
@@ -89,15 +92,27 @@ The blast output from the blast against each genome
 will be written be in xml format (-outfmt 5) to
 STDOUT.
 
-Spacers and DRs can be blasted against the genomes
-in CLdb or any other Blast database (see 'IF
+=head2 What if I want to blast against something
+else (eg., NCBI's nr)?
+
+Spacers and DRs can be blasted 'manually'
+against the genomes in CLdb or any other 
+Blast database (see 'IF
 PERFORMING BLAST WITHOUT THIS SCRIPT' below).
+
 
 =head2 IF PERFORMING BLAST WITHOUT THIS SCRIPT:
 
-You can conduct the blastn run without this script.
+You can conduct the blastn run without this script
+and blast against any nucleotide database (eg., nt).
 Just make sure to use the blastn in the blast+ toolkit
-and set the output format as '-outfmt 5' (xml output)
+and set the output format as '-outfmt 5' (xml output).
+
+=head3 To basically replicate the default blast used 
+in this script (blast db is 'nt' in this example):
+
+blastn -task 'blastn-short' -db nt -query spacers.fna
+-evalue 1e-3 -outfmt 5 > spacer_blast_hits.xml
 
 =head1 EXAMPLES
 
@@ -196,7 +211,7 @@ my $db_path = get_file_path($database_file);
 my $dbh = connect2db($database_file);
 
 # checking fasta query (query_file); determine if repeat or spacer #
-check_query_fasta($query_file);		
+check_query_fasta($query_file);	    # query provided
 
 
 # subject selection #

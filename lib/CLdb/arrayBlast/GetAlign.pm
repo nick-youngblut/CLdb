@@ -72,6 +72,9 @@ sub parse_outfmt{
   # crDNA_start
   # crDNA_end
   # array_sense_strand
+### from hit
+  # hit_def
+  # hit_accession
 ### from hsp
   # subject_scaffold
   # proto_start
@@ -96,6 +99,9 @@ sub parse_outfmt{
 			crdna_end => 'region_end',
 			array_sense_strand => 'array_sense_strand'
 		       };
+  $index{hit} = { subject_def => 'Hit_def',
+		  subject_accession => 'Hit_accession'
+		  };
   $index{hsp} = { 
 		 subject_scaffold => 'subjectScaffold',
 		 proto_start => 'protoFullStart',
@@ -134,9 +140,10 @@ sub parse_outfmt{
   set_index(\%index, \%outfmt,  \%outfmt_order, 'run');
   set_index(\%index, \%outfmt, \%outfmt_order,  'crRNA_info');
   set_index(\%index, \%outfmt, \%outfmt_order, 'hsp');
+  set_index(\%index, \%outfmt, \%outfmt_order, 'hit');
 
  
-  #print Dumper %outfmt; exit;
+#  print Dumper %outfmt; exit;
   return \%outfmt;
 }
 
@@ -245,7 +252,8 @@ sub get_alignProto{
 		next if $field eq 'locus_id' or $field eq 'spacer_id';
 		my $val = $queries_r->{$locus_id}{$spacer_id}{$field};
 		$field = join(".", 'loci', $field);
-		$columns{ $val } = $outfmt_r->{CLdb}{$field};  # field_value => order in seq name		
+		# field_value => order in seq name
+		$columns{ $val } = $outfmt_r->{CLdb}{$field};  		
 	      }
 	    }
 
@@ -256,6 +264,15 @@ sub get_alignProto{
 		  $iter->{crRNA_info}{$locus_spacer}{$field} :
 		    confess "ERROR: cannot find field '$field' for $locus_spacer\n";
 		$columns{ $val } = $outfmt_r->{crRNA_info}{$field};   # field_value => order
+	      }
+	    }
+
+	    ## hit fields
+	    if(exists $outfmt_r->{hit}){
+	      foreach my $field (keys %{$outfmt_r->{hit}} ){    
+		my $val = exists $hit->{$field} ? $hit->{$field} :
+		    confess "ERROR: cannot find field '$field' for $locus_spacer\n";
+		$columns{ $val } = $outfmt_r->{hit}{$field};   # field_value => order
 	      }
 	    }
 
