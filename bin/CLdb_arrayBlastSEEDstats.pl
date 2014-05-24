@@ -85,9 +85,14 @@ alignment.
 =head3 *_byPos.txt
 
 Summing the number of mismatches by position across
-all alignments. The alignment position is
-defined relative to the start of the SEED region
-(accounts for alignments with different lengths).
+all alignments. The field 'pos_rel_SEED' is the
+alignment position defined relative to the start 
+of the SEED region (accounts for alignments with 
+different lengths). The field 'pos_rel_aln'
+is absolute position in the alignment.
+The 'mismatch_norm' field is number of mismatches
+divided by the number of characters in that alignment
+position (accounts for missing characters in the aligment).
 
 =head2 -SEED
 
@@ -159,7 +164,7 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 # pam index
-@SEED = (-8, -1) unless @SEED;
+@SEED = (-8, -1) if ! defined $SEED[0] and ! defined $SEED[1];
 my $seed_index_r = make_pam_index(\@SEED);  # actually making SEED index
 
 

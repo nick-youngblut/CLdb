@@ -151,13 +151,13 @@ sub mismatchByPos{
   # relative to seed start
   my $seed_start = $seedSE_r->[0];
 
-#  print Dumper $seedSE_r; exit;
-
+  
   # proto
   for my $i ($protoSE_r->[0]..$protoSE_r->[1]){
     my $ret_r = $itree->fetch($i-1, $i+1);
     $mismatchByPos_r->{protospacer}{$i - $seed_start}{mismatch} += $ret_r->[0];
     $mismatchByPos_r->{protospacer}{$i - $seed_start}{count}++;
+    $mismatchByPos_r->{protospacer}{$i - $seed_start}{proto_pos} = $i;  # 'absolute' position
   }
   
   # seed
@@ -165,6 +165,7 @@ sub mismatchByPos{
     my $ret_r = $itree->fetch($i-1, $i+1);
     $mismatchByPos_r->{SEED}{$i - $seed_start}{mismatch} += $ret_r->[0];
     $mismatchByPos_r->{SEED}{$i - $seed_start}{count}++;
+    $mismatchByPos_r->{SEED}{$i - $seed_start}{proto_pos} = $i;  # 'absolute' position
   }
 
   # non-seed
@@ -173,6 +174,7 @@ sub mismatchByPos{
       my $ret_r = $itree->fetch($i-1, $i+1);
       $mismatchByPos_r->{nonSEED}{$i - $seed_start}{mismatch} += $ret_r->[0];
       $mismatchByPos_r->{nonSEED}{$i - $seed_start}{count}++;
+      $mismatchByPos_r->{nonSEED}{$i - $seed_start}{proto_pos} = $i;  # 'absolute' position
     }
   }
   if($NseedSE_r->[2] <= $NseedSE_r->[3]){
@@ -180,11 +182,12 @@ sub mismatchByPos{
       my $ret_r = $itree->fetch($i-1, $i+1);
       $mismatchByPos_r->{nonSEED}{$i - $seed_start}{mismatch} += $ret_r->[0];
       $mismatchByPos_r->{nonSEED}{$i - $seed_start}{count}++;
+      $mismatchByPos_r->{nonSEED}{$i - $seed_start}{proto_pos} = $i;  # 'absolute' position
     }
   }
 
     
-#  print Dumper %$mismatchByPos_r; exit;
+  #print Dumper %$mismatchByPos_r; exit;
 }
 
 
@@ -352,8 +355,9 @@ push @EXPORT_OK, 'write_sum_table';
 sub write_sum_table{
   my $prefix = shift or confess "Provide file prefix\n";
   my $MMSum_r = shift or confess "Provide mismatchSum as \%\n";
-  
-  open OUT, ">$prefix\_summary.txt" or confess $!;
+
+  my $outfile = "$prefix\_summary.txt";
+  open OUT, ">$outfile" or confess $!;
 
   # header
   print OUT join("\t", qw/alignment crDNA protospacer region count mismatches mismatch_norm/), "\n";
@@ -374,6 +378,8 @@ sub write_sum_table{
     }	       
   }
   close OUT;
+
+  print STDERR "SEED summary file written: '$outfile'\n";
 }
 
 
@@ -389,26 +395,31 @@ sub write_byPos_table{
   my $prefix = shift or confess "Provide file prefix\n";
   my $MMByPos_r = shift or confess "Provide mismatch ByPos as \%\n";
 
-  open OUT, ">$prefix\_byPos.txt" or confess $!;
+
+  my $outfile = "$prefix\_byPos.txt";
+  open OUT, ">$outfile" or confess $!;
 
   # header
-  print OUT join("\t", qw/region position count mismatches mismatch_norm/), "\n";
+  print OUT join("\t", qw/region pos_rel_SEED pos_rel_align
+			  count mismatches mismatch_norm/), "\n";
 
   # body
   foreach my $region (sort keys %$MMByPos_r){
     foreach my $pos (sort{$a<=>$b} keys %{$MMByPos_r->{$region}}){
 
       print OUT join("\t", $region, 
-		 $pos + 1,   # 1-indexed
-		 $MMByPos_r->{$region}{$pos}{count},
-		 $MMByPos_r->{$region}{$pos}{mismatch},
-		 $MMByPos_r->{$region}{$pos}{mismatch} /
-		 $MMByPos_r->{$region}{$pos}{count}
-		 ), "\n";	    
+		     $pos + 1,   # 1-indexed; relative to the start of the SEED
+		     $MMByPos_r->{$region}{$pos}{proto_pos},
+		     $MMByPos_r->{$region}{$pos}{count},
+		     $MMByPos_r->{$region}{$pos}{mismatch},
+		     $MMByPos_r->{$region}{$pos}{mismatch} /
+		     $MMByPos_r->{$region}{$pos}{count}
+		    ), "\n";	    
     }	       
   }
   close OUT;
-  
+ 
+  print STDERR "SEED by-position table written: '$outfile'\n";
 }
 
 
