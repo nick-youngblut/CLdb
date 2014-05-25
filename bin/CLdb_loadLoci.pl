@@ -130,6 +130,13 @@ use CLdb::query qw/
 		    list_columns/;
 use CLdb::load qw/
 		   load_db_table/;
+use CLdb::load::loadLoci qw/
+			     unix_line_breaks
+			     just_table_columns
+			     make_external_file_dirs
+			     get_leader_seq
+			     get_pam_seq
+			   /;
 use CLdb::seq qw/
 		  read_fasta
 		  seq_from_genome_fasta/;
@@ -138,9 +145,6 @@ use CLdb::utilities qw/
 			connect2db
 			lineBreaks2unix
 			get_file_path/;
-use CLdb::load::loadLoci qw/
-			     unix_line_breaks
-			   /;
 use CLdb::genbank::genbank2fasta qw/
 				     genbank2fasta
 				   /;
@@ -162,45 +166,45 @@ GetOptions(
 file_exists($database_file, "database");
 
 #--- MAIN ---#
-# connect 2 db #
+# connect 2 db 
 my $dbh = connect2db($database_file);
 
-# database path #
+# database path 
 my $db_path = get_file_path($database_file);
 
-# database metadata #
+# database metadata 
 table_exists($dbh, "loci"); 
 #my $column_list_r = list_columns($dbh, "loci", 1);
 
-# getting input loci table #
+# getting input loci table 
 my ($loci_r, $header_r) = get_loci_table();
 
-# checks#
+# checks
 check_locus_id($loci_r);
 make_external_file_dirs($loci_r, $header_r, $db_path);	 # copying array files & genbanks if not in ./genbank & ./array #
-unix_line_breaks($loci_r, $db_path);						# line breaks of all copied files to unix
+unix_line_breaks($loci_r, $db_path) unless $^O =~ /win/i;   # line breaks to unix unless windows OS
 
 
-# inferring from table #
-## getting genome fasta from genbank ##
+# inferring from table
+## getting genome fasta from genbank
 genbank2fasta($loci_r, $db_path, $header_r); 	
 ## getting scaffold name 
 get_scaffold_name($loci_r, $db_path, $header_r);
 
-# updating / loading_db #
-## loci ##
+# updating / loading_db 
+## loci
 print STDERR "\n### loading entries into CLdb ###\n";
 my $loci_header_r = just_table_columns($header_r, 'loci');
 load_db_table($dbh, "loci", $loci_header_r, $loci_r);
 
-## loading leader table ##
+## loading leader table 
 # TODO: update
 my $leader_header_r = just_table_columns($header_r, 'leader');
 $leader_header_r->{"leader_sequence"} = 1;
 my $leader_loci_r = get_leader_seq($loci_r, $db_path);
 load_db_table($dbh, "leaders", $leader_header_r, $leader_loci_r);
 
-## loading pam table ##
+## loading pam table
 # TODO: update
 my $pam_header_r = just_table_columns($header_r, 'pam');
 my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
@@ -213,164 +217,20 @@ $dbh->disconnect();
 exit;
 
 
-### Subroutines
+#--- Subroutines ---#
 sub check_locus_id{
 # no '|' in locus_ID #
-	my ($loci_r) = @_;
-	
-	warn "### checking locus_ID values ###\n";
-	
-	foreach my $locus_id (keys %$loci_r){
-		die "ERROR: locus_id '$locus_id' contains '|', which is not allowed!\n"
-			if $locus_id =~ /\|/;
-		}
-	}
-
-sub get_pam_seq{
-# getting pam seq if needed #
-  my ($loci_r, $db_path, $pam_header_r) = @_;
+  my ($loci_r) = @_;
   
-  if(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}
-     && exists $pam_header_r->{"pam_sequence"}){
-    print STDERR "### PAM sequence & start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
-  }
-  elsif(exists $pam_header_r->{"pam_start"} && exists $pam_header_r->{"pam_end"}){
-    print STDERR "### PAM start-end columns provided. Getting PAM sequence if needed. Loading table ###\n"
-  }
-  elsif(exists $pam_header_r->{"pam_sequence"}){
-    print STDERR "### PAM sequence column provided. Loading values into PAM table ###\n"
-  }
-  else{
-    print STDERR "### no PAM info provided. Skipping PAM loading ###\n"
-  }
-  
-  # getting pam sequence if possible #
-  my %cp;
+  print STDERR "### checking locus_ID values ###\n";
   foreach my $locus_id (keys %$loci_r){
-    if(exists $loci_r->{$locus_id}{'pam_sequence'}){
-      $cp{$locus_id} = $loci_r->{$locus_id};
-    }
-    elsif( exists $loci_r->{$locus_id}{'pam_start'}
-	   && exists $loci_r->{$locus_id}{'pam_start'} 
-	   && exists $loci_r->{$locus_id}{'scaffold'}
-	   && exists $loci_r->{$locus_id}{'fasta_file'}){		# geting sequence 
-      my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
-      
-      $loci_r->{$locus_id}{'pam_sequence'} = 
-	seq_from_genome_fasta( $fasta_r, 
-			       [$loci_r->{$locus_id}{'scaffold'},
-				$loci_r->{$locus_id}{'pam_start'}, 
-				$loci_r->{$locus_id}{'pam_end'}]
-			     );
-    }
-    else{
-      next;
-    }
-    
-    
-    # checking for existence of genome fasta, if yes, extract leader sequence #
-    if(exists $loci_r->{$locus_id}{'fasta_file'}){
-      
-      my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
-      
-      $loci_r->{$locus_id}{'leader_sequence'} = 
-	seq_from_genome_fasta( $fasta_r, 
-			       [$loci_r->{$locus_id}{'scaffold'},
-				$loci_r->{$locus_id}{'leader_start'}, 
-				$loci_r->{$locus_id}{'leader_end'}]
-			     ) unless exists $loci_r->{$locus_id}{'leader_sequence'};
-      
-      if($loci_r->{$locus_id}{'pam_sequence'} eq ""){
-	print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
-	  "' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
-	    ". Not loading pam sequence!\n";
-      }
-      else{		# just entries w/ leader sequence #
-	$cp{$locus_id} = $loci_r->{$locus_id};
-      }
-    }
+    die "ERROR: locus_id '$locus_id' contains '|', which is not allowed!\n"
+			if $locus_id =~ /\|/;
   }
-  
-  #print Dumper %cp; exit;
-  return \%cp;
-  
+  print STDERR "...locus_ID values are OK\n";
 }
 
-sub get_leader_seq{
-# loading leader; pulling out sequence from genome if available #
-	my ($loci_r, $db_path) = @_;
-	
-	# status #
-	print STDERR "### Leader start-end provided. Loading values into leader table ###\n"
-		unless $verbose;
-	
-	# getting leader sequence if possible #
-	my %cp;
-	foreach my $locus_id (keys %$loci_r){
-		# next unless leader_start && leader_end #
-		next unless exists $loci_r->{$locus_id}{'leader_start'} 
-					&& exists $loci_r->{$locus_id}{'leader_end'}
-					&& exists $loci_r->{$locus_id}{'scaffold'}
-					&& exists $loci_r->{$locus_id}{'fasta_file'};
-	
-		# checking for existence of genome fasta, if yes, extract leader sequence #
-		if(exists $loci_r->{$locus_id}{'fasta_file'}){
-			
-			my $fasta_r = read_fasta("$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}");
-			
-			$loci_r->{$locus_id}{'leader_sequence'} = 
-				seq_from_genome_fasta( $fasta_r, 
-						[$loci_r->{$locus_id}{'scaffold'},
-						$loci_r->{$locus_id}{'leader_start'}, 
-						$loci_r->{$locus_id}{'leader_end'}]
-						) unless exists $loci_r->{$locus_id}{'leader_sequence'};
-			
-			if($loci_r->{$locus_id}{'leader_sequence'} eq ""){
-				print STDERR "WARNING: '", $loci_r->{$locus_id}{'scaffold'}, 
-					"' not found for ", $loci_r->{$locus_id}{'fasta_file'}, 
-					". Not loading leader sequence!\n";
-				}
-			else{		# just entries w/ leader sequence #
-				$cp{$locus_id} = $loci_r->{$locus_id};
-				}
-			}
-		}
 
-		#print Dumper %cp; exit;
-	return \%cp;
-	}
-
-sub just_table_columns{
-#-- Description --#
-# loading just the columns of interest #
-  my ($header_r, $table) = @_;
-  $table =~ tr/A-Z/a-z/;
-  
-  my %col_lists;
-  @{$col_lists{'loci'}} = qw/Locus_ID Taxon_ID Taxon_Name 
-			     Subtype Scaffold 
-			     Locus_start Locus_end
-			     CAS_Start CAS_End  
-			     Array_Start Array_End
-			     CAS_Status Array_Status 
-			     Genbank_File Fasta_File Array_File 
-			     Scaffold_count 
-			     File_Creation_Date Author/;
-  
-  @{$col_lists{'leader'}} = qw/Locus_ID Leader_start Leader_end Leader_end Leader_sequence/;
-  @{$col_lists{'pam'}} = qw/Locus_ID PAM_seq PAM_start PAM_end PAM_sequence/;
-  
-  die "ERROR: '$table' not found in column lists!\n"
-    unless exists $col_lists{$table};
-  
-  map{ $_ =~ tr/A-Z/a-z/ } @{$col_lists{$table}};		# table of interest
-	
-  my %header_parse;
-  map{$header_parse{$_} = $header_r->{$_} if exists $header_r->{$_}} @{$col_lists{$table}};
-  
-  #print Dumper %header_parse; exit;
-  return \%header_parse; 
-}
 
 sub get_scaffold_name{
 # if no scaffold value, try to get from fasta #
@@ -422,46 +282,6 @@ sub get_scaffold_name{
   #print Dumper @fasta_need; exit;
 }
 
-sub make_external_file_dirs{
-  # moving files to directory in CLdb_home #
-  my ($loci_r, $header_r, $dir) = @_;
-  
-  foreach my $locus_id (keys %$loci_r){			
-    $loci_r->{$locus_id}{"genbank_file"} = 
-      make_CLdb_dir($dir, 'genbank', $loci_r->{$locus_id}{"genbank_file"}) 
-	if exists $loci_r->{$locus_id}{"genbank_file"};
-    $loci_r->{$locus_id}{"array_file"} = 
-      make_CLdb_dir($dir, 'array', $loci_r->{$locus_id}{"array_file"}) 
-	if exists $loci_r->{$locus_id}{"array_file"};
-    $loci_r->{$locus_id}{"fasta_file"} = 
-      make_CLdb_dir($dir, 'fasta', $loci_r->{$locus_id}{"fasta_file"})
-	if exists $loci_r->{$locus_id}{"fasta_file"};
-  }
-  
-  #print Dumper %$loci_r; exit;	
-  return $dir;
-}
-
-sub make_CLdb_dir{
-  my ($dir, $name, $infile) = @_;
-  my @parts = File::Spec->splitpath( $infile );
-  
-  # making dir; copying files #
-  if(File::Spec->rel2abs($parts[1]) ne "$dir/$name"){
-    mkdir "$dir/$name" unless -d "$dir/$name";
-    unless(-e "$dir/$name/$parts[2]"){		# can't find in needed directory, is it in specified directory?
-      die " ERROR: cannot find $infile\n" 
-	unless -e $infile;			# specified file can't be found anywhere
-      
-      print STDERR "'$infile' not in CLdb_HOME/$name/\n";
-      copy($infile, "$dir/$name/$parts[2]") or die $!;
-      print STDERR "\tCopied $infile to $dir/$name/$parts[2]\n" unless $quiet;
-    }
-  }
-  
-  return $parts[2];
-
-}
 
 
 sub get_loci_table{

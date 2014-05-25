@@ -348,7 +348,7 @@ sub getSpacerRegion{
     print STDERR "...parsing from genome: $fasta_file\n";
 
     # loading genome fasta as hashref
-    my $genome = read_fasta(file => "$fasta_dir/$fasta_file");
+    my $genome = read_fasta(-file => "$fasta_dir/$fasta_file");
 
     # substr each spacer region sequence
     foreach my $scaffold (keys %{$CLdb_info_r->{$fasta_file}}){

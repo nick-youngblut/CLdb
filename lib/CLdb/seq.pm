@@ -144,11 +144,11 @@ sub read_fasta{
 # loading fasta file as a hash #
   my %h = @_;
   confess "ERROR: a file name or file handle must be provided\n"
-    unless exists $h{file} or $h{fh};
+    unless exists $h{-file} or $h{-fh};
 
   # file or file handle
   my $fh;
-  exists $h{fh} ? $fh = $h{fh} : open $fh, $h{file} or confess $!;
+  exists $h{-fh} ? $fh = $h{-fh} : open $fh, $h{-file} or confess $!;
 
   my (%fasta, $tmpkey);
   while(<$fh>){

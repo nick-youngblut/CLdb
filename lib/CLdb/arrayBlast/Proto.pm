@@ -282,7 +282,7 @@ sub getProtoFromDB{
 
     ## running cmd
     open PIPE, "$cmd |" or confess $!;
-    my $fasta_r = read_fasta(fh => \*PIPE);
+    my $fasta_r = read_fasta(-fh => \*PIPE);
     close PIPE;
     confess "No sequence retrieved from command: '$cmd'" unless %$fasta_r;
 
