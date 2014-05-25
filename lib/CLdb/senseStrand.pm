@@ -6,6 +6,7 @@ use warnings FATAL => 'all';
 use Carp  qw( carp confess croak );
 use Data::Dumper;
 use File::Spec;
+use Regexp::Common;
 
 # export #
 use base 'Exporter';
@@ -69,9 +70,12 @@ sub setSenseByArraySE{
     croak "ERROR: cannot find locus_id\n" unless defined $locus_id;
     my $start = $loci_tbl_r->[$i][$index_r->{array_start}];
     my $end = $loci_tbl_r->[$i][$index_r->{array_end}];
-    croak "ERROR: cannot find start or end\n"
-      unless defined $start and defined $end;
     
+    # skipping if no array start-end  (assuming no array)
+    next unless  defined $start and defined $end and
+	$start =~ /$RE{num}{real}/ and $end =~ /$RE{num}{real}/;
+    
+    # determining sense 
     my $sense = $start <= $end ? 1 : -1;
     $sense{ $locus_id } = [$start, $end, $sense];
   }
@@ -181,7 +185,9 @@ sub senseByLeaderLoc{
       $status{leader}++;
     }
     else{
-      warn "WARNING: it appears that the leader & CRISPR array overlap for locus: '$locus_id'\n";
+      printf STDERR "WARNING: it appears that the leader & CRISPR array overlap for locus: '$locus_id'\n";
+      printf STDERR "\tarray_start:%i, array_end:%i\n\tleader_start:%i, leader_end:%i\n",
+	$array_start, $array_end, $l_start, $l_end;
       next;
     }    
   }

@@ -9,6 +9,7 @@ use Getopt::Long;
 use File::Spec;
 use Bio::SeqIO;
 use Set::IntervalTree;
+use Regexp::Common;
 use Carp  qw( carp confess croak );
 
 # export #
@@ -169,22 +170,38 @@ sub get_regions{
 	return \@ret;
 	}
 
-sub load_itrees{
-	my ($feats_r) = @_;
+=head2 load_itrees
 
-	my %itrees;
-	foreach my $feat (@$feats_r){
-		my $scaf = $feat->location->seq_id;
-		
-		unless(exists $itrees{$scaf}){
-			$itrees{$scaf} = Set::IntervalTree->new();
-			}
-			
-		$itrees{$scaf} -> insert($feat, $feat->location->start, $feat->location->end);
-		}
-	
-	return \%itrees;
-	}
+Loading hash of interval trees with feature start-end info.
+{scaffold}=>itree
+
+=cut
+
+sub load_itrees{
+  my ($feats_r) = @_;
+  
+  my %itrees;
+  foreach my $feat (@$feats_r){
+    my $scaf = $feat->location->seq_id;
+    
+    # sanity checks
+    unless( defined $scaf ){
+      print STDERR " WARNING: no scaffold ID found for feature. Skipping feature\n";
+      next;
+    }	
+    if( $feat->location->start !~ /$RE{num}{real}/ or
+	$feat->location->start !~ /$RE{num}{real}/ ){
+	print STDERR " WARNING: feature start-end not numeric. Skipping feature\n";
+	next;
+      }	  
+
+    # loading itree
+    $itrees{$scaf} = Set::IntervalTree->new() unless exists $itrees{$scaf};	
+    $itrees{$scaf} -> insert($feat, $feat->location->start, $feat->location->end);
+  }
+  
+  return \%itrees;
+}
 	
 sub load_itree{
 	my ($feats_r) = @_;

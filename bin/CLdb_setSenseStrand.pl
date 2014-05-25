@@ -210,8 +210,10 @@ else{
 				  );
   # determing sense strand from array start-end
   $sense_r = setSenseByArraySE( $loci_tbl_r,
-			    {locus_id => 0, array_start => 1, array_end => 2}
-			    );
+				{locus_id => 0, 
+				 array_start => 1, 
+				 array_end => 2}
+			      );
   
   # unless -leader: define by leader position (if leader provided)
   unless( $use_leaders ){

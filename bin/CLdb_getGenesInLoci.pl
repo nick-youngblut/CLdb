@@ -195,11 +195,11 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$query,
-	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
-	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
-	   "conflicting" => \$conflicting, 		# write out both entries for conflicts? [FALSE]
-	   "verbose" => \$verbose,				# TRUE
-	   "quiet" => \$quiet, 					# turn off warnings
+	   "all" => \$all_genes,       # get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
+	   "existing" => \$existing, 	       # check for existing, if yes, do not write (unless '-a'). [TRUE]
+	   "conflicting" => \$conflicting,     # write out both entries for conflicts? [FALSE]
+	   "verbose" => \$verbose,	       # TRUE
+	   "quiet" => \$quiet, 		       # turn off warnings
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -428,11 +428,11 @@ sub call_genbank_get_region{
     my $array_status = ${$loci_se_r->{$locus}}[9];
     print STDERR join("\n ",
 		      "...Getting features in:",
-		      "file =\t\t$genbank_file",
-		      "scaffold =\t$scaffold",
-		      "region =\t$start-$end",
-		      "CAS_status =\t$CAS_status",
-		      "Array_status =\t$array_status"), "\n";
+		      "file:\t\t\t$genbank_file",
+		      "scaffold:\t\t$scaffold",
+		      "region:\t\t$start-$end",
+		      "CAS_status:\t\t$CAS_status",
+		      "Array_status:\t\t$array_status"), "\n";
 		
     my $ret_r;
     if($start <= $end){
@@ -477,7 +477,7 @@ sub call_genbank_get_region{
       }
     }	
     # status #
-    print STDERR " Number of features found = $cnt\n";
+    print STDERR " Number of features found: $cnt\n";
   }
 		
   # sanity check #

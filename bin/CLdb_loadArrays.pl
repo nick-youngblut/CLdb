@@ -46,7 +46,7 @@ the spacers and direct repeats into the CLdb database.
 Array file names are obtained from the loci table in the
 CRISPR database.
 
-Array files must be in $CLdb_HOME/array/
+Array files must be in the array directory in $CLdb_HOME
 
 Start-stop is based on CRISPRFinder orientation, which is
 always + strand.
@@ -113,7 +113,7 @@ GetOptions(
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
 my $db_path = get_file_path($database_file);
-my $array_path = "$db_path/array/";
+my $array_path = File::Spec->catdir($db_path, "array");
 $array_path = File::Spec->rel2abs($array_path);
 die "ERROR: cannot find '$array_path'\n" unless -d $array_path;
 
