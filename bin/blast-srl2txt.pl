@@ -99,7 +99,6 @@ use Sereal qw/ decode_sereal /;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::arrayBlast::sereal qw/
 				 parse_outfmt
 				 classify_fields

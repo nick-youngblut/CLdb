@@ -68,7 +68,6 @@ use Sereal qw/ encode_sereal /;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::arrayBlast::sereal qw/
 				 blast_all_array
 			       /;

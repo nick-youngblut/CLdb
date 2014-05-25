@@ -114,7 +114,6 @@ use Bio::SeqIO;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
 	table_exists
 	n_entries
