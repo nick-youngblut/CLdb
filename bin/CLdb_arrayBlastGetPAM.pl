@@ -149,10 +149,10 @@ foreach my $file ( $fasta_in, $table_in ){
 # getting fasta if fasta
 my $fasta_r;
 if(defined $fasta_in){ 
-  $fasta_r = read_fasta(fh => $fh); 
+  $fasta_r = read_fasta(-fh => $fh); 
 }
 elsif(defined $table_in){ 
-  $fasta_r = read_protoTable(fh => $fh); 
+  $fasta_r = read_protoTable(-fh => $fh); 
 }
 else{ die "Logic error $!\n"; }
 

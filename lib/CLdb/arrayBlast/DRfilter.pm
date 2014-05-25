@@ -157,10 +157,13 @@ push @EXPORT_OK, 'DR_filter_blast';
 sub DR_filter_blast{
   my $spacer_r = shift or croak $!;
   my $itrees_r = shift or croak $!;
-  my $DR_cnt = defined $_[0]->{DR_cnt} 
-    ? $_[0]->{DR_cnt} : croak "Provide DR count cutoff";
+  my %h = @_;
 
-#  print Dumper $spacer_r; exit;
+  my $DR_cnt = exists $h{DR_cnt} ?
+    $h{DR_cnt} : croak "Provide DR count cutoff\n";
+  my $keep = exists $h{keep} ?
+    $h{keep} : croak "Provide keep\n";
+  
 
   # status
   my %filter;
@@ -209,17 +212,22 @@ sub DR_filter_blast{
 	    $DR_adj += scalar @$up_adj > 0 ? 1 : 0;
 	    $DR_adj += scalar @$down_adj > 0 ? 1 : 0;
 	   
-	    if( $DR_adj >= $DR_cnt){ # hits 'array'
-	      $filter{'array'}++;
-	      $hsp->{'CLdb_array-hit'} = 1;
+	    if( $DR_adj >= $DR_cnt){ # hits CRISPR array
+	      if($keep){        #keeping hit, just marking as hit to array
+		$filter{'array'}++;
+		$hsp->{'CLdb_array-hit'} = 1;
+	      }
+	      else{  # deleting hsp
+		delete $hsp_ref->{$hspUID};
+	      }
 	    }
-	    else{  # not hitting an 'array'; keeping
+	    else{    # not hitting an 'array'; keeping
 	      $filter{'proto'}++;
 	      $hsp->{'CLdb_array-hit'} = 0;
 	    }
 	    
 	  }
-	  else{ # no hits; keeping 
+	  else{    # no hits; keeping 
 	    $filter{'proto'}++;
 	    $hsp->{'CLdb_array-hit'} = 0;
 	  }	  

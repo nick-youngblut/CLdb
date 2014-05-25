@@ -30,6 +30,10 @@ DR blast hits must be >= fraction of total DR sequence. [0.66]
 
 DR blast hits must be < 'evalue'. [10] 
 
+=item -keep  <bool> 
+
+Keep hits to CRISPR arrays, but just mark as hits to arrays? [FALSE]
+
 =item -verbose  <bool>
 
 Verbose output. [TRUE]
@@ -91,7 +95,7 @@ use CLdb::arrayBlast::DRfilter qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
+my ($verbose, $keep);
 my $evalue_cut = 10;
 my $len_cut = 0.66;
 my $DR_cnt = 1;
@@ -101,6 +105,7 @@ GetOptions(
 	   "length=f" => \$len_cut,			# length cutoff of DR hits
 	   "evalue=f" => \$evalue_cut,			# evalue cutoff of DR hits
 	   "DR=i" => \$DR_cnt, 					# number of adjacent DR hits needed to call 'array'
+	   "keep" => \$keep,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -126,7 +131,8 @@ my $itrees_r = make_DR_itree( $DR_r,
 
 # adding 'array_hit' to spacer hash
 DR_filter_blast( $spacer_r, $itrees_r, 
-		{DR_cnt => $DR_cnt}
+		 DR_cnt => $DR_cnt,
+		 keep => $keep
 	       );
 
 # encoding
