@@ -83,6 +83,8 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
 use Sereal qw/ encode_sereal /;
 
 ### CLdb

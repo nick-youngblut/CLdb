@@ -88,6 +88,8 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Sereal qw/ encode_sereal /;
+use FindBin;
+use lib "$FindBin::RealBin/../lib/";
 
 ### CLdb
 use CLdb::utilities qw/

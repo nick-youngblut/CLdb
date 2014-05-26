@@ -213,8 +213,8 @@ sub DR_filter_blast{
 	    $DR_adj += scalar @$down_adj > 0 ? 1 : 0;
 	   
 	    if( $DR_adj >= $DR_cnt){ # hits CRISPR array
+	      $filter{'array'}++;  # number filtered
 	      if($keep){        #keeping hit, just marking as hit to array
-		$filter{'array'}++;
 		$hsp->{'CLdb_array-hit'} = 1;
 	      }
 	      else{  # deleting hsp
@@ -241,6 +241,8 @@ sub DR_filter_blast{
   print STDERR "### DR filtering of spacer blast hits ###\n";
   print STDERR "Total spacer blast hits: $filter{'total'}\n";
   print STDERR "Spacer blast hits hitting an array (filtered out): $filter{'array'}\n";
+  $keep ? print STDERR "\tKeeping the blast hits to arrays and writing to the srl file\n" :
+    print STDERR "\tDeleting the blast hits to arrays\n";
   print STDERR "Spacer blast hits hitting a protospacer: $filter{'proto'}\n";
 
 }
