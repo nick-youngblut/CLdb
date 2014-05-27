@@ -1,66 +1,65 @@
 <!DOCTYPE html>
-<!--[if IE 8]>
-<html class="no-js lt-ie9" lang="en" >
-<![endif]-->
-<!--[if gt IE 8]><!-->
-<html class="no-js" lang="en" >
-<!--<![endif]-->
-
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width" />
-  <title>blog</title>
-  <link rel="stylesheet" href="/css/normalize.css" />
-  <link rel="stylesheet" href="/css/foundation.css" />
-  <link href='css/custom.css' rel='stylesheet' type='text/css'>
-  <script src="/js/vendor/custom.modernizr.js"></script>
-</head>
-<body>
-
-  <div id="wrap"> <!-- only purpose of this div: sticky footer -->
-
-    <!-- Navigation -->
-    <nav class="top-bar">
-      <ul class="title-area">
-        <li class="name">
-          <h1>
-            <a href="#">Poole</a>
-          </h1>
-        </li>
-        <li class="toggle-topbar menu-icon"><a href="#"><span>menu</span></a></li>
-      </ul>
-      <section class="top-bar-section">
-        <ul class="right">
-          <li class="divider"></li>
-          <li class=""><a href="/index.html">home</a></li>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="keywords" content="" />
+    <!-- css -->
+    <link href="/css/bootstrap.css" rel="stylesheet">
+    <link href="/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href='css/custom.css' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+  
+    <div id="wrap"> <!-- only purpose of this div: sticky footer -->
+  
+      <!-- header -->
+      <div class="navbar navbar-static-top">
+        <div class="navbar-inner">
+          <div class="container">
+            <!-- responsive menu for small screens -->
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </a>
+            <!-- regular menu -->
+            <a class="brand" href="#">Poole</a>
+            <div class="nav-collapse collapse">
+              <ul class="nav pull-right">
+              <li class=""><a href="/index.html">home</a></li>
 <li class=""><a href="/layout.html">layout</a></li>
+<li class=""><a href="/Documentation.html">Documentation</a></li>
 <li class=""><a href="/logic.html">logic</a></li>
 <li class="active"><a href="/blog.html">blog</a></li>
-          <li class="divider"></li>
-          <li class="has-dropdown"><a href="#">Poole</a>
-            <ul class="dropdown">
-              <li><a href="https://bitbucket.org/obensonne/poole">Website</a></li>
-              <li><a href="https://bitbucket.org/obensonne/poole/wiki/Recipes">Recipes</a></li>
-              <li><a href="https://bitbucket.org/obensonne/poole/wiki/Themes">Themes</a></li>
-              <li class="divider"></li>
-              <li><a href="https://news.ycombinator.com/item?id=4857473">Alternatives</a></li>
-            </ul>
-          </li>
-        </ul>
-      </section>
-    </nav>
-
-    <!-- Headline -->
-    <div class="row page-header">
-      <div class="large-12 columns">
-        <h1>blog</h1>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Poole <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="https://bitbucket.org/obensonne/poole">Website</a></li>
+                  <li><a href="https://bitbucket.org/obensonne/poole/wiki/Recipes">Recipes</a></li>
+                  <li><a href="https://bitbucket.org/obensonne/poole/wiki/Themes">Themes</a></li>
+                  <li class="divider"></li>
+                  <li><a href="https://news.ycombinator.com/item?id=4857473">Alternatives</a></li>
+                </ul>
+              </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-      <hr />
-    </div>
-
-    <!-- Content -->
-    <div class="row">
-      <div class="large-12 columns"><h2>Holy Grail</h2>
+  
+      <!-- content -->
+      <div class="container">
+        <div class=page-header>
+          <h1>
+            blog
+          </h1>
+        </div>
+        <div class="row">
+          <div class="span12">
+            <h2>Holy Grail</h2>
 <p><em>Posted at 2013-04-01.</em></p>
 <p>Knights of Ni, we are but simple travelers who seek the enchanter who lives
 beyond these woods. A newt? Did you dress her up like this? On second thoughts,
@@ -80,60 +79,35 @@ new home. Let us ride to Camelot! Now, look here, my good man.</p>
 <h3>What a strange</h3>
 <p>She looks like one. Why do you think that she is a witch? Look, my liege! Bring
 her forward!</p>
-<p><a href="http://chrisvalleskey.com/fillerama/">Ni!</a></p></div>
-    </div>
-
-    <div id="push"></div> <!-- push footer down -->
-  </div> <!-- wrap -->
-
-  <!-- Footer -->
-  <hr />
-  <footer class="row">
-    <div class="large-12 columns">
+<p><a href="http://chrisvalleskey.com/fillerama/">Ni!</a></p>
+          </div>
+        </div>
+      </div>
+      
+      <div id="push"></div> <!-- push footer down -->
+    </div> <!-- wrap -->
+    
+    <!-- footer -->
+    <hr/>
+    <div class="container">
       <div class="row">
-
-        <p class="text-center">
+        <p class="span12 text-center">
           <small>
           Built with <a href="http://bitbucket.org/obensonne/poole">Poole</a>
           &middot;
           Using <a href="http://jquery.com">jQuery</a> and
-          <a href="http://foundation.zurb.com/">Foundation</a>
+          <a href="http://twitter.github.io/bootstrap">Bootstrap</a>
           &middot;
           Licensed as <a href="http://creativecommons.org/licenses/by-sa/3.0">CC-SA</a>
           &middot;
           <a href="http://validator.w3.org/check?uri=referer">Validate me</a>
           </small>
         </p>
-
       </div>
     </div>
-  </footer>
 
-  <!-- JavaScript -->
-  <script>
-    document.write('<script src='
-        + ('__proto__' in {} ? 'js/vendor/zepto'
-            : 'js/vendor/jquery') + '.js><\/script>')
-  </script>
-  <script src="/js/foundation.min.js"></script>
-  <!-- foundation extras - uncomment as needed:
-  <script src="/js/foundation/foundation.js"></script>
-  <script src="/js/foundation/foundation.alerts.js"></script>
-  <script src="/js/foundation/foundation.clearing.js"></script>
-  <script src="/js/foundation/foundation.cookie.js"></script>
-  <script src="/js/foundation/foundation.dropdown.js"></script>
-  <script src="/js/foundation/foundation.forms.js"></script>
-  <script src="/js/foundation/foundation.joyride.js"></script>
-  <script src="/js/foundation/foundation.magellan.js"></script>
-  <script src="/js/foundation/foundation.orbit.js"></script>
-  <script src="/js/foundation/foundation.placeholder.js"></script>
-  <script src="/js/foundation/foundation.reveal.js"></script>
-  <script src="/js/foundation/foundation.section.js"></script>
-  <script src="/js/foundation/foundation.tooltips.js"></script>
-  <script src="/js/foundation/foundation.topbar.js"></script>
-  -->
-  <script>
-    $(document).foundation();
-  </script>
-</body>
+    <!-- js -->
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+  </body>
 </html>
