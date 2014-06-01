@@ -171,17 +171,16 @@ use DBI;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::utilities qw/
-	file_exists 
-	connect2db
-	lineBreaks2unix
-	get_file_path/;
+			file_exists 
+			connect2db
+			lineBreaks2unix
+			get_file_path/;
 use CLdb::query qw/
-	table_exists
-	join_query_opts/;
-use CLdb::genbank_get_region qw/
-	genbank_get_region/;
+		    table_exists
+		    join_query_opts/;
+use CLdb::genbank::genbank_get_region qw/
+				 genbank_get_region/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -196,11 +195,11 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$query,
-	   "all" => \$all_genes, 				# get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
-	   "existing" => \$existing, 			# check for existing, if yes, do not write (unless '-a'). [TRUE]
-	   "conflicting" => \$conflicting, 		# write out both entries for conflicts? [FALSE]
-	   "verbose" => \$verbose,				# TRUE
-	   "quiet" => \$quiet, 					# turn off warnings
+	   "all" => \$all_genes,       # get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
+	   "existing" => \$existing, 	       # check for existing, if yes, do not write (unless '-a'). [TRUE]
+	   "conflicting" => \$conflicting,     # write out both entries for conflicts? [FALSE]
+	   "verbose" => \$verbose,	       # TRUE
+	   "quiet" => \$quiet, 		       # turn off warnings
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -405,91 +404,91 @@ sub check_in_CAS{
 
 sub set_to_pos_strand{
 # setting all start-end so start is <= end #
-	my ($start, $end) = @_;
-	return $start, $end if $start !~ /^\d+$/ || $end !~ /^\d+$/;
-	if ($start > $end){ return $end, $start; }
-	else{ return $start, $end; }
-	}
+  my ($start, $end) = @_;
+  return $start, $end if $start !~ /^\d+$/ || $end !~ /^\d+$/;
+  if ($start > $end){ return $end, $start; }
+  else{ return $start, $end; }
+}
 
 sub call_genbank_get_region{
 # calling genbank_get_region to get CDS info from genbank files #
-	my ($loci_se_r, $genbank_path) = @_;
-	
-	my %loci_tbl;
-	foreach my $locus (keys %$loci_se_r){
-		my $genbank_file = join("/", $genbank_path, ${$loci_se_r->{$locus}}[2]);
-		die " ERROR: $genbank_file not found!\n"
-			unless -e $genbank_file;
-		
- 
-		my $start = ${$loci_se_r->{$locus}}[0];
-		my $end = ${$loci_se_r->{$locus}}[1];
+  my ($loci_se_r, $genbank_path) = @_;
+  
+  my %loci_tbl;
+  foreach my $locus (keys %$loci_se_r){
+    my $genbank_file = join("/", $genbank_path, ${$loci_se_r->{$locus}}[2]);
+    die " ERROR: $genbank_file not found!\n"
+      unless -e $genbank_file;
+    
+    
+    my $start = ${$loci_se_r->{$locus}}[0];
+    my $end = ${$loci_se_r->{$locus}}[1];
 		my $scaffold = ${$loci_se_r->{$locus}}[7];
-		my $CAS_status = ${$loci_se_r->{$locus}}[8];
-		my $array_status = ${$loci_se_r->{$locus}}[9];
-		print STDERR join("\n ",
-					"...Getting features in:",
-					"file =\t\t$genbank_file",
-					"scaffold =\t$scaffold",
-					"region =\t$start-$end",
-					"CAS_status =\t$CAS_status",
-					"Array_status =\t$array_status"), "\n";
+    my $CAS_status = ${$loci_se_r->{$locus}}[8];
+    my $array_status = ${$loci_se_r->{$locus}}[9];
+    print STDERR join("\n ",
+		      "...Getting features in:",
+		      "file:\t\t\t$genbank_file",
+		      "scaffold:\t\t$scaffold",
+		      "region:\t\t$start-$end",
+		      "CAS_status:\t\t$CAS_status",
+		      "Array_status:\t\t$array_status"), "\n";
 		
-		my $ret_r;
-		if($start <= $end){
-			$ret_r = genbank_get_region($scaffold, $start, $end, $genbank_file);
+    my $ret_r;
+    if($start <= $end){
+      $ret_r = genbank_get_region($scaffold, $start, $end, $genbank_file);
+    }
+    else{
+      $ret_r = genbank_get_region($scaffold, $end, $start, $genbank_file);
 			}
-		else{
-			$ret_r = genbank_get_region($scaffold, $end, $start, $genbank_file);
-			}
-		
-		my %header;
-		my @col_sel = qw/start end db_xref product translation/;
-		my $cnt = 0;
-		foreach(@$ret_r){
-			my @line = @$_;
-		
-			if(! %header){
-				for my $i (0..$#line){
-					$line[$i] =~ tr/A-Z/a-z/;
-					$header{$line[$i]} = $i;
-					}
-				}
-			else{					
-				# checking for existence of columns of interest #
-				my $next_bool;
-				foreach my $col (@col_sel){
-					unless($line[$header{$col}]){
-						print STDERR " WARNING: \"$col\" tag not found in feature: $_! Skipping feature\n";						
-						$next_bool = 1; last;
-						}
-					}
-				next if $next_bool;
-				
-				# parsing & scrubing fig/peg # (eg. 'ITEP:') #
-				my $fig_peg;
-				my @fig_peg = split /::/, $line[$header{"db_xref"}];
-				map{ $line[$header{"db_xref"}] = $_ if /fig\|.+peg\.\d+/ } @fig_peg;		# should only be 1 fig-peg
-				$line[$header{"db_xref"}] =~ s/^[^:]+://;
-			
-				# loading hash; selecting just tags of interest #
-				$loci_tbl{$locus}{$line[$header{'feature_num'}]} = [@line[@header{@col_sel}]]; 	# locusID=>feature_num = feature
-				$cnt++;
-				}
-			}	
-		# status #
-		print STDERR " Number of features found = $cnt\n";
-		}
-		
-	# sanity check #
-	unless (%loci_tbl){
-		$dbh->disconnect();
-		die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
-		}
-		
-		#print Dumper %loci_tbl; exit;
-	return \%loci_tbl;		#  locusID=>feature_num = \@feature
+    
+    my %header;
+    my @col_sel = qw/start end db_xref product translation/;
+    my $cnt = 0;
+    foreach(@$ret_r){
+      my @line = @$_;
+      
+      if(! %header){
+	for my $i (0..$#line){
+	  $line[$i] =~ tr/A-Z/a-z/;
+	  $header{$line[$i]} = $i;
 	}
+      }
+      else{					
+	# checking for existence of columns of interest #
+	my $next_bool;
+	foreach my $col (@col_sel){
+	  unless($line[$header{$col}]){
+	    print STDERR " WARNING: \"$col\" tag not found in feature: $_! Skipping feature\n";		
+	    $next_bool = 1; last;
+	  }
+	}
+	next if $next_bool;
+	
+	# parsing & scrubing fig/peg # (eg. 'ITEP:') #
+	my $fig_peg;
+	my @fig_peg = split /::/, $line[$header{"db_xref"}];
+	map{ $line[$header{"db_xref"}] = $_ if /fig\|.+peg\.\d+/ } @fig_peg;		# should only be 1 fig-peg
+	$line[$header{"db_xref"}] =~ s/^[^:]+://;
+	
+	# loading hash; selecting just tags of interest #
+	$loci_tbl{$locus}{$line[$header{'feature_num'}]} = [@line[@header{@col_sel}]]; 	# locusID=>feature_num = feature
+	$cnt++;
+      }
+    }	
+    # status #
+    print STDERR " Number of features found: $cnt\n";
+  }
+		
+  # sanity check #
+  unless (%loci_tbl){
+    $dbh->disconnect();
+    die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
+  }
+		
+  #print Dumper %loci_tbl; exit;
+  return \%loci_tbl;		#  locusID=>feature_num = \@feature
+}
 
 sub get_loci_start_end{
 # getting locus start and locus end from loci table in db #

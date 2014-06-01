@@ -1,0 +1,53 @@
+# header
+blast: 'BlastOutput_version'
+Query: 'BlastOutput_query-def'
+Database: 'BlastOutput_db'
+Fields: user defined
+Hits: 'BlastOutput_iterations' => 'Iteration' => scalar []
+
+# body
+qseqid: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_query-def' 
+qgi: NA
+qacc: NA
+qaccver: NA
+qlen: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_query-len' 
+sseqid: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_id'
+sallseqid: NA
+sgi: NA
+sallgi: NA
+sacc: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_accession'
+accver: NA
+sallacc: NA
+slen: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_len'
+qstart: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-from'
+qend: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-to'
+sstart: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-from'
+send: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-to'
+qseq: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_qseq'
+sseq: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hseq'
+evalue: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_evalue'
+bitscore: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_bit-score'
+score: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_score'
+length: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_align-len'
+pident: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_identity'
+nident: NA
+mismatch: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => ?
+positive: NA
+gapopen: 'BlastOutput_iterations' => 'Parameters' => 'Parameters_gap-open'
+gaps: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_gaps'
+ppos: NA
+frames: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-frame' /
+				 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-frame'
+qframe: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-frame'
+sframe: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-frame'
+btop: NA
+staxids: NA
+sscinames: NA
+scomnames: NA
+sblastnames: NA
+sskingdoms: NA
+stitle: NA
+salltitles: NA
+sstrand: NA
+qcovs: NA
+qcovhsp: NA

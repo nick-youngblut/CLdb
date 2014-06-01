@@ -69,7 +69,6 @@ This software is licensed under the terms of the GPLv3
 
 =cut
 
-
 ### modules
 use strict;
 use warnings;
@@ -82,7 +81,6 @@ use DBI;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
 	table_exists
 	n_entries

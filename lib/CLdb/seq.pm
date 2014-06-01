@@ -38,6 +38,49 @@ revcomp
 
 =cut
 
+=head2 write_fasta
+
+writing out fasta to file or file handle
+
+=head3 IN
+
+fasta => hashref %{name}=>seq
+file => file name  ('>file_name' or other write operator)
+fh => file handle 
+
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'write_fasta';
+
+sub write_fasta{
+  my %h = @_;
+  
+  # I/O
+  croak "ERROR: provide a fasta as hash_ref"
+    unless exists $h{fasta};
+  my $outfh;
+  if(exists $h{file}){
+    open $outfh, $h{file} or croak 
+      "ERROR: could not write to $h{'file'}";
+  }
+  elsif(exists $h{fh}){ $outfh = $h{fh}; }
+  else{ croak "ERROR: provide a file name or file handle"; }
+
+  # writing
+  foreach my $name (keys %{$h{fasta}}){
+    $name =~ s/^>//;
+    print $outfh join("\n", ">$name", $h{fasta}{$name} ), "\n";
+  }
+  close $outfh;
+}
+
+
+
+=head2 seq_from_genome_fasta
+
+=cut
 
 sub seq_from_genome_fasta{
 #-- Description --#
@@ -80,30 +123,50 @@ sub seq_from_genome_fasta{
 	return $leader_seq;
 	}
 
+
+=head2 read_fasta
+
+Reading in fasta file
+
+=head3 IN
+
+hash of args:
+file :  file name
+fh  : file handle
+
+=head3 OUT
+
+$%{name}=>seq
+
+=cut
+
 sub read_fasta{
 # loading fasta file as a hash #
-	my ($fasta_in) = @_;
-	if(defined $fasta_in){
-		confess " ERROR: cannot find $fasta_in!" unless -e $fasta_in || -l $fasta_in;
-		open IN, $fasta_in or confess $!;
-		}
-	else{ *IN = *STDIN; }
+  my %h = @_;
+  confess "ERROR: a file name or file handle must be provided\n"
+    unless exists $h{-file} or $h{-fh};
 
-	my (%fasta, $tmpkey);
-	while(<IN>){
-		chomp;
- 		s/#.+//;
- 		next if  /^\s*$/;	
- 		if(/>.+/){
- 			s/>//;
- 			$fasta{$_} = "";
- 			$tmpkey = $_;	# changing key
- 			}
- 		else{$fasta{$tmpkey} .= $_; }
-		}
-	close IN;
-	return \%fasta;
-	} 
+  # file or file handle
+  my $fh;
+  exists $h{-fh} ? $fh = $h{-fh} : open $fh, $h{-file} or confess $!;
+
+  my (%fasta, $tmpkey);
+  while(<$fh>){
+    chomp;
+    s/#.+//;
+    next if  /^\s*$/;	
+
+    if(/>.+/){
+      s/>//;
+      $fasta{$_} = "";
+      $tmpkey = $_;	# changing key
+    }
+    else{$fasta{$tmpkey} .= $_; }
+  }
+  close $fh;
+  return \%fasta;
+} 
+
 
 sub revcomp{
 # reverse complement of a sequence

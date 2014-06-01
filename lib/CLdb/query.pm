@@ -10,20 +10,17 @@ use DBI;
 
 ## CLdb ##
 use CLdb::seq qw/
-	revcomp/;
+		  revcomp
+		/;
 
 
 # export #
 use base 'Exporter';
 our @EXPORT_OK = qw/
-table_exists
-n_entries
-join_query_opts
-get_array_seq
-get_leader_pos
-get_array_seq
-list_columns
-/;
+		     n_entries
+		     join_query_opts
+		     get_leader_pos
+		   /;
 
 	
 =head1 NAME
@@ -45,177 +42,402 @@ Subroutines for querying CLdb
 
 =head1 EXPORT_OK
 
-table_exists
-n_entries
-join_query_opts
-get_array_seq
+=cut
+
+
+=head2 queryLociTable
+
+general query for loci table.
+returning all entries & columns in loci table
+that match sql 
+
+
+=head3 IN
+
+dbh =>  dbh object
+refine =>  refinement query
+columns => array_ref of columns (fields) to return 
+
+=head3 OUT
+
+@@ of matching entries.
+Column names are 1st @
 
 =cut
 
-sub list_columns{
-#-- description --#
-# listing all columns in specified table (table must exist) 
-# lists column names
-#-- input --#
+push @EXPORT_OK, 'queryLociTable';
+
+sub queryLociTable{
+  my %opt = @_;
+  my $dbh = defined $opt{dbh} ? $opt{dbh} : 
+    croak "ERROR: provide a dbh object\n";
+  my $columns = defined $opt{columns} ?
+    join(",", @{$opt{columns}}) : '*';
+
+
+  my $sql = <<HERE;
+SELECT $columns
+FROM loci
+WHERE locus_id IS NOT NULL
+$opt{refine}
+HERE
+  
+  my $sth = $dbh->prepare($sql);
+  my $rv = $sth->execute;
+  my $ret = $sth->fetchall_arrayref;
+
+  die "ERROR: no matching entries for query:\n'$sql'\n"
+    unless scalar @$ret;
+
+  # adding column names
+  unshift @$ret, $sth->{NAME};
+
+  # making undef columns = ''
+  foreach my $r (@$ret){
+    map{ $_ = '' unless defined $_ } @$r;
+  }
+
+  #print Dumper @$ret; exit;
+  return $ret;
+}
+
+
+=head2 getLociSpacerInfo
+
+Querying CLdb with join on loci & spacers
+
+=head3 IN
+
+hash of args:
+dbh :  $; dbh objeckt
+extra_sql :  $; refine sql query
+columns  :  \@; columns to return
+
+=cut
+
+push @EXPORT_OK, 'getLociSpacerInfo';
+
+sub getLociSpacerInfo{
+  my %h = @_;
+  my $dbh = exists $h{dbh} ? $h{dbh} : confess "Provide a dbh object";
+  my $extra_sql = exists $h{extra_sql} ?
+    $h{extra_sql} : "";
+  my $columns_r = exists $h{columns} ? 
+    $h{columns} : confess "Provide columns to select";
+  
+  # manditory columns
+  unshift @$columns_r, 'loci.locus_id';
+  unshift @$columns_r, 'spacers.spacer_id';
+
+  my $sql = join(" ", 
+		 "SELECT", 
+		 join(",",  @$columns_r),
+		 "FROM loci, spacers",
+		 "WHERE loci.locus_id = spacers.locus_id",
+		 $extra_sql
+		 );
+  
+  # querying
+  $dbh->{FetchHashKeyName} = 'NAME_lc';
+  my $sth = $dbh->prepare($sql) or confess $dbh->err;
+  $sth->execute;
+  my $ret_r = $sth->fetchall_hashref(['locus_id', 'spacer_id']);
+
+  # print Dumper $ret_r; exit;
+  return $ret_r;
+}
+
+=head2 list_columns
+
+listing all columns in specified table (table must exist) 
+lists column names
+
+=head3 IN
+
 # $dbh = DBI object
 # $tbl = sql table of interest
 # $silent_ret = no verbose & exit; return column names
-	my ($dbh, $tbl, $silent_ret) = @_;
-	my $all = $dbh->selectall_arrayref("pragma table_info($tbl)");
 
-	my %tmp;
-	foreach (@$all){ 
-		$$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
-		$tmp{$$_[1]} = 1; 
-		}
-		
-	if(defined $silent_ret){ return \%tmp; }
-	else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
-	}
+=head3 OUT
+
+=cut
+
+push @EXPORT_OK, 'list_columns';
+
+sub list_columns{
+  my ($dbh, $tbl, $silent_ret) = @_;
+  my $all = $dbh->selectall_arrayref("pragma table_info($tbl)");
+  
+  my %tmp;
+  foreach (@$all){ 
+    $$_[1] =~ tr/A-Z/a-z/;		# lower case for matching
+    $tmp{$$_[1]} = 1; 
+  }
+  
+  if(defined $silent_ret){ return \%tmp; }
+  else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
+}
 
 
 
+=head2 orient_byArray
 
-sub orient_byArray{
-    # orienting (rev-comp if needed) by array start-end
-    # if array_start > array_end, revcomp element
-    # else: revcomp
-  # columns:
-    # locus_ID
+ orienting (rev-comp if needed) by array start-end
+ 
+ if array_start > array_end, revcomp element
+ else: revcomp
+
+=head3 columns:
+    
+  # locus_ID
     # element_ID
     # eleement_seq
     # element_start
     # element_end
     # array_start
     # array_end
+
+=cut
+
+sub orient_byArray{    
+  my ($row) = @_;
+  
+  if ($$row[5] <= $$row[6]) { # array start > array end
+    return [@$row[0..2]];
     
-    my ($row) = @_;
-
-    if ($$row[5] <= $$row[6]) { # array start > array end
-        return [@$row[0..2]];
-        
-    }
-    else {
-        $$row[2] = revcomp($$row[2]);
-        return [@$row[0..2]];
-       
-    }
-
+  }
+  else {
+    $$row[2] = revcomp($$row[2]);
+    return [@$row[0..2]];
+    
+  }
+  
 }
 
 
-sub orient_byleader{
-    # orienting (rev-comp if needed) by leader
-    # if leader comes prior to element, no rev-comp
-    # else: revcomp
+=head2 orient_byleader
+
+  # orienting (rev-comp if needed) by leader
+  # if leader comes prior to element, no rev-comp
+  # else: revcomp
+
+=head3 columns:
+
+  # locus_ID
+  # element_ID
+  # eleement_seq
+  # element_start
+  # element_end
+  # leader_stat
+  # leader_end
+
+=cut
+
+
+sub orient_byleader{  
+  my ($row) = @_;
+  
+  if ($$row[3] >= $$row[6]) { #array_start >= leader_end position
+    return [@$row[0..2]];
+  }
+  else {
+    $$row[2] = revcomp($$row[2]);
+    return [@$row[0..2]];
+       
+  }
+}
+
+
+
+=head2 get_array_seq
+
+=head3 description
+
+etting spacer or DR cluster repesentative sequence from either table
+
+=head3 IN
+ 
+ $dbh = DBI database object
+ $opts_r = hash of options 
+
+=head3 Options
+ 
+ spacer_DR_b = spacer or DR [spacer]
+ refine_sql = refinement sql (part of WHERE; must start with 'AND')
+ cutoff = cluster sequenceID cutoff [1]
+
+=head3 OUT
+
+$%{name} => seq
+
+name = 'locus_id|element|element_id|cluster_id|cluster_cutoff'
+
+=cut
+
+push @EXPORT_OK, 'get_array_seq';
+
+sub get_array_seq{	
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+  my $opts_r = shift or confess "ERROR: provide a hashref of options\n";
+  my $cutoff = exists $opts_r->{cutoff} ? $opts_r->{cutoff} : 1;
+  my $refine_sql = exists $opts_r->{refine_sql} ? 
+    $opts_r->{refine_sql} : '';
+  exists $opts_r->{spacer_DR_b} or confess "ERROR: provide 'spacer_DR_b' as an arg";
+
+  # getting table info #
+  my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+  
   # columns:
-    # locus_ID
-    # element_ID
-    # eleement_seq
-    # element_start
-    # element_end
-    # leader_stat
-    # leader_end
-    
-    my ($row) = @_;
+  #	locus_ID
+  #	spacer|DR
+  #	spacer/DR_ID
+  # 	clusterID
+  # 	sequence
+  #     sense_strand
 
-    if ($$row[3] >= $$row[6]) { #array_start >= leader_end position
-        return [@$row[0..2]];
-        
-    }
-    else {
-        $$row[2] = revcomp($$row[2]);
-        return [@$row[0..2]];
-       
-    }
-    
-}
-
-
-sub get_array_seq{
-#-- description --#
-# Getting spacer or DR cluster repesentative sequence from either table
-#-- input --#
-# $dbh = DBI database object
-# $opts_r = hash of options 
-#-- options --#
-# spacer_DR_b = spacer or DR [spacer]
-# extra_query = extra sql
-# cutoff = cluster sequenceID cutoff [1]
-# join_sql = "AND" statements 
-	
-	my ($dbh, $opts_r) = @_;
-	
-	# checking for opts #
-	map{ confess "ERROR: cannot find option: '$_'" 
-		unless exists $opts_r->{$_} } qw/spacer_DR_b extra_query join_sql/;
-	
-	# getting table info #
-	my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-	($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
-
-# columns:
-#	locus_ID
-#	spacer|DR
-#	spacer/DR_ID
-# 	clusterID
-# 	sequence
-
-	my $query; 
-	if(defined $opts_r->{by_cluster}){ # selecting by cluster
-	
-	  # by group default options #
-	  $opts_r->{"cutoff"} = 1 unless exists $opts_r->{'cutoff'}; 	
-	
-	  $query = "SELECT 
+  my $query; 
+  if( $opts_r->{by_cluster} ){ # selecting by cluster        
+    $query = "
+SELECT 
 'NA',
 '$tbl_prefix',
 'NA',
 $tbl_prefix\_clusters.cluster_ID,
-$tbl_prefix\_clusters.Rep_sequence
+$tbl_prefix\_clusters.Rep_sequence,
+loci.array_sense_strand
 FROM $tbl_prefix\_clusters, loci 
 WHERE loci.locus_id = $tbl_prefix\_clusters.locus_id 
-AND $tbl_prefix\_clusters.cutoff = $opts_r->{'cutoff'}
-$opts_r->{'join_sql'}";
-      }
-	else{ # selecting all spacers
-	$query = "SELECT
+AND $tbl_prefix\_clusters.cutoff = $cutoff
+$refine_sql
+GROUP BY $tbl_prefix\_clusters.cluster_ID 
+ORDER BY $tbl_prefix\_clusters.cluster_ID
+";
+  }
+  else{  # selecting all spacers or DRs
+    $query = "
+SELECT
 $tbl_oi.Locus_ID,
 '$tbl_prefix',
 $tbl_oi.$tbl_prefix\_ID,
 'NA',
-$tbl_prefix\_clusters.Rep_sequence
-FROM $tbl_oi, $tbl_prefix\_clusters, loci
+$tbl_oi.$tbl_prefix\_sequence,
+loci.array_sense_strand
+FROM $tbl_oi, loci
 WHERE loci.locus_id = $tbl_oi.locus_id
-AND $tbl_oi.locus_id = $tbl_prefix\_clusters.locus_id
-AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID 
-AND $tbl_prefix\_clusters.cutoff = 1
-$opts_r->{'join_sql'}";
-	}
+$refine_sql";
+  }
+    
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  confess "ERROR: no matching $tbl_prefix entries!\n"
+    unless $$ret[0];
+ 
+  my %fasta;
+  foreach my $row (@$ret){
+    # revcomp sequence if array_sense_strand == -1
+    ## ACTUALLY: don't need to revcomp because cluster rep sequences already rev-comped
+    croak "ERROR: sense strand must be 1 or -1\n"
+      unless $row->[5] == 1 or $row->[5] == -1;
+    
+#    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;  # flip to - strand
 
-	$query =~ s/[\n\t]+/ /g;
-	$query = join(" ", $query, $opts_r->{"extra_query"});
+    my $seq_name = join("|", @{$row}[0..3], 
+		       $opts_r->{by_cluster} ? $cutoff : 'NA');
+    $fasta{ $seq_name } = $row->[4];
+  }
 
-	# adding group by  & order if clustering
-	$query .= " GROUP BY $tbl_prefix\_clusters.cluster_ID ORDER BY $tbl_prefix\_clusters.cluster_ID"
-	  if defined $opts_r->{by_cluster}; # selecting by cluster
-	  
+  return \%fasta;
+}
 
 
-#print Dumper $tbl_prefix;
-#print Dumper $query; exit;
-	
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	confess "ERROR: no matching $tbl_prefix entries!\n"
-		unless $$ret[0];
+=head2 get_array_seq_preCluster
 
-		#print Dumper @$ret; exit;
-	return $ret;
-	}
+Selecting array sequences (spacer|DR) if clustering tables
+aren't present
+
+=head3 IN
+
+$dbh :  dbh object
+$opts :  hashref of options
+
+=head3 Options
+ 
+ spacer_DR_b = spacer or DR [spacer]
+ refine_sql = refinement sql (part of WHERE; must start with 'AND')
+
+=head3 OUT
+
+$%{name}=>seq
+
+name = 'locus_id|element|element_id|cluster_id|cluster_cutoff'
+
+=cut
+
+push @EXPORT_OK, 'get_array_seq_preCluster';
+
+sub get_array_seq_preCluster{
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+  my $opts_r = shift or confess "ERROR: provide a hashref of options\n";
+
+  # checking for opts #
+  map{ die "ERROR: cannot find option: '$_'"
+         unless exists $opts_r->{$_} } qw/spacer_DR_b/;
+  $opts_r->{refine_sql} = '' unless exists $opts_r->{refine_sql};
+
+  # getting table info (spacer|DR)#
+  my ($tbl_oi, $tbl_prefix);
+  if( $opts_r->{spacer_DR_b} ){ # DR
+    ($tbl_oi, $tbl_prefix) = ("DRs","DR");
+  }
+  else{  # spacer
+    ($tbl_oi, $tbl_prefix) = ("spacers","spacer");
+  }
+
+  my $spacer_DR = $dbh->quote($tbl_prefix);
+
+  my $query = "SELECT
+loci.Locus_ID,
+$spacer_DR,
+$tbl_oi.$tbl_prefix\_ID,
+'NA',
+$tbl_oi.$tbl_prefix\_sequence,
+loci.array_sense_strand
+FROM loci,$tbl_oi
+WHERE loci.locus_id = $tbl_oi.locus_id
+$opts_r->{'refine_sql'}";
+
+  # query db #
+  my $sth = $dbh->prepare($query) or croak $dbh->err;
+  $sth->execute;
+  my $ret = $sth->fetchall_arrayref() or croak $dbh->err;
+  die " ERROR: no matching entries!\n"
+    unless $$ret[0];
+
+  # making fasta #
+  my %fasta;
+  foreach my $row (@$ret){
+    croak "\nERROR: array_sense_strand not set for all entries! Set with 'CLdb_setSenseStrand.pl'\n\n"
+      unless defined $row->[5];  # array_sense_strand must exist
+
+    # revcomp sequence if array_sense_strand == -1
+    croak "ERROR: sense strand must be 1 or -1\n"
+      unless $row->[5] == 1 or $row->[5] == -1;
+    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;
+    
+    my $seq_name = join("|", @{$row}[0..3], 'NA' );
+    $fasta{ $seq_name } = $row->[4];
+  }
+  
+  #print Dumper %fasta; exit;
+  return \%fasta;
+}
+
 
 sub join_query_opts{
-# joining query options for with 'AND' 
+# making sql refinement statment
+## joining query options for with 'AND' 
+
 	my ($vals_r, $cat) = @_;
 	
 	return "" unless @$vals_r;	
@@ -224,17 +446,32 @@ sub join_query_opts{
 	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
 	}
 
+
+=head2 table_exists
+
+Determine whether table exists in CLdb
+
+=head3 IN
+
+$dbh :  dbh object
+$table :  table name
+
+=head3 OUT
+
+exists ? 1 : 0
+
+=cut
+
+push @EXPORT_OK, 'table_exists';
+
 sub table_exists {
-# checking for the existence of a table #
-	my ($dbh, $table) = @_;
-	confess "ERROR: Provide a DBI database object!\n" if ! defined $dbh;
-	confess "ERROR: Provide a CLdb table name!\n" if ! defined $table;
-	
-	my $res = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", "tbl_name"); 
-	
-	confess "ERROR: '$table' table not found in CLdb!\n" 
-		unless grep(/^$table$/i, keys %$res);
-	}
+  my $dbh = shift or confess "ERROR: provie a dbh object\n";
+  my $table = shift or confess "ERROR: provide a table name\n";
+
+  my $res = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", "tbl_name"); 
+
+  grep(/^$table$/i, keys %$res) ? 1 : 0;  # 1 if exists
+}
 
 sub n_entries {
 # getting number of entries in a table #

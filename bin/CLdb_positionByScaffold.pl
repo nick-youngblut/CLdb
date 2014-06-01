@@ -126,7 +126,6 @@ use File::Path qw/rmtree/;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::utilities qw/
 	file_exists 
 	connect2db/;

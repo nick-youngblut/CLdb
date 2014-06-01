@@ -117,7 +117,6 @@ use DBI;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::query qw/
 	table_exists
 	n_entries
@@ -153,14 +152,14 @@ file_exists($CLdb_sqlite, "database");
 
 # checking ITEP input #
 if(@ITEP_sqlite){
-	die " ERROR: '-ITEP' must be 2 arguments (database_file, runID)!\n"
-		unless scalar @ITEP_sqlite >= 2;
-	die " ERROR: cannot find ITEP database file!\n"
-		unless -e $ITEP_sqlite[0];
-	}
+  die " ERROR: '-ITEP' must be 2 arguments (database_file, runID)!\n"
+    unless scalar @ITEP_sqlite >= 2;
+  die " ERROR: cannot find ITEP database file!\n"
+    unless -e $ITEP_sqlite[0];
+}
 else{
-	print STDERR "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
-	}
+  print STDERR "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
+}
 
 
 #--- MAIN ---#
@@ -200,10 +199,10 @@ get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
 if (@ITEP_sqlite){
   my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
 					     $ITEP_sqlite[1], \%dna_segs);
-  my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
+  #my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
   #flip_genes_on_neg_strand(\%dna_segs, $strand_r);
 }
-else{	# gene cluster = 1 for all  
+else{	# ITEP note provided: gene cluster = 1 for all
   gene_cluster_same(\%dna_segs);
 }
 
@@ -227,54 +226,56 @@ exit;
 sub flip_genes_on_neg_strand{
 # flipping start-end of genes on neg strand for plotting reasons #
 # all gene features flipped for genes on - strand
-	my ($dna_segs_r, $strand_r) = @_;
-	
-	foreach my $taxon (keys %$dna_segs_r){
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon}}){
-			next unless exists $dna_segs_r->{$taxon}{$locus_id}{'gene'};	# only genes 
-			next unless exists $strand_r->{$locus_id} && $strand_r->{$locus_id} == -1;
-			
-			# flipping s-e for all genes on neg CAS strand #
-			foreach my $peg (keys %{$dna_segs_r->{$taxon}{$locus_id}{'gene'}}){
-				my $x_r = $dna_segs_r->{$taxon}{$locus_id}{'gene'}{$peg};
-				($$x_r[0], $$x_r[1]) = ($$x_r[1], $$x_r[0]); 		# flipping all gene features
-					#print Dumper "flipped: $taxon, $locus_id, $peg";
-				}	
-			}
-		}
-		#exit;
-	}
+  my ($dna_segs_r, $strand_r) = @_;
+  
+  foreach my $taxon (keys %$dna_segs_r){
+    foreach my $locus_id (keys %{$dna_segs_r->{$taxon}}){
+      next unless exists $dna_segs_r->{$taxon}{$locus_id}{'gene'};	# only genes 
+      next unless exists $strand_r->{$locus_id} && $strand_r->{$locus_id} == -1;
+      
+      # flipping s-e for all genes on neg CAS strand #
+      foreach my $peg (keys %{$dna_segs_r->{$taxon}{$locus_id}{'gene'}}){
+	my $x_r = $dna_segs_r->{$taxon}{$locus_id}{'gene'}{$peg};
+	($$x_r[0], $$x_r[1]) = ($$x_r[1], $$x_r[0]); 		# flipping all gene features
+	#print Dumper "flipped: $taxon, $locus_id, $peg";
+      }	
+    }
+  }
+  #exit;
+}
 
 sub get_cas_strand{
-	my ($dbh, $dna_segs_r) = @_;
+# determing strand of cas genes based on CAS_start & CAS_end
+  my ($dbh, $dna_segs_r) = @_;
+  
+  # getting all loci #
+  my @loci;
+  map{ push @loci, keys %{$dna_segs_r->{$_}} } keys %$dna_segs_r;
 	
-	# getting all loci #
-	my @loci;
-	map{ push @loci, keys %{$dna_segs_r->{$_}} } keys %$dna_segs_r;
-	
-	# querying db for CAS start-end #
-	my $cmd = "SELECT CAS_start, CAS_end FROM loci WHERE locus_id = ?";
-	my $sth = $dbh->prepare($cmd);
-	
-	my %strand;
-	foreach my $locus_id (@loci){
-		$sth->bind_param(1, $locus_id);
-		$sth->execute;
-		my $ret =$sth->fetchrow_arrayref();	
-		die " ERROR: no CAS_start, CAS_end for locus: '$locus_id'!\n"
-			unless $$ret[0];
+  # querying db for CAS start-end #
+  my $cmd = "SELECT CAS_start, CAS_end FROM loci WHERE locus_id = ?";
+  my $sth = $dbh->prepare($cmd);
+  
+  my %strand;
+  foreach my $locus_id (@loci){
+    $sth->bind_param(1, $locus_id);
+    $sth->execute;
+    my $ret =$sth->fetchrow_arrayref();	
+    die " ERROR: no CAS_start, CAS_end for locus: '$locus_id'!\n"
+      unless $$ret[0];
+    
+    if($$ret[0] <= $$ret[1]){		# start < end; + strand
+      $strand{$locus_id} = 1;
+    }
+    else{	# end > start; - strand
+      $strand{$locus_id} = -1;
+    }
+  }
+  
+  #print Dumper %strand; exit;
+  return \%strand;
+}
 
-		if($$ret[0] <= $$ret[1]){		# start < end; + strand
-			$strand{$locus_id} = 1;
-			}
-		else{	# end > start; - strand
-			$strand{$locus_id} = -1;
-			}
-		}
-		
-		#print Dumper %strand; exit;
-	return \%strand;
-	}
 
 sub write_dna_segs{
 # writing dna_segs precursor table #
@@ -295,134 +296,134 @@ sub write_dna_segs{
 ### locus_ID
 ### feat_ID 
 
-	my ($dna_segs, $subtypes_r) = @_;
+  my ($dna_segs, $subtypes_r) = @_;
+  
+  # header #
+  print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype dna_segs_id/), "\n";
+  
+  # body #
+  foreach my $taxon_name (keys %$dna_segs){
+    foreach my $locus_id (keys %{$dna_segs->{$taxon_name}}){
+      # spacers #
+      foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"spacer"}}){
+	my $row = $dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id};
 	
-	# header #
-	print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype dna_segs_id/), "\n";
+	# start-end, color #
+	my $start = $$row[0];
+	my $end = $$row[1];
+	my $col = $$row[2];
+	my $dna_segs_id = $$row[$#$row];
 	
-	# body #
-	foreach my $taxon_name (keys %$dna_segs){
-		foreach my $locus_id (keys %{$dna_segs->{$taxon_name}}){
-			# spacers #
-			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"spacer"}}){
-				my $row = $dna_segs->{$taxon_name}{$locus_id}{"spacer"}{$id};
-				
-				# start-end, color #
-				my $start = $$row[0];
-				my $end = $$row[1];
-				my $col = $$row[2];
-				my $dna_segs_id = $$row[$#$row];
-				
-				print join("\t",  
-					$id,
-					$start,
-					$end,
-					1,				# strand
-					$col,
-					1, 0.5, 8, 1,	# plot formatting
-					"blocks", 		# end of required columns
-					$taxon_name,
-					$locus_id,
-					"spacer", 		# feature
-					$id,
-					$subtypes_r->{$taxon_name}{$locus_id},
-					$dna_segs_id
-					), "\n";				
-				}
-			# DRs #
-			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"DR"}}){
-				my $row = $dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id};
-				
-				# start-end, color #
-				my $start = $$row[0];
-				my $end = $$row[1];
-				my $dna_segs_id = $$row[$#$row];				
+	print join("\t",  
+		   $id,
+		   $start,
+		   $end,
+		   1,				# strand
+		   $col,
+		   1, 0.5, 8, 1,	# plot formatting
+		   "blocks", 		# end of required columns
+		   $taxon_name,
+		   $locus_id,
+		   "spacer", 		# feature
+		   $id,
+		   $subtypes_r->{$taxon_name}{$locus_id},
+		   $dna_segs_id
+		  ), "\n";				
+      }
+      # DRs #
+      foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"DR"}}){
+	my $row = $dna_segs->{$taxon_name}{$locus_id}{"DR"}{$id};
+	
+	# start-end, color #
+	my $start = $$row[0];
+	my $end = $$row[1];
+	my $dna_segs_id = $$row[$#$row];				
+	
+	print join("\t",  
+		   $id,
+		   $start,
+		   $end,
+		   1, 				# strand 
+		   1,				# col
+		   1, 0.1, 8, 1,	# plot formatting
+		   "blocks", 		# end of required columns
+		   $taxon_name,
+		   $locus_id,
+		   "directrepeat", 	# feature
+		   $id,
+		   $subtypes_r->{$taxon_name}{$locus_id},
+		   $dna_segs_id
+		  ), "\n";				
+      }
+      # leaders #
+      foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"leader"}}){
+	my $row = $dna_segs->{$taxon_name}{$locus_id}{"leader"}{$id};
+	
+	# start-end, color #
+	my $start = $$row[0];
+	my $end = $$row[1];
+	my $dna_segs_id = $$row[$#$row];				
+	
+	print join("\t",  
+		   $id,			
+		   $start,
+		   $end,
+		   1, 				# strand 
+		   1,				# col
+		   1, 0.1, 8, 1,	# plot formatting
+		   "blocks", 		# end of required columns
+		   $taxon_name,
+		   $locus_id,
+		   "leader", 		# feature
+		   $id,
+		   $subtypes_r->{$taxon_name}{$locus_id},
+		   $dna_segs_id
+		  ), "\n";				
+      }			
+      # genes #
+      foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"gene"}}){
+	my $row = $dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id};
+	
+	# start-end, color #			
+	my $start = $$row[0];
+	my $end = $$row[1];
+	my $strand = get_strand($start, $end); 		# getting strand before possible flip of start-end; needed for plotting genes in correct orientation
+	($start, $end) = flip_se($start, $end);		# all start-end to + strand
+	
+	my $alias = $$row[2];
+	my $dna_segs_id = $$row[$#$row];
+	
+	
+	# color #
+	my $col = 1;
+	$col = $$row[3]
+	  if $$row[3];
+	
+	print join("\t",  
+		   $alias,
+		   $start,
+		   $end,
+		   $strand,				# strand 
+		   $col,
+		   1, 1, 8, 1,				# plot formatting
+		   "arrows", 				# end of required columns
+		   $taxon_name,
+		   $locus_id,
+		   "gene", 				# feature
+		   $id,
+		   $subtypes_r->{$taxon_name}{$locus_id},
+		   $dna_segs_id			
+		  ), "\n";				
+      }				
+    }
+  }
+}
 
-				print join("\t",  
-					$id,
-					$start,
-					$end,
-					1, 				# strand 
-					1,				# col
-					1, 0.1, 8, 1,	# plot formatting
-					"blocks", 		# end of required columns
-					$taxon_name,
-					$locus_id,
-					"directrepeat", 	# feature
-					$id,
-					$subtypes_r->{$taxon_name}{$locus_id},
-					$dna_segs_id
-					), "\n";				
-				}
-			# leaders #
-			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"leader"}}){
-				my $row = $dna_segs->{$taxon_name}{$locus_id}{"leader"}{$id};
-				
-				# start-end, color #
-				my $start = $$row[0];
-				my $end = $$row[1];
-				my $dna_segs_id = $$row[$#$row];				
-
-				print join("\t",  
-					$id,			
-					$start,
-					$end,
-					1, 				# strand 
-					1,				# col
-					1, 0.1, 8, 1,	# plot formatting
-					"blocks", 		# end of required columns
-					$taxon_name,
-					$locus_id,
-					"leader", 		# feature
-					$id,
-					$subtypes_r->{$taxon_name}{$locus_id},
-					$dna_segs_id
-					), "\n";				
-				}			
-			# genes #
-			foreach my $id (keys %{$dna_segs->{$taxon_name}{$locus_id}{"gene"}}){
-				my $row = $dna_segs->{$taxon_name}{$locus_id}{"gene"}{$id};
-				
-				# start-end, color #			
-				my $start = $$row[0];
-				my $end = $$row[1];
-				my $strand = get_strand($start, $end); 		# getting strand before possible flip of start-end; needed for plotting genes in correct orientation
-				($start, $end) = flip_se($start, $end);		# all start-end to + strand
-				
-				my $alias = $$row[2];
-				my $dna_segs_id = $$row[$#$row];
-				
-				
-				# color #
-				my $col = 1;
-				$col = $$row[3]
-					if $$row[3];
-				
-				print join("\t",  
-					$alias,
-					$start,
-					$end,
-					$strand,				# strand 
-					$col,
-					1, 1, 8, 1,				# plot formatting
-					"arrows", 				# end of required columns
-					$taxon_name,
-					$locus_id,
-					"gene", 				# feature
-					$id,
-					$subtypes_r->{$taxon_name}{$locus_id},
-					$dna_segs_id			
-					), "\n";				
-				}				
-			}
-		}
-	}
-	
 sub flip_se{
-	my ($start, $end) = @_;
-	if($start <= $end){ return $start, $end; }
-	else{ return $end, $start; }
-	}
+  my ($start, $end) = @_;
+  if($start <= $end){ return $start, $end; }
+  else{ return $end, $start; }
+}
 
 sub edit_dna_segs_taxon_name{
     my ($dna_segs_r, $header_r, $multi_loci, $multi_subtype) = @_;
@@ -483,65 +484,65 @@ sub check_multi{
 
 sub get_strand{
 # start > end? #
-	my ($start, $end) = @_;
-	if($start <= $end){ return 1; }		# + strand
-	else{ return -1; }					# - strand
-	}
+  my ($start, $end) = @_;
+  if($start <= $end){ return 1; }		# + strand
+  else{ return -1; }					# - strand
+}
 
 sub gene_cluster_same{
 # gene cluster = 1 for all if ITEP not provided #
-	my ($dna_segs_r) = @_;
-	
-	foreach my $taxon_id (keys %$dna_segs_r){
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_id}}){
-			foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
-				push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, 1;
-				}
-			}
-		}
-	}
+  my ($dna_segs_r) = @_;
+  
+  foreach my $taxon_id (keys %$dna_segs_r){
+    foreach my $locus_id (keys %{$dna_segs_r->{$taxon_id}}){
+      foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
+	push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, 1;
+      }
+    }
+  }
+}
 
 sub get_gene_cluster_info{
 # getting gene cluster info from ITEP #
-	my ($dbh_ITEP, $ITEP_file, $runID, $dna_segs_r) = @_;
-	
-	my $query = "
+  my ($dbh_ITEP, $ITEP_file, $runID, $dna_segs_r) = @_;
+  
+  my $query = "
 SELECT clusterid
 FROM clusters
 WHERE runid = ?
 AND geneid = ?
 ";
-	$query =~ s/\n|\r/ /g;
+  $query =~ s/\n|\r/ /g;
 	
-	my $sth = $dbh_ITEP->prepare($query);
+  my $sth = $dbh_ITEP->prepare($query);
+  
+  my %gene_clusters;
+  foreach my $taxon_id (keys %$dna_segs_r){
+    foreach my $locus_id (keys %{$dna_segs_r->{$taxon_id}}){
+      foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
+	$sth->bind_param(1, $runID);
+	$sth->bind_param(2, $gene_id);
+	$sth->execute;
+	my $ret =$sth->fetchrow_arrayref();	
+	die " ERROR: no matching entries for ITEP query!\n"
+	  unless $$ret[0];
 	
-	my %gene_clusters;
-	foreach my $taxon_id (keys %$dna_segs_r){
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_id}}){
-			foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
-				$sth->bind_param(1, $runID);
-				$sth->bind_param(2, $gene_id);
-				$sth->execute;
-				my $ret =$sth->fetchrow_arrayref();	
-				die " ERROR: no matching entries for ITEP query!\n"
-					unless $$ret[0];
-				
-				push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, $$ret[0];
-				
-				$gene_clusters{$$ret[0]} = 1;
-				}
-			}
-		}
+	push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, $$ret[0];
 	
-	#print Dumper %gene_clusters; exit;
-	return \%gene_clusters;
-	}
+	$gene_clusters{$$ret[0]} = 1;
+      }
+    }
+  }
+  
+  #print Dumper %gene_clusters; exit;
+  return \%gene_clusters;
+}
 
 sub get_gene_info{
-# getting direct repeat info from CLdb #
-	my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
-
-	my $query = "
+  # getting direct repeat info from CLdb #
+  my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
+  
+  my $query = "
 SELECT
 loci.taxon_name,
 loci.locus_id, 
@@ -555,24 +556,24 @@ AND Genes.In_CAS = 'yes'
 $join_sql
 $extra_query
 ";
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries for CAS gene query!\n"
-		unless $$ret[0];
-	
-	# loading hash #
-	foreach my $row (@$ret){
-		$dna_segs_r->{$$row[0]}{$$row[1]}{"gene"}{$$row[2]} = [@$row[3..$#$row]];
-		}
-	
-		#print Dumper %$dna_segs_r; exit;
-	#return \%gene_ids;
-	}	
+  $query =~ s/\n|\r/ /g;
+  
+  # status #
+  print STDERR "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries for CAS gene query!\n"
+    unless $$ret[0];
+  
+  # loading hash #
+  foreach my $row (@$ret){
+    $dna_segs_r->{$$row[0]}{$$row[1]}{"gene"}{$$row[2]} = [@$row[3..$#$row]];
+  }
+  
+  #print Dumper %$dna_segs_r; exit;
+  #return \%gene_ids;
+}	
 
 sub get_leader_info{
 # getting leader info from CLdb (optional) #

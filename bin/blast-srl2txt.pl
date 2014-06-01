@@ -99,7 +99,6 @@ use Sereal qw/ decode_sereal /;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use lib "$FindBin::RealBin/../lib/perl5/";
 use CLdb::arrayBlast::sereal qw/
 				 parse_outfmt
 				 classify_fields
@@ -110,8 +109,7 @@ use CLdb::arrayBlast::sereal qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
-my $outfmt = '7 qseqid sseqid pident length mismatch 
-gapopen qstart qend sstart send evalue bitscore'; 
+my $outfmt = '7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'; 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "verbose" => \$verbose,
@@ -132,5 +130,7 @@ my $decoder = Sereal::Decoder->new();
 my $blast_r =  $decoder->decode( $srl );
 
 # making table
-blast_xml2txt(blast => $blast_r, fields => $fields_r);
+foreach my $blast_run (keys %$blast_r){
+  blast_xml2txt(blast => $blast_r->{$blast_run}, fields => $fields_r);
+}
 
