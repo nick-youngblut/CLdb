@@ -6,6 +6,8 @@ use warnings FATAL => 'all';
 use Carp  qw( carp confess croak );
 use Data::Dumper;
 use File::Spec;
+use Parallel::ForkManager;
+use IPC::Cmd qw/run/;
 
 ## export #
 use base 'Exporter';
@@ -58,7 +60,10 @@ $db_path :  database path
 push @EXPORT_OK, 'unix_line_breaks';
 
 sub unix_line_breaks{
-  my ($loci_r, $db_path) = @_;
+  my $loci_r = shift || confess "Provide loci hashref\n";
+  my $db_path = shift || confess "Provide database path\n";
+  my $forks = shift;
+  $forks = 0 unless defined $forks;
 
   print STDERR "### checking line breaks for all external files (converting to unix) ###\n";
 
@@ -68,19 +73,35 @@ sub unix_line_breaks{
                    "fasta_file" => "fasta",
                    "array_file" => "array");
 
+  # fork object
+  my $pm = Parallel::ForkManager->new($forks);
+
+  # processing each file
   foreach my $locus_id (keys %$loci_r){
     foreach my $file_col (keys %file_cols){
       if(exists $loci_r->{$locus_id}{$file_col}){
         next unless $loci_r->{$locus_id}{$file_col};                            # if no file; nothing to check
 
+	$pm->start and next;
+
 	my $dirpath = File::Spec->catdir($db_path, $file_cols{$file_col});
 	my $filepath = File::Spec->catdir($dirpath, $loci_r->{$locus_id}{$file_col});
 
         print STDERR " processing: $filepath\n";
-        lineBreaks2unix($filepath, 1);
+#        lineBreaks2unix($filepath, 1);
+
+	# system call for command line perl (hopefully, will prevent file truncations upon crashing)
+	my $cmd = "perl -pe 's/\r/\n/g; s/\r\$//g' $filepath";
+	my( $success, $error_message, $full_buf, 
+	    $stdout_buf, $stderr_buf ) =
+	      run( command => $cmd, verbose => 0 );
+	die "System call failed: '$cmd'" unless $success;
+
+	$pm->finish;
       }
     }
   }
+  $pm->wait_all_children;
 }
 
 

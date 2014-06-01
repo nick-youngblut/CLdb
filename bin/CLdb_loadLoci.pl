@@ -24,6 +24,10 @@ CLdb database.
 
 =over
 
+=item -forks  <int>
+
+Number of files to process in parallel. [1]
+
 =item -verbose  <bool>
 
 Verbose output. [TRUE]
@@ -153,10 +157,11 @@ use CLdb::genbank::genbank2fasta qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $quiet);
+my ($verbose, $database_file);
+my $forks = 0;
 GetOptions(
 	   "database=s" => \$database_file,
-	   "quiet" => \$quiet,
+	   "forks=i" => \$forks,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -166,23 +171,22 @@ GetOptions(
 file_exists($database_file, "database");
 
 #--- MAIN ---#
-# connect 2 db 
-my $dbh = connect2db($database_file);
-
 # database path 
 my $db_path = get_file_path($database_file);
 
-# database metadata 
-table_exists($dbh, "loci"); 
-#my $column_list_r = list_columns($dbh, "loci", 1);
-
 # getting input loci table 
 my ($loci_r, $header_r) = get_loci_table();
+unix_line_breaks($loci_r, $db_path, $forks) unless $^O =~ /win/i;   # line breaks to unix unless windows OS
 
 # checks
 check_locus_id($loci_r);
 make_external_file_dirs($loci_r, $header_r, $db_path);	 # copying array files & genbanks if not in ./genbank & ./array #
-unix_line_breaks($loci_r, $db_path) unless $^O =~ /win/i;   # line breaks to unix unless windows OS
+
+# connect 2 db 
+my $dbh = connect2db($database_file);
+
+# database metadata 
+table_exists($dbh, "loci"); 
 
 
 # inferring from table
@@ -206,10 +210,10 @@ load_db_table($dbh, "leaders", $leader_header_r, $leader_loci_r);
 
 ## loading pam table
 # TODO: update
-my $pam_header_r = just_table_columns($header_r, 'pam');
-my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
-$pam_header_r->{"pam_sequence"} = 1;
-load_db_table($dbh, "pam", $pam_header_r, $pam_loci_r);
+#my $pam_header_r = just_table_columns($header_r, 'pam');
+#my $pam_loci_r = get_pam_seq($loci_r, $db_path, $pam_header_r);
+#$pam_header_r->{"pam_sequence"} = 1;
+#load_db_table($dbh, "pam", $pam_header_r, $pam_loci_r);
 
 
 # disconnect to db #
