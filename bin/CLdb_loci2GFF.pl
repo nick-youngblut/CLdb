@@ -1,524 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use Set::IntervalTree;
-use DBI;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, $database_file);
-my (@taxon_id, @taxon_name); 				# blast subject query refinement
-my ($write_loci, $write_spacers, $write_drs, $write_leaders, $write_operon, $write_array);
-my $extra_query = "";
-my $len_cutoff = 1;
-GetOptions(
-	   "database=s" => \$database_file,
-	   "id=s{,}" => \@taxon_id,
-	   "name=s{,}" => \@taxon_name,
-	   "loci" => \$write_loci,
-	   "spacers" => \$write_spacers,
-	   "drs" => \$write_drs,
-	   "leaders" => \$write_leaders,
-	   "operon" => \$write_operon,
-	   "array" => \$write_array,
-	   "query=s" => \$extra_query,
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-
-### MAIN	
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# joining query options (for table join) #
-my $join_sqls = join_query_opts_or(\@taxon_id, \@taxon_name);
-
-# getting blast hits #
-## just loci table ##
-loci2gff($dbh, $join_sqls, $extra_query) if $write_loci;
-array2gff($dbh, $join_sqls, $extra_query) if $write_array;
-operon2gff($dbh, $join_sqls, $extra_query) if $write_operon;
-
-## 2 table join ##
-spacers2gff($dbh, $join_sqls, $extra_query) if $write_spacers;
-drs2gff($dbh, $join_sqls, $extra_query) if $write_drs;
-leaders2gff($dbh, $join_sqls, $extra_query) if $write_leaders;
-
-
-### Subroutines
-sub leaders2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.locus_start,
-a.locus_end,
-a.array_status,
-a.operon_status,
-b.locus_id,
-b.leader_start,
-b.leader_end
-FROM loci a, leaders b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" leader";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[10],			# feature start (sstart)
-			$$row[11],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-	
-sub drs2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.locus_start,
-a.locus_end,
-a.array_status,
-a.operon_status,
-b.dr_id,
-b.dr_start,
-b.dr_end
-FROM loci a, drs b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" operon_status:\"$$row[8]\"";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[10],			# feature start (sstart)
-			$$row[11],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\__$$row[9]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-
-sub spacers2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.locus_start,
-a.locus_end,
-a.array_status,
-a.operon_status,
-b.spacer_id,
-b.spacer_start,
-b.spacer_end
-FROM loci a, spacers b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" operon_status:\"$$row[8]\"";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[10],			# feature start (sstart)
-			$$row[11],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\__$$row[9]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-
-sub operon2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.operon_start,
-a.operon_end,
-a.operon_status
-FROM loci a, loci b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" operon_status:\"$$row[7]\"";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[5],			# feature start (sstart)
-			$$row[6],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-
-sub array2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.array_start,
-a.array_end,
-a.array_status
-FROM loci a, loci b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\"";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[5],			# feature start (sstart)
-			$$row[6],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-
-sub loci2gff{
-# writing loci as gff feature #
-	my ($dbh, $join_sqls, $query) = @_;
-
-	# selecting loci #
-	my $q = "
-SELECT
-a.locus_id,
-a.taxon_name,
-a.taxon_id,
-a.subtype,
-a.scaffold,
-a.locus_start,
-a.locus_end,
-a.array_status,
-a.operon_status
-FROM loci a, loci b
-where a.locus_id = b.locus_id
-$join_sqls
-$query
-";
-	$q =~ s/\n/ /g;
-	print STDERR "$q\n" if $verbose;
-	
-	my $ret = $dbh->selectall_arrayref($q);
-	
-	die " ERROR: no matching entries!\n"
-		unless @$ret;
-	
-	# writing gff #
-# seqid = locus_id
-# source = 'CLdb'
-# feature = 'region'
-# start = 'locus_start'
-# end = 'locus_end'
-# score = .
-# strand = strand (based on start-end)
-# phase = 0
-# attributes
-	# ID = taxon_ID
-	# name = taxon_name
-	# alias = locus_id
-	# note = array_status, operon_status
-	
-	foreach my $row (@$ret){
-		my $strand = "+";
-		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
-		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" operon_status:\"$$row[8]\"";
-		$$row[0] =~ s/^/cli./;
-		
-		print join("\t",
-			$$row[4],			# subject scaffold
-			"CLdb",				# source
-			"region",
-			$$row[5],			# feature start (sstart)
-			$$row[6],			# feature end	(send)
-			".",				# score
-			$strand,
-			".",				# phase
-			join(";", 
-				"ID=\"$$row[2]\"",			# query taxon_name
-				"Name=\"$$row[1]\"",		# query taxon_id
-				"Alias=\"$$row[0]\"",			# locus_id
-				"Note='$note'"
-				)), "\n";
-		
-		}
-	}
-
-sub join_query_opts_or{
-	my ($taxon_id_r, $taxon_name_r) = @_;
-	
-	return "" unless @$taxon_id_r || @$taxon_name_r;
-	
-	# adding quotes #
-	map{ s/"*(.+)"*/'$1'/ } @$taxon_id_r;
-	map{ s/"*(.+)"*/'$1'/ } @$taxon_name_r;	
-	
-	if(@$taxon_id_r && @$taxon_name_r){
-		return join("", " AND (a.taxon_id IN (", join(", ", @$taxon_id_r),
-						") OR a.taxon_name IN (", join(", ", @$taxon_name_r),
-						"))");
-		}
-	elsif(@$taxon_id_r){
-		return join("", " AND a.taxon_id IN (", join(", ", @$taxon_id_r), ")");
-		}
-	elsif(@$taxon_name_r){
-		return join("", " AND a.taxon_name IN (", join(", ", @$taxon_name_r), ")");	
-		}
-	}
-
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND a.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
-
-
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -563,9 +44,9 @@ Write CRISPR loci features. [FALSE]
 
 Write CRISPR array features. [FALSE]
 
-=item -operon <char>
+=item -CAS <char>
 
-Write CRISPR operon features. [FALSE]
+Write CRISPR CAS features. [FALSE]
 
 =item -spacer  <char>
 
@@ -646,11 +127,11 @@ to limit hits to just 1 subject genome.
 
 CLdb_loci2GFF.pl -d CLdb.sqlite -name "E.coli" -loci > ecoli_loci.gff
 
-=head2 GFF3 of all CRISPR arrays & operons in E.col
+=head2 GFF3 of all CRISPR arrays & CASs in E.col
 
-CLdb_loci2GFF.pl -d CLdb.sqlite -name "E.coli" -o a > ecoli_array-operon.gff
+CLdb_loci2GFF.pl -d CLdb.sqlite -name "E.coli" -o a > ecoli_array-CAS.gff
 
-=head2 GFF3 of all spacers in FIG|2209.27
+=head2 GFF3 of all spacers in taxon_ID: 'FIG|2209.27'
 
 CLdb_loci2GFF.pl -d CLdb.sqlite -id 2209.27 -s > 2209.27_spacers.gff
 
@@ -668,4 +149,526 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use Set::IntervalTree;
+use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+my ($verbose, $database_file);
+my (@taxon_id, @taxon_name); 				# blast subject query refinement
+my ($write_loci, $write_spacers, $write_drs, $write_leaders, $write_CAS, $write_array);
+my $extra_query = "";
+my $len_cutoff = 1;
+GetOptions(
+	   "database=s" => \$database_file,
+	   "id=s{,}" => \@taxon_id,
+	   "name=s{,}" => \@taxon_name,
+	   "loci" => \$write_loci,
+	   "spacers" => \$write_spacers,
+	   "drs" => \$write_drs,
+	   "leaders" => \$write_leaders,
+	   "CAS" => \$write_CAS,
+	   "array" => \$write_array,
+	   "query=s" => \$extra_query,
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# joining query options (for table join) #
+my $join_sqls = join_query_opts_or(\@taxon_id, \@taxon_name);
+
+# getting blast hits #
+## just loci table ##
+loci2gff($dbh, $join_sqls, $extra_query) if $write_loci;
+array2gff($dbh, $join_sqls, $extra_query) if $write_array;
+CAS2gff($dbh, $join_sqls, $extra_query) if $write_CAS;
+
+## 2 table join ##
+spacers2gff($dbh, $join_sqls, $extra_query) if $write_spacers;
+drs2gff($dbh, $join_sqls, $extra_query) if $write_drs;
+leaders2gff($dbh, $join_sqls, $extra_query) if $write_leaders;
+
+
+### Subroutines
+sub leaders2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.locus_start,
+a.locus_end,
+a.array_status,
+a.CAS_status,
+b.locus_id,
+b.leader_start,
+b.leader_end
+FROM loci a, leaders b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" leader";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[10],			# feature start (sstart)
+			$$row[11],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+	
+sub drs2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.locus_start,
+a.locus_end,
+a.array_status,
+a.CAS_status,
+b.dr_id,
+b.dr_start,
+b.dr_end
+FROM loci a, drs b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" CAS_status:\"$$row[8]\"";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[10],			# feature start (sstart)
+			$$row[11],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\__$$row[9]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+
+sub spacers2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.locus_start,
+a.locus_end,
+a.array_status,
+a.CAS_status,
+b.spacer_id,
+b.spacer_start,
+b.spacer_end
+FROM loci a, spacers b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" CAS_status:\"$$row[8]\"";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[10],			# feature start (sstart)
+			$$row[11],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\__$$row[9]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+
+sub CAS2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.CAS_start,
+a.CAS_end,
+a.CAS_status
+FROM loci a, loci b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" CAS_status:\"$$row[7]\"";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[5],			# feature start (sstart)
+			$$row[6],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+
+sub array2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.array_start,
+a.array_end,
+a.array_status
+FROM loci a, loci b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\"";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[5],			# feature start (sstart)
+			$$row[6],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+
+sub loci2gff{
+# writing loci as gff feature #
+	my ($dbh, $join_sqls, $query) = @_;
+
+	# selecting loci #
+	my $q = "
+SELECT
+a.locus_id,
+a.taxon_name,
+a.taxon_id,
+a.subtype,
+a.scaffold,
+a.locus_start,
+a.locus_end,
+a.array_status,
+a.CAS_status
+FROM loci a, loci b
+where a.locus_id = b.locus_id
+$join_sqls
+$query
+";
+	$q =~ s/\n/ /g;
+	print STDERR "$q\n" if $verbose;
+	
+	my $ret = $dbh->selectall_arrayref($q);
+	
+	die " ERROR: no matching entries!\n"
+		unless @$ret;
+	
+	# writing gff #
+# seqid = locus_id
+# source = 'CLdb'
+# feature = 'region'
+# start = 'locus_start'
+# end = 'locus_end'
+# score = .
+# strand = strand (based on start-end)
+# phase = 0
+# attributes
+	# ID = taxon_ID
+	# name = taxon_name
+	# alias = locus_id
+	# note = array_status, CAS_status
+	
+	foreach my $row (@$ret){
+		my $strand = "+";
+		$strand = "-" if $$row[5] > $$row[6]; 		# '-' if start > end
+		my $note = "subtype:\"$$row[3]\" array_status:\"$$row[7]\" CAS_status:\"$$row[8]\"";
+		#$$row[0] =~ s/^/cli./;
+		
+		print join("\t",
+			$$row[4],			# subject scaffold
+			"CLdb",				# source
+			"region",
+			$$row[5],			# feature start (sstart)
+			$$row[6],			# feature end	(send)
+			".",				# score
+			$strand,
+			".",				# phase
+			join(";", 
+				"ID=\"$$row[2]\"",			# query taxon_name
+				"Name=\"$$row[1]\"",		# query taxon_id
+				"Alias=\"$$row[0]\"",			# locus_id
+				"Note='$note'"
+				)), "\n";
+		
+		}
+	}
+
+sub join_query_opts_or{
+	my ($taxon_id_r, $taxon_name_r) = @_;
+	
+	return "" unless @$taxon_id_r || @$taxon_name_r;
+	
+	# adding quotes #
+	map{ s/"*(.+)"*/'$1'/ } @$taxon_id_r;
+	map{ s/"*(.+)"*/'$1'/ } @$taxon_name_r;	
+	
+	if(@$taxon_id_r && @$taxon_name_r){
+		return join("", " AND (a.taxon_id IN (", join(", ", @$taxon_id_r),
+						") OR a.taxon_name IN (", join(", ", @$taxon_name_r),
+						"))");
+		}
+	elsif(@$taxon_id_r){
+		return join("", " AND a.taxon_id IN (", join(", ", @$taxon_id_r), ")");
+		}
+	elsif(@$taxon_name_r){
+		return join("", " AND a.taxon_name IN (", join(", ", @$taxon_name_r), ")");	
+		}
+	}
+
+sub join_query_opts{
+# joining query options for selecting loci #
+	my ($vals_r, $cat) = @_;
+
+	return "" unless @$vals_r;	
+	
+	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+	return join("", " AND a.$cat IN (", join(", ", @$vals_r), ")");
+	}
+
 

@@ -1,5 +1,93 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_xlims_make.pl -- making xlims table for plotting
+
+=head1 SYNOPSIS
+
+CLdb_xlims_make.pl [flags] > xlims.txt
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -locus_id  <char>
+
+Refine query to specific a locus_id(s) (>1 argument allowed).
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine which sequences are returned.
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_xlims_make.pl
+
+=head1 DESCRIPTION
+
+Make a basic xlims table needed for plotting.
+
+=head1 EXAMPLES
+
+=head2 Plotting all loci classified as subtype 'I-A'
+
+CLdb_xlims_make.pl -d CLdb.sqlite -sub I-A 
+
+=head2 No broken loci
+
+CLdb_xlims_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -9,18 +97,30 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-
 my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
-my (@subtype, @taxon_id, @taxon_name);
+my (@locus_id, @subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
 my $xlim_out = "xlims.txt";
 GetOptions(
 	   "database=s" => \$CLdb_sqlite,
 	   "ITEP=s{,}" => \@ITEP_sqlite,
+	   "locus_id=s{,}" => \@locus_id,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
@@ -30,21 +130,17 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
+#--- I/O error & defaults ---#
 # checking CLdb #
-die " ERROR: provide a database file name!\n"
-	unless $CLdb_sqlite;
-die " ERROR: cannot find CLdb database file!\n"
-	unless -e $CLdb_sqlite;
-	
-### MAIN
+file_exists($CLdb_sqlite, "database");
+
+#--- MAIN ---#
 # connect 2 CLdb #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$CLdb_sqlite", '','', \%attr) 
-	or die " Can't connect to $CLdb_sqlite!\n";
+my $dbh = connect2db($CLdb_sqlite);
 
 # joining query options (for table join) #
 my $join_sql = "";
+$join_sql .= join_query_opts(\@locus_id, "locus_id");
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
@@ -89,12 +185,10 @@ sub edit_xlims_taxon_name{
 		foreach my $locus_id (keys %{$xlims_r->{$taxon_name}}){
 			# editing taxon_name in row #
 			my $new_taxon_name = $taxon_name;
-			$new_taxon_name = join("__", $taxon_name, "cli$locus_id")
+			$new_taxon_name = join("__", $taxon_name, $locus_id)
 					if $multi_loci;
 			$new_taxon_name = join("__", $new_taxon_name, $xlims_r->{$taxon_name}{$locus_id}{"subtype"})
 					if $multi_subtype;
-			
-			#print Dumper $new_taxon_name;
 			
 			push(@{$xlims_r->{$taxon_name}{$locus_id}{"entry"}}, $new_taxon_name);
 			}
@@ -169,7 +263,7 @@ GROUP BY loci.locus_id
 	return \%xlims;
 	}
 
-sub join_query_opts{
+sub join_query_opts_OLD{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
 
@@ -179,90 +273,4 @@ sub join_query_opts{
 	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
 	}
 
-
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_xlims_make.pl -- making xlims table for plotting
-
-=head1 SYNOPSIS
-
-CLdb_xlims_make.pl [flags] > xlims.txt
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -subtype  <char>
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id  <char>
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name  <char>
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_xlims_make.pl
-
-=head1 DESCRIPTION
-
-Make a basic xlims table needed for plotting.
-
-=head1 EXAMPLES
-
-=head2 Plotting all loci classified as subtype 'I-A'
-
-CLdb_xlims_make.pl -d CLdb.sqlite -sub I-A 
-
-=head2 No broken loci
-
-CLdb_xlims_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

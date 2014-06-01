@@ -1,5 +1,138 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_dna_segs_formatColor.pl -- reduce the number of colors needed for plotting
+
+=head1 SYNOPSIS
+
+CLdb_dna_segs_formatColor.pl [flags] < dna_segs_order.txt > dna_segs_order_color.txt
+
+=head2 Optional flags
+
+=over
+
+=item -tree  <char>
+
+Tree file name (nexus or newick).
+
+=item -format  <char>
+
+Tree file format. [newick]
+
+=item -spacer  <int>
+
+Methods used to reduce colors needed for spacer clusters (see DESCRIPTION).
+
+=item -gene  <int>
+
+Methods used to reduce colors needed for gene clusters (see DESCRIPTION).
+
+=item -branch  <float>
+
+The branch length cutoff for not coloring features just in that clade.
+
+=item -stats  <bool>
+
+Write branch length stats for the provided tree, then exit? [FALSE]
+
+=item -default  <char> 
+
+The default colors for when coloring isn't needed (needs 3 values: 'gene_color' 'spacer_color' 'DR_color').
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_dna_segs_formatColor.pl
+
+=head1 DESCRIPTION
+
+Add descriminatory coloring to genes and spacers.
+Genes and/or spacers that do not need coloring
+because: 
+
+=over 
+
+=item i) Continuous adjacency: 
+the gene/spacer always adjacent
+in the plot, so 'blast' connections in the 
+plot will provide the needed information.
+
+=item ii) Max branch length: 
+the gene/spacer is only found in
+a very similar clade, so no coloring is needed
+(if a tree & branch length cutoff is provided).
+
+=back
+
+Discrimantory coloring can be based on:
+
+=over 
+
+=item Continuous adjacency in the plot (not colored if adjacent): [1]
+
+=item Max branch length (not colored below cutoff): [2]
+
+=item Both: [3]
+
+=back
+
+By default: genes = 1, spacers = 3
+
+The default non-descriminatory colors are:
+
+=over
+
+=item gene: #666666
+
+=item spacer: #CCCCCC
+
+=item direct repeat: #000000
+
+=back 
+
+=head2 WARNING
+
+If the dna_segs table has been ordered by a tree,
+use the pruned/edited tree.
+
+=head1 EXAMPLES
+
+=head2 Basic usage:
+
+CLdb_dna_segs_formatColor.pl < dna_segs_order.txt > dna_segs_order_col.txt
+
+=head2 Branch length cutoff (<= 0.1):
+
+CLdb_dna_segs_formatColor.pl -t tree.nwk -b 0.1 < dna_segs_order.txt > dna_segs_order_col.txt
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -10,6 +143,19 @@ use File::Spec;
 use Bio::TreeIO;
 use Color::Mix;
 use List::Util qw/min max sum/;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+	
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -23,7 +169,7 @@ my @default_colors = ("#666666", "#CCCCCC", "#000000");		# gene, spacer, DR
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
-	   "compare=s" => \$compare_in,
+	  # "compare=s" => \$compare_in,
 	   "spacer=i" => \$spacer_color_opt, 		# 0 = none, 1 = tree, 2 = adjacency, 3 = both
 	   "gene=i" => \$gene_color_opt,			# 0 = none, 1 = tree, 2 = adjacency, 3 = both
 	   "branch=f" => \$brlen_cutoff,			# branch-length cutoff (>= max branch length)	   
@@ -67,15 +213,11 @@ if($tree_in){
 		if $gene_color_opt == 1 || $gene_color_opt == 3;	
 	}
 
-# adjacency-based color formatting #
-#if($compare_in){
-#	my $compare_r = load_compare($compare_in);
-	
+# adjacency-based color formatting #	
 check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer", $header_r)
 	if $spacer_color_opt == 2 || $spacer_color_opt == 3;
-check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "gene", $header_r)
+check_adjacency($dna_segs_r, $dna_segs_order_r,  \%color_mod, "gene", $header_r)
 	if $gene_color_opt == 2 || $gene_color_opt == 3;
-#	}
 
 # editting colors #
 ## finding colors that need descriminating hexadecimal coloring ##
@@ -87,7 +229,7 @@ apply_rainbow(\%color_mod, $descrim_cnt_r);
 ## applying default color to repeats ##
 apply_DR_color(\%color_mod);
 
-# writing editted table #
+# writing edited table #
 write_dna_segs($dna_segs_r, $header_r, $dna_segs_order_r, \%color_mod);
 
 
@@ -123,16 +265,12 @@ sub apply_DR_color{
 	foreach my $col ( keys %{$color_mod_r->{"directrepeat"}} ){
 		$color_mod_r->{"directrepeat"}{$col} = $default_colors{"directrepeat"};
 		}
-
 	}
 
 sub apply_rainbow{
 # applying rainbow to color mod #
 	my ($color_mod_r, $descrim_cnt_r) = @_;
-	
-		#print Dumper $descrim_cnt_r; exit;
-		#print Dumper $color_mod_r; exit;
-	
+		
 	my %new_dna_segs;
 	foreach my $feat (keys %$color_mod_r){
 		next if $feat eq "directrepeat";
@@ -148,10 +286,20 @@ sub apply_rainbow{
 		
 		# applying colors #
 		my $cnt = 0;
-		foreach my $col (sort {$a<=>$b} keys %{$color_mod_r->{$feat}}){
-			unless($color_mod_r->{$feat}{$col}){
-				$color_mod_r->{$feat}{$col} = $hexa[$cnt];
-				$cnt++;
+		if($feat eq 'gene'){
+			foreach my $col (sort {$a cmp $b} keys %{$color_mod_r->{$feat}}){
+				unless($color_mod_r->{$feat}{$col}){
+					$color_mod_r->{$feat}{$col} = $hexa[$cnt];
+					$cnt++;
+					}
+				}			
+			}
+		else{
+			foreach my $col (sort {$a<=>$b} keys %{$color_mod_r->{$feat}}){
+				unless($color_mod_r->{$feat}{$col}){
+					$color_mod_r->{$feat}{$col} = $hexa[$cnt];
+					$cnt++;
+					}
 				}
 			}
 		}
@@ -178,8 +326,6 @@ sub check_adjacency{
 # making adjacency list for taxa by color #
 	my ($dna_segs_r, $dna_segs_order_r, $color_mod_r, $feat, $header_r) = @_;
 
-	#print Dumper $dna_segs_r->{"spacer"}; exit;
-
 	# making and checking adjacency list #
 	foreach my $col (keys %{$dna_segs_r->{$feat}}){			# for each spacer, gene, or DR
 		#next if exists $color_mod_r->{$feat}{$col};		# next if color already assigned
@@ -192,8 +338,6 @@ sub check_adjacency{
 			if(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1} &&		# adjacent taxa found in same color
 				exists $dna_segs_r->{$feat}{$col}{$dna_segs_id2}){
 				$adjlist{$dna_segs_id1} = $dna_segs_id2;				# color must be found in adjacent 
-				#print Dumper $dna_segs_id1, $dna_segs_id2
-				#	if $dna_segs_id1 eq "3.F.A.2.12__cli74" || $dna_segs_id2 eq "3.F.A.2.12__cli74";
 				}
 			elsif(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1}){	# if 'loner'
 				$adjlist{$dna_segs_id1} = 0;
@@ -225,7 +369,7 @@ sub check_adjacency{
 				}
 			$i++;
 			}	
-		#print Dumper "adjcnt: $adjcnt; adjlen: $adjlen";
+			#print Dumper "adjcnt: $adjcnt; adjlen: $adjlen";
 		$color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt <= 1;
 		}
 		
@@ -238,8 +382,6 @@ sub check_adjacency{
 sub check_adjacency_old{
 # making adjacency list for taxa by color #
 	my ($dna_segs_r, $dna_segs_order_r, $compare_r, $color_mod_r, $feat, $header_r) = @_;
-	
-		#print Dumper $dna_segs_order_r; exit;
 	
 	# making and checking adjacency list #
 	foreach my $col (keys %{$dna_segs_r->{$feat}}){		# for each spacer, gene, or DR
@@ -490,135 +632,5 @@ sub stdev{
         return $std;
 }
 
-__END__
 
-=pod
-
-=head1 NAME
-
-CLdb_dna_segs_formatColor.pl -- reduce the number of colors needed for plotting
-
-=head1 SYNOPSIS
-
-CLdb_dna_segs_formatColor.pl [flags] < dna_segs_order.txt > dna_segs_order_color.txt
-
-=head2 Optional flags
-
-=over
-
-=item -tree  <char>
-
-Tree file name (nexus or newick).
-
-=item -format  <char>
-
-Tree file format. [newick]
-
-=item -spacer  <int>
-
-Methods used to reduce colors needed for spacer clusters (see DESCRIPTION).
-
-=item -gene  <int>
-
-Methods used to reduce colors needed for gene clusters (see DESCRIPTION).
-
-=item -branch  <float>
-
-The branch length cutoff for not coloring features just in that clade.
-
-=item -stats  <bool>
-
-Write branch length stats for the provided tree, then exit? [FALSE]
-
-=item -default  <char> 
-
-The default colors for when coloring isn't needed (needs 3 values: 'gene_color' 'spacer_color' 'DR_color').
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_dna_segs_formatColor.pl
-
-=head1 DESCRIPTION
-
-Add descriminatory coloring to genes and spacers.
-Genes and/or spacers that do not need coloring
-because: 
-=over 
-
-=item i) the gene/spacer always adjacent
-in the plot, so 'blast' connections in the 
-plot will provide the needed information.
-
-=item ii) the gene/spacer is only found in
-a very similar clade, so no coloring is needed
-(if a tree & branch length cutoff is provided).
-
-=back
-
-Discrimantory coloring can be based on:
-
-=over 
-
-=item Continuous adjacency in the plot: [1]
-
-=item Max branch length: [2]
-
-=item Both: [3]
-
-=back
-
-By default: genes = 1, spacers = 3
-
-The default non-descriminatory colors are:
-
-=over
-
-=item gene: #666666
-
-=item spacer: #CCCCCC
-
-=item direct repeat: #000000
-
-=back 
-
-=head2 WARNING
-
-If the dna_segs table has been ordered by a tree,
-use the pruned/edited tree.
-
-=head1 EXAMPLES
-
-=head2 Basic usage:
-
-CLdb_dna_segs_formatColor.pl < dna_segs_order.txt > dna_segs_order_col.txt
-
-=head2 Branch length cutoff (<= 0.1):
-
-CLdb_dna_segs_formatColor.pl -t tree.nwk -b 0.1 < dna_segs_order.txt > dna_segs_order_col.txt
-
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

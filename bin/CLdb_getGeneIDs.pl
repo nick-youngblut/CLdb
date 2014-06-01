@@ -1,98 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use DBI;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, $database_file);
-my (@subtype, @taxon_id, @taxon_name);
-my $extra_query = "";
-GetOptions(
-	   "database=s" => \$database_file,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name,
-	   "query=s" => \$extra_query, 
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# joining query options (for table join) #
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
-# query db #
-get_figs_join($dbh, $extra_query, $join_sql);
-
-# disconnect to db #
-$dbh->disconnect();
-exit;
-
-
-### Subroutines
-sub get_figs_join{
-	my ($dbh, $extra_query, $join_sql) = @_;
-
-	
-	# make query #
-	my $query = "SELECT  genes.gene_id, loci.taxon_name, loci.taxon_id, loci.locus_id from genes, loci where genes.locus_id = loci.locus_id $join_sql";
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	# writing out figs #
-	foreach my $row (@$ret){
-		next unless $$row[0];
-		$$row[3] =~ s/^cli\.|^/cli./;
-		map{$_ = "" unless $_} @$row;
-		print join("\t", @$row), "\n";
-		}
-	
-	}
-
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
-
-
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -162,6 +69,8 @@ and write them to a table. Output columns are:
 
 =item * Locus_ID
 
+=item * Subtype
+
 =back
 
 By default, all Gene_IDs will be written. Use the 
@@ -204,4 +113,103 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+my ($verbose, $database_file);
+my (@subtype, @taxon_id, @taxon_name);
+my $extra_query = "";
+GetOptions(
+	   "database=s" => \$database_file,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name,
+	   "query=s" => \$extra_query, 
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
+# query db #
+get_figs_join($dbh, $extra_query, $join_sql);
+
+# disconnect to db #
+$dbh->disconnect();
+exit;
+
+
+### Subroutines
+sub get_figs_join{
+	my ($dbh, $extra_query, $join_sql) = @_;
+
+	
+	# make query #
+	my $query = "SELECT  genes.gene_id, loci.taxon_name, loci.taxon_id, loci.locus_id, loci.subtype
+	from genes, loci where genes.locus_id = loci.locus_id $join_sql";
+	$query = join(" ", $query, $extra_query);
+	
+	# status #
+	print STDERR "$query\n" if $verbose;
+
+	# query db #
+	my $ret = $dbh->selectall_arrayref($query);
+	die " ERROR: no matching entries!\n"
+		unless $$ret[0];
+	
+	# writing out figs #
+	foreach my $row (@$ret){
+		next unless $$row[0];
+		map{$_ = "" unless $_} @$row;
+		print join("\t", @$row), "\n";
+		}
+	
+	}
+
+sub join_query_opts_OLD{
+# joining query options for selecting loci #
+	my ($vals_r, $cat) = @_;
+
+	return "" unless @$vals_r;	
+	
+	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
+	}
+
+
 

@@ -1,5 +1,121 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_subtypePA_ITOL.pl -- make CRISPR subtype pres-abs ITOL table
+
+=head1 SYNOPSIS
+
+CLdb_subtypePA_ITOL.pl [flags] > subtype_PA.meta
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -colors  <char>
+
+For providing user-defined hexidecimal colors (>= 1 argument).
+
+=item -abundance  <bool>
+
+Provide counts of subtypes per taxon instead of binary pres-abs? [FALSE]
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine which sequences are returned.
+
+=item -group  <bool>
+
+Get array elements de-replicated by group (ie. all uniqe sequences). [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_subtypePA_ITOL.pl
+
+=head1 DESCRIPTION
+
+Make a CRISPR subtype presence-absence table for plotting
+with a tree in ITOL.
+
+Subtype coloring is done in alpha-numeric order unless
+the subtypes are provided via '-subtype'
+
+=head1 EXAMPLES
+
+=head2 Pres-abs table of all subtypes & taxa in CLdb
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite 
+
+=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary)
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -a
+
+=head2 Subtype count table of loci containing CAS operons
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status!='absent'"
+
+=head2 Subtype count table of loci containing intact CAS operons (no broken or shuffled)
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status='intact'"
+
+=head2 User provided colors
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -c "#FF0000 #FF6600 #FFFF00"
+
+=head2 Pres-abs table of specific subtypes & taxa_names
+
+CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -sub I-A I-B I-C -taxon_name Ecoli Senterica Awoodii 
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -8,6 +124,18 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -29,17 +157,12 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
 
-### MAIN
+#--- MAIN ---#
 # connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+my $dbh = connect2db($database_file);
 
 # joining query options (for table join) #
 my $join_sql = "";
@@ -167,7 +290,7 @@ sub count_subtypes{
 	return \%taxa, \%subtypes;
 	}
 	
-sub join_query_opts{
+sub join_query_opts_OLD{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
 
@@ -178,121 +301,4 @@ sub join_query_opts{
 	}
 
 
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_subtypePA_ITOL.pl -- make CRISPR subtype pres-abs ITOL table
-
-=head1 SYNOPSIS
-
-CLdb_subtypePA_ITOL.pl [flags] > subtype_PA.meta
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -colors  <char>
-
-For providing user-defined hexidecimal colors (>= 1 argument).
-
-=item -abundance  <bool>
-
-Provide counts of subtypes per taxon instead of binary pres-abs? [FALSE]
-
-=item -subtype  <char>
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id  <char>
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name  <char>
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
-=item -group  <bool>
-
-Get array elements de-replicated by group (ie. all uniqe sequences). [FALSE]
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_subtypePA_ITOL.pl
-
-=head1 DESCRIPTION
-
-Make a CRISPR subtype presence-absence table for plotting
-with a tree in ITOL.
-
-Subtype coloring is done in alpha-numeric order unless
-the subtypes are provided via '-subtype'
-
-=head1 EXAMPLES
-
-=head2 Pres-abs table of all subtypes & taxa in CLdb
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite 
-
-=head2 Subtype count table of all subtypes & taxa in CLdb (not-binary)
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -a
-
-=head2 Subtype count table of loci containing CAS operons
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status!='absent'"
-
-=head2 Subtype count table of loci containing intact CAS operons (no broken or shuffled)
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status='intact'"
-
-=head2 User provided colors
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -c "#FF0000 #FF6600 #FFFF00"
-
-=head2 Pres-abs table of specific subtypes & taxa_names
-
-CLdb_subtypePA_ITOL.pl -d CLdb.sqlite -sub I-A I-B I-C -taxon_name Ecoli Senterica Awoodii 
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

@@ -1,5 +1,95 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_delete.pl -- deleting loci-associated entries throughout database
+
+=head1 SYNOPSIS
+
+CLdb_delete.pl [options]
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine query.
+
+=item -kill  <bool>
+
+Will override the script's attempts to prevent the deletion of all loci. [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_delete.pl
+
+=head1 DESCRIPTION
+
+Select loci that should be deleted.
+All entries in all tables that
+are associated with the selected loci.
+
+=head1 EXAMPLES
+
+=head2 Delete all loci in a genome 
+
+CLdb_delete.pl -d CLdb.sqlite -taxon_id 6666666.403
+
+=head2 Delete locus_ids 1 through 4 
+
+CLdb_delete.pl -d CLdb.sqlite -q "AND locus_id IN (1,2,3,4)
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -8,6 +98,18 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -27,17 +129,12 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
 
-### MAIN
+#--- MAIN ---#
 # connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+my $dbh = connect2db($database_file);
 
 # joining query 
 my $join_sql = "";
@@ -72,11 +169,11 @@ write_selected_loci($loci_r) unless $verbose;
 my $tables_r = list_tables($dbh);
 
 # need to join; get unique IDs and delete on unique IDs #
-## hclust tables ##
-delete_hclust($dbh, $loci_r, "spacers", "spacer_id", "spacer_hclust") 
-	if exists $tables_r->{"spacers_hclust"};
-delete_hclust($dbh, $loci_r, "DRs", "DR_id", "DR_hclust")
-	if exists $tables_r->{"DR_hclust"};
+## cluster tables ##
+delete_clusters($dbh, $loci_r, "spacers", "spacer_id", "spacer_clusters") 
+	if exists $tables_r->{"spacer_clusters"};
+delete_clusters($dbh, $loci_r, "DRs", "DR_id", "DR_clusters")
+	if exists $tables_r->{"DR_clusters"};
 
 ## blast tables ##
 delete_spacer_pairwise_blast($dbh, $loci_r) if exists $tables_r->{"spacer_pairwise_blast"};
@@ -87,11 +184,10 @@ simple_delete($dbh, $loci_r, "spacers") if exists $tables_r->{"spacers"};
 simple_delete($dbh, $loci_r, "drs") if exists $tables_r->{"drs"};
 simple_delete($dbh, $loci_r, "dr_consensus") if exists $tables_r->{"dr_consensus"};
 simple_delete($dbh, $loci_r, "leaders") if exists $tables_r->{"leaders"};
-#simple_delete($dbh, $loci_r, "draft") if exists $tables_r->{"draft"};
 simple_delete($dbh, $loci_r, "genes") if exists $tables_r->{"genes"};
 simple_delete($dbh, $loci_r, "loci") if exists $tables_r->{"loci"};
-simple_delete($dbh, $loci_r, "spacer_hclust") if exists $tables_r->{"spacer_hclust"};
-
+simple_delete($dbh, $loci_r, "spacer_clusters") if exists $tables_r->{"spacer_clusters"};
+simple_delete($dbh, $loci_r, "DR_clusters") if exists $tables_r->{"DR_clusters"};
 
 $dbh->commit();
 exit;
@@ -134,7 +230,7 @@ sub delete_spacer_pairwise_blast{
 		}	
 	}
 
-sub delete_hclust{
+sub delete_clusters{
 # deleting spacer hclust entries #
 	my ($dbh, $loci_r, $table, $id, $del_table) = @_;
 	
@@ -231,7 +327,7 @@ sub get_loci_entries{
 	return $ret;
 	}
 
-sub join_query_opts{
+sub join_query_opts_OLD{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
 
@@ -250,96 +346,4 @@ sub check_deletion{
 		}
 	}
 
-
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_delete.pl -- deleting loci-associated entries throughout database
-
-=head1 SYNOPSIS
-
-CLdb_delete.pl [options]
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -subtype  <char>
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id  <char>
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name  <char>
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query  <char>
-
-Extra sql to refine query.
-
-=item -kill  <bool>
-
-Will override the script's attempts to prevent the deletion of all loci. [FALSE]
-
-=item -verbose  <bool>
-
-Verbose output. [TRUE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_delete.pl
-
-=head1 DESCRIPTION
-
-Select loci that should be deleted.
-All entries in all tables that
-are associated with the selected loci.
-
-=head1 EXAMPLES
-
-=head2 Delete all loci in a genome 
-
-CLdb_delete.pl -d CLdb.sqlite -taxon_id 6666666.403
-
-=head2 Delete locus_ids 1 through 4 
-
-CLdb_delete.pl -d CLdb.sqlite -q "AND locus_id IN (1,2,3,4)
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

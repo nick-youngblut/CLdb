@@ -1,5 +1,73 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_checkLociOverlap.pl -- checking for loci position overlap
+
+=head1 SYNOPSIS
+
+CLdb_checkLociOverlap.pl [flags]
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -verbose  <bool>
+
+Verbose output. [TRUE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_checkLociOverlap.pl
+
+=head1 DESCRIPTION
+
+Check for overlap of loci based on locus_start-locus_end
+position info in the CLdb loci table. Overlap 
+may be caused by erroneous entries in the database.
+
+Overlapping entries will be written to STDOUT.
+
+=head1 EXAMPLES
+
+=head2 Usage:
+
+CLdb_checkLociOverlap.pl -d CLdb.sqlite 
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -9,6 +77,18 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Set::IntervalTree;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+	
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -20,17 +100,13 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
 
-### MAIN
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+#--- MAIN ---#
 # connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+my $dbh = connect2db($database_file);
 
 # database metadata #
 my $table_list_r = list_tables();
@@ -40,7 +116,6 @@ my $column_list_r = list_columns("loci", 1);
 
 # getting input loci table #
 my ($loci_r) = get_loci_table($dbh, $column_list_r);
-
 
 # making interval trees #
 make_interval_trees($loci_r, $column_list_r);
@@ -142,73 +217,4 @@ sub list_columns{
 	else{  print "Columns:\n", join(",\n", keys %tmp), "\n\n";  exit; }
 	}
 
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_checkLociOverlap.pl -- checking for loci position overlap
-
-=head1 SYNOPSIS
-
-CLdb_checkLociOverlap.pl [flags]
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -verbose  <bool>
-
-Verbose output. [TRUE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_checkLociOverlap.pl
-
-=head1 DESCRIPTION
-
-Check for overlap of loci based on locus_start-locus_end
-position info in the CLdb loci table. Overlap 
-may be caused by erroneous entries in the database.
-
-Overlapping entries will be written to STDOUT.
-
-=head1 EXAMPLES
-
-=head2 Usage:
-
-CLdb_checkLociOverlap.pl -d CLdb.sqlite 
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

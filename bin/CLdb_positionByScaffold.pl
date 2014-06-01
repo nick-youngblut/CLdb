@@ -1,5 +1,117 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_positionByScaffold.pl -- Convert positional values from a scaffold-merged (1 scaffold) to multi-scaffold 
+
+=head1 SYNOPSIS
+
+CLdb_positionByScaffold.pl [Flags] < Loci.txt > Loci_byScaf.txt
+
+=head2 Required flags
+
+=over
+
+=item -genbank  <char>
+
+List of genbank files (3-column; tab-delim; 'taxon_name\tgenbank_unmerged\tgenbank_merged')
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -array  <char>
+
+Directory of the CLdb array files.
+
+=item -verbose  <bool>
+
+Verbose output. [TRUE]
+
+=item -help  <bool>	
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_positionByScaffold.pl
+
+=head1 DESCRIPTION
+
+Convert merged genbank position information (merged with EMBOSS 'union')
+to scaffold-based (multiple scaffold) position info.
+
+Possitional information changed in Loci table and array files (if -array used). 
+
+This is designed to be used before loading the loci table, genbank files,
+and array files into CLdb.
+
+It is only necessary if you would like to have scaffold position information
+in CLdb.
+
+=head2 Input
+
+=head3 Loci table
+
+All of the position info will be changed to scaffold (as long as
+the corresponding merged & unmerged genbank files are provided).
+Also, the scaffold ID for the position information will be added
+to the edited loci table.
+
+=head3 genbank file table
+
+3-column; tab-delim; 'taxon_name\tgenbank_unmerged\tgenbank_merged'
+
+Example of unmerged genbank file format: RAST genbank output for a draft genome.
+
+=head3 array directory <optional>
+
+This is used to determine where the array files listed in the loci table
+are located. The edited array files will be written to a seperate directory. 
+
+=head2 Matching unmerged and merged scaffolds
+
+All scaffold start-end info is obtained form the 'source' tags
+in both the unmerged and merged genbank files. 1-to-1
+connections between scaffolds are determined in a number of steps:
+
+=over 
+
+=item 1) Comparing scaffold lengths.
+
+=item 2) Comparing scaffold sequences. No duplicate scaffolds allowed!
+
+=back
+
+=head1 EXAMPLES
+
+=head2 Normal usage (array files edited):
+
+CLdb_positionByScaffold.pl < loci.txt -genbank genbank_file_list.txt -array > loci_byScaf.txt
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
+
 ### modules
 use strict;
 use warnings;
@@ -7,229 +119,291 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
-use DBI;
 use Bio::SeqIO;
 use Set::IntervalTree;
+use File::Path qw/rmtree/;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose_b, $array_dir, $gbk_list_in);
 GetOptions(
-	   "database=s" => \$database_file,
-	   "verbose" => \$verbose,
+	   "array=s" => \$array_dir,
+	   "genbank=s" => \$gbk_list_in,
+	   "verbose_b" => \$verbose_b,
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
+#--- I/O error & defaults ---#
+file_exists($gbk_list_in, "genbank list");
 
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+# array directory #
+my $array_dir_out;
+if(defined $array_dir){
+	die "ERROR: cannot find directory of array files!\n"
+	unless -d $array_dir;
+	($array_dir_out = $array_dir) =~ s|(.+)[\/]$|$1_byScaf|;
+	die "REGEX ERROR: $!\n" if $array_dir_out eq $array_dir;
+	rmtree $array_dir_out or die $! if -d $array_dir_out;
+	mkdir $array_dir_out;
+	}
 
-# listing tables #
-my $tables_r = list_tables($dbh);
+#--- MAIN ---#
+# loading input lists/tables #
+my $gbk_list_r = load_genbank_list($gbk_list_in);
+my $loci_tbl_r = load_loci_table();
 
-# loading genbanks #
-my $gen_list_r = get_genbank_list();
-my $gen_io_r = load_genbank_io($gen_list_r);
+# edited loci table header #
+my @header_order = sort{$loci_tbl_r->{'header'}{$a} <=> $loci_tbl_r->{'header'}{$b}} 
+						keys %{$loci_tbl_r->{'header'}};
+print join("\t", @header_order), "\n";
+my @indices = @{$loci_tbl_r->{'header'}}{@header_order};
 
-# making merged => unmerged location index #
-foreach my $unmerged (keys %$gen_list_r){				
-	# getting scaffold lengths & sequence #
-	my $unmerged_r = parse_unmerged_genbank($gen_list_r, $gen_io_r, $unmerged);
-	my $merged_r = parse_merged_genbank($gen_list_r, $gen_io_r, $gen_list_r->{$unmerged});
 
-	# finding merged-unmerged contig 1-to-1 assocations in contig length #
-	my ($scaf_index_r, $needs_blasting_r) = find_same_length($gen_list_r, $unmerged_r, $merged_r);
+# writing out loci entries w/out genbank_file value #
+my $genbank_i = $loci_tbl_r->{'header'}{'genbank_file'};
+my $locus_id_i = $loci_tbl_r->{'header'}{'locus_id'};
+foreach my $taxon_name (sort keys %{$loci_tbl_r->{'body'}} ){
+	foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){
+		unless(defined $$locus[$genbank_i] && $$locus[$genbank_i] ne ""){
+			# writing out new loci file (enties that do not have a genbank file value #
+			warn "WARNING: $taxon_name -> $$locus[$locus_id_i] does not have a genbank_file value! Positions not changed!\n";
+			map{ $$locus[$_] = "" unless defined $$locus[$_] } @indices;
+			print join("\t", @$locus[ @indices ] ), "\n";
+			}
+		}
+	}
+
+# writing all loci not found in genbank_unmerged_merged file #
+foreach my $taxon_name (sort keys %{$loci_tbl_r->{'body'}} ){
+	unless(exists $gbk_list_r->{$taxon_name}){			# taxon must be found in genbank_unmerged_merged file
+		foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){
+			warn "WARNING: $taxon_name -> $$locus[$locus_id_i] not found in genbank_unmerged_merged file! Positions not changed!\n";
+			map{ $$locus[$_] = "" unless defined $$locus[$_] } @indices;
+			print join("\t", @$locus[ @indices ] ), "\n";
+			}
+		}
+	}
+
+# processing each taxon #
+foreach my $taxon_name (sort keys %$gbk_list_r){			# each taxon/genbank
+	# genbank #
+	## skipping unless present in loci file ##
+	unless (exists $loci_tbl_r->{'body'}{$taxon_name}){
+		warn "Skipping position change for '$taxon_name'. Not found in loci file!\n";
+		next;
+		}
 	
-	# determine if sequences are the same (either identical or rev-comp)
+	## getting genbank bioperl objects #
+	my $gbk_r = load_genbank_io($gbk_list_r->{$taxon_name});
+	
+	## getting scaffold lengths & sequence #
+	my $unmerged_r = parse_genbank($gbk_r->{'unmerged'}, 
+									'unmerged', $gbk_list_r->{$taxon_name}{'unmerged'});
+	my $merged_r = parse_genbank($gbk_r->{'merged'}, 
+									'merged', $gbk_list_r->{$taxon_name}{'merged'});
+
+	# position association #
+	## finding merged-unmerged contig 1-to-1 assocations in scaffold length #
+	my ($scaf_index_r, $needs_blasting_r) = find_same_length($unmerged_r, $merged_r);
+
+	## determine if sequences are the same (either identical or rev-comp)
 	find_same_sequence($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r);
 
-	# checking to make sure all scaffolds accounted for #
+	## checking to make sure all scaffolds accounted for #
 	if(%{$needs_blasting_r->{"merged"}}){
 		print STDERR " ERROR: not all 1-to-1 connects made. Ambiguous contigs:\n\t";
 		print STDERR join(",\n\t", keys %{$needs_blasting_r->{"unmerged"}}), "\n\n";
-		exit;
+		exit(1);
 		}
 	
-	# making an interval tree relating absolute location to scaffold-based location #
+	## making an interval tree relating absolute location to scaffold-based location #
 	my $itree = make_loc_itree($scaf_index_r, $merged_r, $unmerged_r);
-	
-	# getting values from database #
-	my $loci_r = get_loci_oi($dbh, $gen_list_r->{$unmerged});
-	
-	# getting associated tables #
-	my %tables_oi;
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
-		if exists $tables_r->{"spacers"};
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "drs", "dr")
-		if exists $tables_r->{"drs"};
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "leaders", "leader", "locus")
-		if exists $tables_r->{"leaders"};
-	get_other_tables_oi($dbh, $loci_r, \%tables_oi, "genes", "gene")
-		if exists $tables_r->{"genes"};
-	
-	# converting values #
-	merged_to_unmerged_pos($itree, $loci_r, \%tables_oi);
-	
-	# updating tables #
-	update_loci($dbh, $loci_r);
-	update_other_table($dbh, $loci_r, \%tables_oi, "spacers", "spacer")
-		if exists $tables_r->{"spacers"};
-	update_other_table($dbh, $loci_r, \%tables_oi, "drs", "dr")
-		if exists $tables_r->{"drs"};
-	update_other_table($dbh, $loci_r, \%tables_oi, "leaders", "leader", "locus")
-		if exists $tables_r->{"leaders"};
-	update_other_table($dbh, $loci_r, \%tables_oi, "genes", "gene")
-		if exists $tables_r->{"genes"};
+
+	# location/file_name editing #
+	## loci table ##	
+	foreach my $locus (sort @{$loci_tbl_r->{'body'}{$taxon_name}} ){		# locus = @$row				
+		# loci #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus, 
+							$taxon_name, 'locus_start', 'locus_end', 'scaffold');
+		# array #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+							$taxon_name, 'array_start', 'array_end', '');
+		# CAS #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+							$taxon_name, 'cas_start', 'cas_end', '');
+		# leader #
+		edit_loci_tbl_loc( $loci_tbl_r->{'header'}, $itree, $locus,
+							 $taxon_name, 'leader_start', 'leader_end', '');
+		
+		# genbank file name (changing to unmerged file name) #
+		edit_loci_tbl_file( $loci_tbl_r->{'header'}, $locus,
+							 $taxon_name, 'genbank_file', $gbk_list_r->{$taxon_name}{'unmerged'});
+				
+		# writing out new loci file #
+		print join("\t", @$locus[ @indices ] ), "\n";
+						 
+		# array file #
+		edit_array_file($array_dir, $array_dir_out, $locus, $loci_tbl_r->{'header'}, $itree, $taxon_name)
+				if defined $array_dir;
+		}
 	}
-
-# updating loci table values: genbank file names #
-update_loci_genbank($dbh, $gen_list_r);
-
-# committing updates #
-$dbh->commit;
-print STDERR "...All updates committed!\n";
-
-# disconnect #
-$dbh->disconnect();
-exit;
-
 
 
 ### Subroutines
-sub update_loci_genbank{
-# updating loci genbank values to unmerged genbank files #
-	my ($dbh, $gen_list_r) = @_;
-	print STDERR "...updating genbank file names in loci table\n";
+sub edit_array_file{
+# editing array file (changing positions to scaffold-relative positions) #
+	my ($array_dir, $array_dir_out, $locus, $header_r, $itree, $taxon_name) = @_;
 	
-	my $cmd = "UPDATE loci SET genbank_file=? where genbank_file=?";		# merged to unmerged
-	my $sql = $dbh->prepare($cmd);
-
-	my $cnt = 0;
-	foreach my $unmerged (keys %$gen_list_r){
-		my @parts = File::Spec->splitpath($unmerged);
-		$sql->bind_param(1, $parts[2]);
-		@parts = File::Spec->splitpath($gen_list_r->{$unmerged});
-		$sql->bind_param(2, $parts[2]);		
-		$sql->execute();
+	# cannot edit array file unless file exists #
+	return 0 unless exists $header_r->{'array_file'};
+	my $array_i = $header_r->{'array_file'};
+	
+	# check for array file value #
+	if (! defined $$locus[$array_i] || $$locus[$array_i] eq ""){
+		warn "WARNING: cannot find array file value for \"$taxon_name\" loci\n";
+		return 0;
+		}
 		
-		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr in: $unmerged\n";
-			}
-		else{ $cnt++; }
+	# making an array file edit #
+	my @parts = File::Spec->splitpath($$locus[$array_i]);
+	
+	open IN, "$array_dir/$parts[2]" or die $!;
+	open OUT, ">$array_dir_out/$parts[2]" or die $!;
+	while(<IN>){
+		chomp;
+		next if /^\s*$/;
+		s/\t{3}/\t\t/g;				# any instances of '\t' instead of no value (due to 1st placed in excel)
+		my @l = split /\t/;			# start, DR, spacer, end 
+		
+		die "ERROR: no start-end position found for line $. of $array_dir/$parts[2]: '$_'\n"
+			unless $l[0] =~ /^\d+$/ && $l[3] =~ /^\d+$/;
+		
+		# getting by-scaffold position #
+		my $ret = $itree->fetch($l[0], $l[3]);		# ret = scaffold that positions span
+		die "ERROR: could not find position info for: $taxon_name, ", join(", ", @l), "\n"
+			unless defined $ret;
+		
+		# updating position info #
+		## new start = scaf_start + (current_pos - scaf_gw_pos)
+		## new end = scaf_end - (scaf_gw_pos - current_pos)
+		$l[0] = $$ret[0]->{"start"} + ($l[0] - $$ret[0]->{"gw_start"});
+		$l[3] = $$ret[0]->{"end"} - ($$ret[0]->{"gw_end"} - $l[3]);
+					
+		print OUT join("\t", @l), "\n";
 		}
-
-	print STDERR "...Number of genbank values updated: $cnt\n";
-	print STDERR "...BE SURE to move unmerged genbanks into \$CLdb_HOME/genbank!!!\n";
+	close IN;
+	close OUT;
+	
+	# status #
+	print STDERR "Edited array file written: '$array_dir_out/$parts[2]'\n"
+		unless $verbose_b;
 	}
 
-sub find_same_sequence{
-# checking contigs by same sequence; should match all contigs #
-## sequences should match exactly & 1-to-1 ##
-	my ($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r) = @_;
+sub edit_loci_tbl_file{
+	my ($header, $locus, $taxon_name, $file_cat, $unmerged_file) = @_;
+	
+		#print Dumper $unmerged_file; exit;
+	
+	# locus start-end #
+	## loci table file index ##
+	die "ERROR: cannot find '$file_cat' in header!\n"
+		unless exists $header->{$file_cat};
+	my $file_i = $header->{$file_cat};
+	
+	## edit file name if file name already present #
+	if( defined $$locus[ $file_i ] ){
+		# striping path from file name #
+		my @parts = File::Spec->splitpath($unmerged_file);
+		
+		$$locus[ $file_i ]  = $parts[2];
+ 		}
+	}
 
-	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
-		foreach my $unmerged_contig (keys %{$needs_blasting_r->{"unmerged"}}){
-			if ($merged_r->{$merged_contig}{"seq"} eq $unmerged_r->{$unmerged_contig}{"seq"}){
-				push( @{$scaf_index_r->{$merged_contig}}, $unmerged_contig);
-				#print Dumper $unmerged_contig;
-				#print Dumper $merged_contig;
-				#print Dumper $unmerged_contig;
-				#print Dumper $merged_r->{$merged_contig}{"seq"};
-				#print Dumper $unmerged_r->{$unmerged_contig}{"seq"};
-				
-				}
-		#	else{
-				#print Dumper $merged_r->{$merged_contig}{"seq"};
-		#		#print Dumper $unmerged_r->{$unmerged_contig}{"seq"}
-		#		}
-			}
+sub edit_loci_tbl_loc{
+	my ($header, $itree, $locus, $taxon_name, $start_cat, $end_cat, $scaf_cat) = @_;
+		
+	# locus start-end #
+	## index #
+	my $start_i = $header->{$start_cat}
+			if exists $header->{$start_cat};
+	my $end_i = $header->{$end_cat}
+			if exists $header->{$end_cat};
+	my $scaf_i = $header->{$scaf_cat}
+			if exists $header->{$scaf_cat};
+	
+	# skipping if no values #
+	return 0 unless exists $header->{$start_cat} && exists $header->{$end_cat};
+	
+	## edit start-end values #
+	if( defined $$locus[ $start_i ] && defined $$locus[ $end_i ] 
+		&& $$locus[ $start_i ] ne "" && $$locus[ $end_i ] ne "" ){		# must be defined & not ""	
+		my $start = $$locus[ $start_i ];
+		my $end = $$locus[ $end_i ];
+	
+		if( defined $scaf_i ){			# scaffold info
+			($$locus[ $start_i ], 	
+ 			 $$locus[ $end_i ],
+ 			 $$locus[ $scaf_i ]) = 
+ 					edit_loc($itree, $taxon_name, $locus,
+ 							$start, $end
+ 							);
+ 				}
+ 		else{				# no scaffold info 
+ 			($$locus[ $start_i ], 
+ 			 $$locus[ $end_i ]) = 
+ 					edit_loc($itree, $taxon_name, $locus,
+ 							$start, $end
+ 							);	
+ 			}
+ 		}
+		#print Dumper $loci_tbl_r; exit;
+	}
+
+sub edit_loc{
+# editing start-end location # 
+	my ($itree, $taxon_name, $locus, $start, $end) = @_;
+	
+	# checking start-end orientation; flipping if - strand for itree fetching #
+	my $flip_b = 0;
+	if($start > $end){
+		$flip_b = 1;
+		($start, $end) = ($end, $start);
 		}
 	
-	# checking problem contigs for 1 to 1 associations #
-	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
-		if( exists $scaf_index_r->{$merged_contig} ){
-			if(scalar @{$scaf_index_r->{$merged_contig}} == 1){
-				# deleting merged #
-				delete $needs_blasting_r->{"merged"}{$merged_contig};
+	# getting position info (in unmerged) #
+	my $ret = $itree->fetch($start, $end);				# ret = scaffold that positions span
+	die "ERROR: no scaffold span for taxon_name->$taxon_name, start->$start, end->$end\n"
+		unless defined $ret;
+	die "## ERROR ##\n>1 scaffold spanned for taxon_name->$taxon_name, start->$start, end->$end\n",
+		Dumper @$ret if scalar @$ret > 1;
+
+	# updating position info #
+	## new start = scaf_start + (current_pos - scaf_gw_pos)
+	## new end = scaf_end - (scaf_gw_pos - current_pos)
+	$start = $$ret[0]->{"start"} + ($start - $$ret[0]->{"gw_start"});
+	$end = $$ret[0]->{"end"} - ($$ret[0]->{"gw_end"} - $end);
+	
+	# flipping start-end back if necessary #
+	($start, $end) = ($end, $start) if $flip_b;
+
+	# check start stop #
+	die " ERROR: scaffold start or end < 0 for taxon_name->$taxon_name, start->$start, end->$end\n"
+		if $start < 0 || $end < 0;
 			
-				# deleting unmerged #
-				foreach my $unmerged_contig (@{$scaf_index_r->{$merged_contig}}){
-					delete $needs_blasting_r->{"unmerged"}{$unmerged_contig};
-					}
-				}
-			else{
-				die " ERROR: Scaffold->\"$merged_contig\" has same sequence as >=2 scaffolds in unmerged genbank!\n";
-				}
-			}
-		else{		# no sequenc hit
-			die " ERROR: Scaffold->\"$merged_contig\" has no identical sequence in unmerged genbank!\n";
-			}
-		}
-	}
+	# scaffold #
+	my $scaffold_name = $$ret[0]->{"id"};
 
-sub list_tables{
-	my $dbh = shift;
-	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-	map{delete $all->{$_}; tr/A-Z/a-z/; $all->{$_} = 1} keys %$all;
-		#print Dumper %$all; exit;
-	return $all;
-	}
-	
-sub update_other_table{
-# updating position info in other tables #
-	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
-	$prefix2 = $prefix unless $prefix2;
-	
-	my $cmd = "UPDATE $table SET $prefix\_start=?, $prefix\_end=? 
-WHERE $prefix2\_id=?
-AND locus_id=?";
-
-	$cmd =~ s/[\n\r]/ /g;
-	
-	my $sql = $dbh->prepare($cmd);
-	my $cnt = 0;
-	foreach my $locus (@$loci_r){
-		foreach my $row ( @{$tables_oi_r->{$table}{$$locus[0]}} ) {
-			$sql->execute(@$row[0..2], $$locus[0]);
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
-				}
-			else{ $cnt++; }
-			}
-		}
-	
-	print STDERR "...Number of entries to be updated in $table: $cnt\n";	
-	}
-
-sub update_loci{
-# updating position info in loci table #
-	my ($dbh, $loci_r) = @_;
-	
-	my $cmd = "UPDATE Loci SET scaffold=?, locus_start=?, locus_end=?,
-operon_start=?, operon_end=?, array_start=?, array_end=?
-WHERE locus_id=?";
-	$cmd =~ s/[\n\r]/ /g;
-	
-	my $sql = $dbh->prepare($cmd);
-	my $cnt = 0;
-	foreach my $locus (@$loci_r){
-		$sql->execute(@$locus[1..$#$locus], $$locus[0]);
-		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr for locus: $$locus[0]\n";
-			}
-		else{ $cnt++; }
-		}
-	
-	print STDERR "...Number of entries to be updated in Loci: $cnt\n";
+		#print Dumper $start, $end, $scaffold_name; exit;
+	return $start, $end, $scaffold_name;
 	}
 
 sub merged_to_unmerged_pos{
@@ -313,61 +487,6 @@ sub merged_to_unmerged_pos{
 		#exit;
 	}
 
-sub flip_se{
-	my ($start, $end) = @_;
-	return $end, $start;
-	}
-	
-sub check_scaffold_span{
-	my ($ret, $locus, $start, $end, $table) = @_;
-	die " ERROR: no scaffold spans positions start->$start, end->$end for locus->$$locus[0], table->$table\n"
-		unless @$ret;
-
-	if(scalar @$ret > 1){		# error & die
-		print STDERR " ERROR: start=$start, end=$end spans >1 scaffold in table->$table\n";
-		print STDERR " LOCUS: ", join(", ", $$locus[0], @$locus[2..$#$locus]), "\n";	
-			#print Dumper @$ret;
-		exit;
-		}	
-	}
-
-sub get_other_tables_oi{
-# other tables that need position updating:
-## spacers
-## drs
-## leaderseqs
-## genes
-
-	my ($dbh, $loci_r, $tables_oi_r, $table, $prefix, $prefix2) = @_;
-	$prefix2 = $prefix unless $prefix2;
-	
-	my $cmd = "SELECT $prefix\_start, $prefix\_end, $prefix2\_ID FROM $table where locus_id = ?";
-	$cmd =~ s/[\n\r]/ /g;
-	my $sql = $dbh->prepare($cmd);
-
-	foreach my $loci (@$loci_r){
-		$sql->bind_param(1, $$loci[0]);
-		$sql->execute();
-		my $ret = $sql->fetchall_arrayref();
-		$tables_oi_r->{$table}{$$loci[0]} = $ret;	
-		}
-	}	
-
-sub get_loci_oi{
-# getting loci with genbank of interest #
-	my ($dbh, $merged_genbank) = @_;
-
-	my @parts = File::Spec->splitpath($merged_genbank);
-	
-	my $cmd = "SELECT locus_id, scaffold, locus_start, locus_end, 
-operon_start, operon_end, array_start, array_end
-FROM Loci where genbank_file = \'$parts[2]\'";
-	$cmd =~ s/[\n\r]/ /g;
-	my $ret = $dbh->selectall_arrayref($cmd);
-	
-	return $ret;
-	}
-
 sub make_loc_itree{
 # making a location itree #
 ## input: genome-wide loc; output: unmerged scaf loc ##
@@ -408,10 +527,45 @@ sub print_itree{
 		}
 	}
 
+sub find_same_sequence{
+# checking contigs by same sequence; should match all contigs #
+## sequences should match exactly & 1-to-1 ##
+	my ($scaf_index_r, $needs_blasting_r, $unmerged_r, $merged_r) = @_;
+
+	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
+		foreach my $unmerged_contig (keys %{$needs_blasting_r->{"unmerged"}}){
+			if ($merged_r->{$merged_contig}{"seq"} eq $unmerged_r->{$unmerged_contig}{"seq"}){
+				push( @{$scaf_index_r->{$merged_contig}}, $unmerged_contig);
+				}
+			}
+		}
+	
+	# checking problem contigs for 1 to 1 associations #
+	foreach my $merged_contig (keys %{$needs_blasting_r->{"merged"}}){
+		if( exists $scaf_index_r->{$merged_contig} ){
+			if(scalar @{$scaf_index_r->{$merged_contig}} == 1){
+				# deleting merged #
+				delete $needs_blasting_r->{"merged"}{$merged_contig};
+			
+				# deleting unmerged #
+				foreach my $unmerged_contig (@{$scaf_index_r->{$merged_contig}}){
+					delete $needs_blasting_r->{"unmerged"}{$unmerged_contig};
+					}
+				}
+			else{
+				die " ERROR: Scaffold->\"$merged_contig\" has same sequence as >=2 scaffolds in unmerged genbank!\n";
+				}
+			}
+		else{		# no sequenc hit
+			die " ERROR: Scaffold->\"$merged_contig\" has no identical sequence in unmerged genbank!\n";
+			}
+		}
+	}
+
 sub find_same_length{
 # foreach merged-unmerged, find scaffolds that match in length #
 ## finding 1-to-1 associations in length ##
-	my ($gen_list_r, $unmerged_r, $merged_r) = @_;
+	my ($unmerged_r, $merged_r) = @_;
 	
 	my %scaf_index;
 	foreach my $mcontig (keys %$merged_r){				# merged => unmerged
@@ -446,171 +600,143 @@ sub find_same_length{
 	return \%scaf_index, \%needs_blasting;
 	}
 
-sub parse_unmerged_genbank{
+sub parse_genbank{
 # pulling out start-stop & sequence for all 'source' features #
-	my ($gen_list_r, $gen_io_r, $unmerged) = @_;
+	my ($gbko, $cat, $gbk_file) = @_;
 	
-	my %unmerged;			
-	print STDERR "...loading: $unmerged\n" unless $verbose;
-	while(my $seqo = $gen_io_r->{$unmerged}->next_seq){
+	my %loc;			
+	print STDERR "...loading $cat genbank file: '$gbk_file'\n" unless $verbose_b;
+	my $source_cnt = 0;
+	while(my $seqo = $gbko->next_seq){
 		my @sources = grep{ $_->primary_tag eq "source" } $seqo->get_SeqFeatures;
 		foreach my $source (@sources){
-			my $contig_id = $source->seq->display_id; 
-			$unmerged{$contig_id}{"start"} = $source->location->start;
-			$unmerged{$contig_id}{"end"} = $source->location->end;
-			$unmerged{$contig_id}{"length"} = abs($unmerged{$contig_id}{"end"} -
-															$unmerged{$contig_id}{"start"});
-			$unmerged{$contig_id}{"seq"} = $source->seq->seq;
-			$unmerged{$contig_id}{"seq"} =~ tr/A-Z/a-z/;
-			$unmerged{$contig_id}{"id"} = $contig_id;
+			# umerged contigs: ID by count; merged: ID by ID #
+			my $contig_id;
+			if($cat eq 'merged'){
+				$contig_id = $source_cnt; 
+				}
+			else{
+				$contig_id = $source->seq->display_id; 
+				}
+			$loc{$contig_id}{"start"} = $source->location->start;
+			$loc{$contig_id}{"end"} = $source->location->end;
+			$loc{$contig_id}{"length"} = abs($loc{$contig_id}{"end"} -
+															$loc{$contig_id}{"start"});
+			$loc{$contig_id}{"seq"} = $source->seq->seq;
+			$loc{$contig_id}{"seq"} =~ tr/A-Z/a-z/;
+			$loc{$contig_id}{"id"} = $contig_id;
+			
+			$source_cnt++;
 			}
 		}
 
 	
-		#print Dumper %unmerged; exit;
-	return \%unmerged;
-	}
+		#print Dumper %loc; exit;
+	return \%loc;
 
-sub parse_merged_genbank{
-# pulling out start-stop & sequence for all 'source' features #
-## start-end is absolute positioning ##
-	my ($gen_list_r, $gen_io_r, $merged) = @_;
-	
-	my %merged;
-	my $source_cnt = 0;
-	print STDERR "...loading: $merged\n" unless $verbose;
-	while(my $seqo = $gen_io_r->{$merged}->next_seq){
-		my @sources = grep{ $_->primary_tag eq "source" } $seqo->get_SeqFeatures;
-		foreach my $source (@sources){
-			$merged{$source_cnt}{"start"} = $source->location->start;
-			$merged{$source_cnt}{"end"} = $source->location->end;
-			$merged{$source_cnt}{"length"} = abs($merged{$source_cnt}{"end"} -
-														$merged{$source_cnt}{"start"});
-			$merged{$source_cnt}{"seq"} = $source->seq->seq;
-			$merged{$source_cnt}{"seq"} =~ tr/A-Z/a-z/;
-			$source_cnt++;
-			}		
-		}
-		#print Dumper %merged; exit;
-	return \%merged;
 	}
 
 sub load_genbank_io{
 # parsing the merged genbank into scaffold lengths & sequence #
-	my ($gen_list_r) = @_;
+	my ($gbk_list_r) = @_;
 	
-	my %gen_io;
-	foreach my $file (%$gen_list_r){
-		$gen_io{$file} = Bio::SeqIO->new(-format => "genbank", -file => $file);
+		#print Dumper $gbk_list_r; exit;
+	
+	my %gbk;
+	foreach my $cat (keys %$gbk_list_r){		
+		$gbk{$cat}	= 	Bio::SeqIO->new(-format => "genbank", 
+						-file => $gbk_list_r->{$cat});
 		}
-	
-	return \%gen_io;
+		#print Dumper %gbk; exit;
+	return \%gbk;
 	}
 
-sub get_genbank_list{
+sub load_array_list{
+# loading list of array files #
+	my ($array_in) = @_;
+	
+	open IN, $array_in or die $!;
+	my %array_list;
+	while(<IN>){
+		chomp;
+		next if /^\s*$/;
+		
+		my @l = split /\t/;
+		die "ERROR: array list file must be in 2-column format: ('taxon_name\\tarray_file')\n"
+			unless scalar @l == 2;
+		
+		$array_list{$l[0]} = $l[1];
+		}
+	close IN;
+	
+		#print Dumper %array_list;
+	return \%array_list;
+	}
+
+sub load_loci_table{
+# loci loci table file used for CLdb #	
+	my %loci;
+	while(<>){
+		chomp;
+		next if /^\s*$/;
+		my @l = split /\t/;
+		
+		if($.==1){	# header
+			map{ tr/A-Z/a-z/ } @l; 		# caps-invariant
+			for my $i (0..$#l){
+				$loci{'header'}{$l[$i]} = $i;
+				}
+			die "ERROR: cannot find taxon_name column in header of loci table!\n"
+				unless exists $loci{'header'}{'taxon_name'};
+			}
+		else{		# body 
+			die "ERROR: no taxon_name value for: $_\n"
+				unless defined $l[ $loci{'header'}{'taxon_name'} ];
+			my $taxon_name = $l[ $loci{'header'}{'taxon_name'} ];
+			push @{$loci{'body'}{$taxon_name}}, \@l;
+			}
+		}
+
+	# checking for genbank file #
+	die "ERROR: no 'genbank_file' column found in loci table! Possitions in array files will not be edited!\n"
+		unless exists $loci{'header'}{'genbank_file'};
+
+	# checking for array file #
+	warn "WARNING: no 'array_file' column found in loci table! Possitions in array files will not be edited!\n"
+		unless exists $loci{'header'}{'array_file'};
+		
+	# adding scaffold column if not present #
+	$loci{'header'}{'scaffold'} = scalar keys %{$loci{'header'}}
+		unless exists $loci{'header'}{'scaffold'};
+
+		#print Dumper %loci; exit;
+	return \%loci;
+	}
+
+sub load_genbank_list{
 # getting list of genbanks #
-## 2 column: unmerged, merged ##
+## 3 column: taxon_name\tunmerged\tmerged ##
+	my ($gbk_list_in) = @_;
+	
+	open IN, $gbk_list_in or die $!;
 	
 	my %list;
-	while(<>){
+	while(<IN>){
 		chomp;
 		next if /^\s*$/;
 		
 		my @tmp = split /\t/;
-		die " ERROR: the genbank list must have 2 columns!\n"
-			unless scalar @tmp == 2;
+		die "ERROR: the genbank list must have 3 columns (taxon_name\\tunmerged\\tmerged)!\n"
+			unless scalar @tmp == 3;
+		map{ die "ERROR: cannot find file '$_'\n" unless -e $_ } @tmp[1..2];
 		
-		$list{$tmp[0]} = $tmp[1];	# unmerged => merged
+		$list{$tmp[0]}{'unmerged'} = $tmp[1];
+		$list{$tmp[0]}{'merged'} = $tmp[2];
 		}
+	close IN;
 	
 		#print Dumper %list; exit;
 	return \%list;
 	}
 
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_positionByScaffold.pl -- Convert positional values from merged (whole-genome) to by-scaffold
-
-=head1 SYNOPSIS
-
-CLdb_positionByScaffold.pl [Flags] < genbank_unmerged_merged.txt
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -help  <bool>	
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_positionByScaffold.pl
-
-=head1 DESCRIPTION
-
-Convert merged genbank position information (merged with EMBOSS 'union')
-to scaffold-based position info. 
-
-=head2 Input
-
-The input must be a 2 column tab-delimited table:
-'unmerged_genbank_file_name', 'merged_genbank_file_name'
-
-Example of unmerged genbank file format: RAST genbank output for a draft genome.
-
-Updates not committed until all of the values have been converted
-(in case something goes wrong, you won't have a hybrid-position database)
-
-=head2 Matching unmerged and merged scaffolds
-
-All scaffold start-end info is obtained form the 'source' tags
-in both the unmerged and merged genbank files. 1-to-1
-connections between scaffolds are determined in a number of steps:
-
-=over 
-
-=item 1) Comparing scaffold lengths.
-
-=item 2) Comparing scaffold sequences. No duplicate scaffolds allowed!
-
-=back
-
-=head1 EXAMPLES
-
-=head2 Normal usage:
-
-CLdb_positionByScaffold.pl -d CLdb.sqlite < unmerged_merged.txt
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

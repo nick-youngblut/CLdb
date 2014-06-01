@@ -1,124 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use DBI;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, $database_file, $list_tables, $prefix);
-my (@tables);
-GetOptions(
-	   "database=s" => \$database_file,
-	   "table=s{,}" => \@tables,
-	   "prefix=s" => \$prefix,
-	   "list" => \$list_tables,
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# checking for tables of interest #
-my $table_list_r = list_tables($dbh);
-$table_list_r = entry_count($dbh, $table_list_r);
-
-# listing tables #
-if ($list_tables){
-	list_table_entries($table_list_r);
-	$dbh->disconnect();
-	exit;
-	}
-	
-# writing tables #
-write_tables($database_file, \@tables, $table_list_r, $prefix);
-
-# disconnect #
-$dbh->disconnect();
-exit;
-
-
-### Subroutines
-sub list_table_entries{
-	my ($table_list_r) = @_;
-	
-	print join("\t", qw/Table Number_entries/), "\n";
-	foreach my $table (sort keys %$table_list_r){
-		print join("\t", $table, $table_list_r->{$table}), "\n";
-		}
-	}
-
-sub write_tables{
-	my ($database_file, $tables_r, $table_list_r, $prefix) = @_;
-	
-	foreach my $table (keys %$table_list_r){
-		next if @$tables_r && ! grep /^$table$/i, @$tables_r;	# just tables selected (if -t provided)
-
-		# no entry warning #
-		unless( $table_list_r->{$table} > 0){
-			print STDERR " WARNING: no entries in $table table! Skipping!\n";
-			next;
-			}
-			
-		# sql fed to database #
-		my $outfile = "$table.txt";
-		$outfile = join("_", $prefix, "$table.txt") if $prefix;
-		
-		my $sql = "
-.header on
-.sep \"\\t\"
-.output $outfile
-SELECT * from $table;";
-		
-		open PIPE, "| sqlite3 $database_file" or die $!;
-		print PIPE $sql;
-		close PIPE;
-
-		print STDERR "...$table table written: $table.txt\n";
-		}
-
-	}
-
-sub entry_count{
-	my ($dbh, $table_list_r) = @_;
-	my %table;
-	foreach my $table (@$table_list_r){
-		my $q = "SELECT count(*) FROM $table";
-		my $res = $dbh->selectall_arrayref($q);
-		$table =~ tr/A-Z/a-z/;
-		$table{$table} = $$res[0][0];
-		}
-		#print Dumper %table; exit;
-	return \%table;
-	}
-
-sub list_tables{
-	my $dbh = shift;
-	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-	return [keys %$all];
-	}
-
-
-
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -208,4 +89,128 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+my ($verbose, $database_file, $list_tables, $prefix);
+my (@tables);
+GetOptions(
+	   "database=s" => \$database_file,
+	   "table=s{,}" => \@tables,
+	   "prefix=s" => \$prefix,
+	   "list" => \$list_tables,
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# checking for tables of interest #
+my $table_list_r = list_tables($dbh);
+$table_list_r = entry_count($dbh, $table_list_r);
+
+# listing tables #
+if ($list_tables){
+	list_table_entries($table_list_r);
+	$dbh->disconnect();
+	exit;
+	}
+	
+# writing tables #
+write_tables($database_file, \@tables, $table_list_r, $prefix);
+
+# disconnect #
+$dbh->disconnect();
+exit;
+
+
+### Subroutines
+sub list_table_entries{
+	my ($table_list_r) = @_;
+	
+	print join("\t", qw/Table Number_entries/), "\n";
+	foreach my $table (sort keys %$table_list_r){
+		print join("\t", $table, $table_list_r->{$table}), "\n";
+		}
+	}
+
+sub write_tables{
+	my ($database_file, $tables_r, $table_list_r, $prefix) = @_;
+	
+	foreach my $table (keys %$table_list_r){
+		next if @$tables_r && ! grep /^$table$/i, @$tables_r;	# just tables selected (if -t provided)
+
+		# no entry warning #
+		unless( $table_list_r->{$table} > 0){
+			print STDERR " WARNING: no entries in $table table! Skipping!\n";
+			next;
+			}
+			
+		# sql fed to database #
+		my $outfile = "$table.txt";
+		$outfile = join("_", $prefix, "$table.txt") if $prefix;
+		
+		my $sql = "
+.header on
+.sep \"\\t\"
+.output $outfile
+SELECT * from $table;";
+		
+		open PIPE, "| sqlite3 $database_file" or die $!;
+		print PIPE $sql;
+		close PIPE;
+
+		print STDERR "...$table table written: $table.txt\n";
+		}
+
+	}
+
+sub entry_count{
+	my ($dbh, $table_list_r) = @_;
+	my %table;
+	foreach my $table (@$table_list_r){
+		my $q = "SELECT count(*) FROM $table";
+		my $res = $dbh->selectall_arrayref($q);
+		$table =~ tr/A-Z/a-z/;
+		$table{$table} = $$res[0][0];
+		}
+		#print Dumper %table; exit;
+	return \%table;
+	}
+
+sub list_tables{
+	my $dbh = shift;
+	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
+	return [keys %$all];
+	}
+
+
+
 

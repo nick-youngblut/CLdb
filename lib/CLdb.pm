@@ -4,6 +4,11 @@ use 5.006;
 use strict;
 use warnings FATAL => 'all';
 
+
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use CLdb::query;
+
 =head1 NAME
 
 CLdb - The great new CLdb!

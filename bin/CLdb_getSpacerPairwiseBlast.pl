@@ -1,5 +1,117 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_getSpacerPairwiseBlast.pl -- getting pairwise spacer blast hits in CLdb
+
+=head1 SYNOPSIS
+
+CLdb_getSpacerPairwiseBlast.pl [flags] > spacer-spacer_blasts.txt
+
+=head2 Required flags
+
+=over
+
+=item -database  <char>
+
+CLdb database.
+
+=back
+
+=head2 options
+
+=over
+
+=item -subtype  <char>
+
+Refine query to specific a subtype(s) (>1 argument allowed).
+
+=item -taxon_id  <char>
+
+Refine query to specific a taxon_id(s) (>1 argument allowed).
+
+=item -taxon_name  <char>
+
+Refine query to specific a taxon_name(s) (>1 argument allowed).
+
+=item -query  <char>
+
+Extra sql to refine the query.
+
+=item -overlap  <float>
+
+Check for spacer overlap. See DESCRIPTION. [0 1]
+
+=item -percentID  <fload>
+
+PercentID cutoff for blast hits (>=). [90]
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_getSpacerPairwiseBlast.pl
+
+=head1 DESCRIPTION
+
+Get spacer-spacer BLASTn-short hits among spacers
+in CLdb. 
+
+=head2 Overlap
+
+Overlap = blast_hit_length / spacer_length
+
+'-overlap' defines the cutoff; the min overlap for the query
+or spacer is used. Two values are required: min_overlap &
+max_overlap. For example: '-overlap 0 0.99' will select
+all spacer blasts that only partially overlap.
+
+=head2 Output
+
+The output is in standard blast+ -outfmt 6 format, 
+except 2 columns are appended: 
+query_spacer_overlap, subject_spacer_overlap
+
+=head1 EXAMPLES
+
+=head2 All spacer-spacer blasts
+
+CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite
+
+=head2 All spacer-spacer blasts for just subtype I-B
+
+CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -subtype I-B
+
+=head2 All spacer-spacer blasts that only partially overlap
+
+CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -9,6 +121,19 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use List::Util qw/min/;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -31,26 +156,20 @@ GetOptions(
 	   "help|?" => \&pod2usage # Help
 	   );
 
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
 $database_file = File::Spec->rel2abs($database_file);
 @overlap_frac = (0,1) unless @overlap_frac;
 
-### MAIN
+#--- MAIN ---#
 # connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
+my $dbh = connect2db($database_file);
 
 # joining query options (for table join) #
 my $join_sql = "";
 $join_sql .= join_query_opts(\@subtype, "subtype");
 $join_sql .= join_query_opts(\@taxon_id, "taxon_id");
 $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-$join_sql .= join_query_opts_or(\@staxon_id, \@staxon_name);
 
 # getting blast hits #
 my $blast_hits_r = get_blast_hits($dbh, $join_sql, $extra_query);
@@ -182,29 +301,14 @@ spacer_pairwise_blast.subject_locus_id, spacer_pairwise_blast.subject_spacer_id"
 	return $ret;
 	}
 
-sub join_query_opts_or{
-	my ($staxon_id_r, $staxon_name_r) = @_;
-	
-	return "" unless @$staxon_id_r || @$staxon_name_r;
-	
-	# adding quotes #
-	map{ s/"*(.+)"*/"$1"/ } @$staxon_id_r;
-	map{ s/"*(.+)"*/"$1"/ } @$staxon_name_r;	
-	
-	if(@$staxon_id_r && @$staxon_name_r){
-		return join("", " AND (blast_hits.taxon_id IN (", join(", ", @$staxon_id_r),
-						") OR blast_hits.taxon_name IN (", join(", ", @$staxon_name_r),
-						"))");
-		}
-	elsif(@$staxon_id_r){
-		return join("", " AND blast_hits.staxon_id IN (", join(", ", @$staxon_id_r), ")");
-		}
-	elsif(@$staxon_name_r){
-		return join("", " AND blast_hits.staxon_name IN (", join(", ", @$staxon_name_r), ")");	
-		}
+
+sub path_by_database{
+	my ($database_file) = @_;
+	my @parts = File::Spec->splitpath($database_file);
+	return join("/", $parts[1], "genbank");
 	}
 
-sub join_query_opts{
+sub join_query_opts_OLD{
 # joining query options for selecting loci #
 	my ($vals_r, $cat) = @_;
 
@@ -213,126 +317,3 @@ sub join_query_opts{
 	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
 	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
 	}
-
-sub path_by_database{
-	my ($database_file) = @_;
-	my @parts = File::Spec->splitpath($database_file);
-	return join("/", $parts[1], "genbank");
-	}
-
-
-
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_getSpacerPairwiseBlast.pl -- getting pairwise spacer blast hits in CLdb
-
-=head1 SYNOPSIS
-
-CLdb_getSpacerPairwiseBlast.pl [flags] > spacer-spacer_blasts.txt
-
-=head2 Required flags
-
-=over
-
-=item -database  <char>
-
-CLdb database.
-
-=back
-
-=head2 options
-
-=over
-
-=item -subtype  <char>
-
-Refine query to specific a subtype(s) (>1 argument allowed).
-
-=item -taxon_id  <char>
-
-Refine query to specific a taxon_id(s) (>1 argument allowed).
-
-=item -taxon_name  <char>
-
-Refine query to specific a taxon_name(s) (>1 argument allowed).
-
-=item -query  <char>
-
-Extra sql to refine the query.
-
-=item -overlap  <float>
-
-Check for spacer overlap. See DESCRIPTION. [0 1]
-
-=item -percentID  <fload>
-
-PercentID cutoff for blast hits (>=). [90]
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_getSpacerPairwiseBlast.pl
-
-=head1 DESCRIPTION
-
-Get spacer-spacer BLASTn-short hits among spacers
-in CLdb. 
-
-=head2 Overlap
-
-Overlap = blast_hit_length / spacer_length
-
-'-overlap' defines the cutoff; the min overlap for the query
-or spacer is used. Two values are required: min_overlap &
-max_overlap. For example: '-overlap 0 0.99' will select
-all spacer blasts that only partially overlap.
-
-=head2 Output
-
-The output is in standard blast+ -outfmt 6 format, 
-except 2 columns are appended: 
-query_spacer_overlap, subject_spacer_overlap
-
-=head1 EXAMPLES
-
-=head2 All spacer-spacer blasts
-
-CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite
-
-=head2 All spacer-spacer blasts for just subtype I-B
-
-CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -subtype I-B
-
-=head2 All spacer-spacer blasts that only partially overlap
-
-CLdb_getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
-

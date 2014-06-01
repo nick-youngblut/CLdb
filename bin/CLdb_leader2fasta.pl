@@ -1,141 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use DBI;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-
-my ($verbose, $database_file, $gap_rm);
-my (@subtype, @taxon_id, @taxon_name);
-my $extra_query = "";
-GetOptions(
-	   "database=s" => \$database_file,
-	   "query=s" => \$extra_query,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name, 
-	   "gaps" => \$gap_rm,
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# joining query options (for table join) #
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
-
-# getting leaderss of interest from database #
-my $leaders_r;
-if($join_sql){
-	$leaders_r = get_leaders_join($dbh, $extra_query, $join_sql);
-	}
-else{
-	$leaders_r = get_leaders($dbh, $extra_query);
-	}
-
-# writing fasta #
-write_leaders_fasta($leaders_r);
-
-# disconnect #
-$dbh->disconnect();
-exit;
-
-
-### Subroutines
-sub write_leaders_fasta{
-# writing arrays as fasta
-	my ($leaders_r) = @_;
-	
-	foreach my $locus_id (keys %$leaders_r){
-		print join("\n", ">cli.$locus_id", $leaders_r->{$locus_id}), "\n";
-		}
-	}
-
-sub get_leaders{
-	my ($dbh, $extra_query) = @_;
-	
-	# make query #
-	my $query = "SELECT Locus_ID, Leader_sequence FROM Leaders";
-	$query = join(" ", $query, $extra_query);
-	
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %leaders;
-	foreach my $row (@$ret){
-		$$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
-		$leaders{$$row[0]}= $$row[1];
-		}
-	
-	#	print Dumper %leaders; exit;
-	return \%leaders;
-	}
-	
-sub get_leaders_join{
-	my ($dbh, $extra_query, $join_sql) = @_;
-	
-	# make query #
-	my $query = "SELECT a.Locus_ID, a.Leader_sequence FROM Leaders a, Loci b WHERE a.locus_id = b.locus_id $join_sql";
-	$query = join(" ", $query, $extra_query);
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	my %leaders;
-	foreach my $row (@$ret){
-		$$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
-		$leaders{$$row[0]} = $$row[1];
-		}
-	
-	#	print Dumper %leaders; exit;
-	return \%leaders;
-	}
-	
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
-
-
-#my $query = "SELECT FROM locus_id";
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -195,6 +59,13 @@ perldoc CLdb_leader2fasta.pl
 Get leader sequences from the CRISPR database
 and write them in fasta format.
 
+Use CLdb_arrayFastaAddInfo.pl to add more
+metadata (eg., subtype) to each sequence name.
+
+=head2 OUTPUT: sequence names
+
+locus_id|Leader_start|Leader_end
+
 =head1 EXAMPLES
 
 =head2 Write all spacers to a fasta:
@@ -227,4 +98,116 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+
+my ($verbose, $database_file, $gap_rm);
+my (@subtype, @taxon_id, @taxon_name);
+my $extra_query = "";
+GetOptions(
+	   "database=s" => \$database_file,
+	   "query=s" => \$extra_query,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name, 
+	   "gaps" => \$gap_rm,
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
+
+# getting leaderss of interest from database #
+my $leaders_r = get_leaders($dbh, $extra_query, $join_sql);
+
+# writing fasta #
+write_leaders_fasta($leaders_r);
+
+# disconnect #
+$dbh->disconnect();
+exit;
+
+
+### Subroutines
+sub write_leaders_fasta{
+  # writing arrays as fasta
+  my ($leaders_r) = @_;
+  
+  foreach my $locus_id (keys %$leaders_r){
+    print join("\n", 
+	       join("|", 
+		    ">$locus_id", 
+		    'Leader', 'NA', 'NA'
+		    ),
+	       $leaders_r->{$locus_id}{'Leader_sequence'}
+	      ), "\n";
+  }
+}
+
+sub get_leaders{
+  my ($dbh, $extra_query, $join_sql) = @_;
+  
+  # make query #
+  my $query = "SELECT loci.Locus_ID, leaders.Leader_sequence
+FROM Loci, Leaders
+WHERE loci.locus_id = leaders.locus_id
+$join_sql";
+  $query = join(" ", $query, $extra_query);
+
+  # status #
+  print STDERR "$query\n" if $verbose;
+
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries!\n"
+    unless $$ret[0];
+  
+  my %leaders;
+  foreach my $row (@$ret){
+    $$row[1] =~ s/-//g if $gap_rm; 		# removing gaps
+#    $leaders{$$row[0]}{'Leader_start'} = $$row[1];
+#    $leaders{$$row[0]}{'Leader_end'} = $$row[2];
+    $leaders{$$row[0]}{'Leader_sequence'} = $$row[1];
+  }
+  
+  #print Dumper %leaders; exit;
+  return \%leaders;
+}
 

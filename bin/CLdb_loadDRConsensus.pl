@@ -1,230 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use DBI;
-use List::Util qw/max/;
-use Bio::AlignIO;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, $database_file, $path);
-my (@subtype, @taxon_id, @taxon_name);
-my $extra_query = "";
-my $consensus_cutoff = 51;
-GetOptions(
-	   "database=s" => \$database_file,
-	   "subtype=s{,}" => \@subtype,
-	   "taxon_id=s{,}" => \@taxon_id,
-	   "taxon_name=s{,}" => \@taxon_name,
-	   "query=s" => \$extra_query,
-	   "path=s" => \$path,
-	   "cutoff=i" => \$consensus_cutoff,  
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-$database_file = File::Spec->rel2abs($database_file);
-$path = File::Spec->rel2abs($path) if $path;
-
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# making an consensus temp directory #
-my $dir = make_consensus_dir($database_file, $path); 
-
-
-# getting loci in DR table #
-my $DR_loci_r = get_DR_loci($dbh);
-
-# joining query options (for table join) #
-my $join_sql = "";
-$join_sql .= join_query_opts(\@subtype, "subtype");
-$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
-$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
-
-# getting arrays of interest from database #
-my %arrays;
-if($join_sql){		# table-join query
-	get_arrays_join(\%arrays, $dbh, $DR_loci_r, $extra_query, $join_sql);
-	}
-else{				# simple query of all spacers/DR
-	get_arrays(\%arrays, $dbh, $DR_loci_r, $extra_query);
-	}
-
-
-# getting consensus of sequences #
-my %DR_con;
-foreach my $locus (keys %arrays){
-	my $outfile = write_DR_fasta($arrays{$locus}, $dir, $locus);
-	call_mafft($outfile, \%DR_con, $locus, $consensus_cutoff);
-	}
-
-# loading consensus sequences to db #
-add_entries($dbh, \%DR_con);
-
-# disconnect to db #
-$dbh->disconnect();
-exit;
-
-### Subroutines
-sub add_entries{
-# adding entries to DR consensus table #
-	my ($dbh, $DR_con_r) = @_;
-	
-	my $cmd = "INSERT INTO DR_consensus(Locus_ID, Consensus_Sequence_IUPAC, Consensus_Sequence_Threshold) values (?,?,?)";
-	
-	my $sql = $dbh->prepare($cmd);
-	
-	my $cnt = 0;
-	foreach my $locus_id (keys %$DR_con_r){
-		$sql->execute( $locus_id, $DR_con_r->{$locus_id}{"IUPAC"}, $DR_con_r->{$locus_id}{"Threshold"} );
-		if($DBI::err){
-			print STDERR "ERROR: $DBI::errstr for cli.$locus_id\n";
-			}
-		else{ $cnt++; }
-		}
-	$dbh->commit;
-
-	print STDERR "...$cnt entries added/updated in database\n" unless $verbose;
-	}
-
-sub call_mafft{
-	my ($outfile, $DR_con_r, $locus, $consensus_cutoff) = @_;
-	
-	my $alnIO = Bio::AlignIO->new(
-				-file => "mafft --quiet $outfile |",
-				-format => "fasta" );
-	
-	while(my $aln = $alnIO->next_aln){
-		$DR_con_r->{$locus}{"IUPAC"} = $aln->consensus_iupac();
-		$DR_con_r->{$locus}{"Threshold"} = $aln->consensus_string($consensus_cutoff);		
-		$DR_con_r->{$locus}{"Threshold"} =~ s/\?/N/g;			# ambiguous letter = 'N'
-		last;	
-		}
-
-		#print Dumper %$DR_con_r; exit;
-	}
-
-
-sub write_DR_fasta{
-# writing arrays as fasta
-	my ($DR_r, $dir, $locus) = @_;
-
-	my $outfile = "$dir/cli$locus\_DR.fna";
-	open OUT, ">$outfile" or die $!;
-	foreach my $row (@$DR_r){
-		print OUT join("\n", ">$$row[0]", $$row[1]), "\n";
-		}
-	close OUT;
-	
-	return $outfile;
-	}
-
-sub get_DR_loci{
-# getting DR loci from directrepeats table #
-	my ($dbh) = @_;
-
-	my $query = "SELECT distinct(locus_id) FROM DRs";	
-	my $ret = $dbh->selectall_arrayref($query);
-
-	die " ERROR: no direct repeat entries found in database (DRs table)!\n"
-		unless @$ret;
-	
-	return $ret;
-	}
-
-sub get_arrays{
-	my ($arrays_r, $dbh, $DR_loci_r, $extra_query) = @_;
-	
-	# make query #
-	my $query = "SELECT DR_ID, DR_sequence FROM DRs WHERE Locus_id = ?";
-	$query = join(" ", $query, $extra_query);
-	
-	my $sql = $dbh->prepare($query);
-
-	foreach my $locus (@$DR_loci_r){
-		$locus = $$locus[0];
-		$sql->execute($locus);
-		my $ret = $sql->fetchall_arrayref();
-		
-		die " ERROR: no direct repeats entries for $locus!\n"
-			unless @$ret;
-		
-		$arrays_r->{$locus} = $ret;	
-		}
-		
-		#print Dumper %$arrays_r; exit;
-	}
-	
-sub get_arrays_join{
-	my ($arrays_r, $dbh, $DR_loci_r, $extra_query, $join_sql) = @_;
-	
-	# make query #
-	my $query = "SELECT a.DR_ID, a.DR_sequence FROM DRs a left outer join loci b ON a.locus_id = b.locus_id AND b.locus_id = ? $join_sql";
-	$query = join(" ", $query, $extra_query);
-	
-	my $sql = $dbh->prepare($query);
-
-	# query db #
-	foreach my $locus (@$DR_loci_r){
-		$locus = $$locus[0];
-		$sql->execute($locus);
-		my $ret = $sql->fetchall_arrayref();
-		
-		die " ERROR: no direct repeats entries for $locus!\n"
-			unless @$ret;
-		
-		$arrays_r->{$locus} = $ret;	
-		}
-		
-		#print Dumper %$arrays_r; exit;
-	}
-
-sub join_query_opts{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND b.$cat IN (", join(", ", @$vals_r), ")");
-	}
-
-sub make_consensus_dir{
-# making a directory for grouping files	#
-	my ($database_file, $path) = @_;
-	my $dir;
-	if($path){
-		$dir = $path . "consensus/";
-		}
-	else{
-		my @parts = File::Spec->splitpath($database_file);
-		$dir = $parts[1] . "consensus/";
-		}
-	
-	mkdir $dir unless -d $dir;
-	
-	return $dir;
-	}
-
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -333,4 +108,227 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use DBI;
+use List::Util qw/max/;
+use Bio::AlignIO;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts
+	get_array_seq/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+my ($verbose, $database_file, $path);
+my (@subtype, @taxon_id, @taxon_name);
+my $extra_query = "";
+my $consensus_cutoff = 51;
+GetOptions(
+	   "database=s" => \$database_file,
+	   "subtype=s{,}" => \@subtype,
+	   "taxon_id=s{,}" => \@taxon_id,
+	   "taxon_name=s{,}" => \@taxon_name,
+	   "query=s" => \$extra_query,
+	   "path=s" => \$path,
+	   "cutoff=i" => \$consensus_cutoff,  
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+$database_file = File::Spec->rel2abs($database_file);
+$path = File::Spec->rel2abs($path) if $path;
+
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# making an consensus temp directory #
+my $dir = make_consensus_dir($database_file, $path); 
+
+
+# getting loci in DR table #
+my $DR_loci_r = get_DR_loci($dbh);
+
+# joining query options (for table join) #
+my $join_sql = "";
+$join_sql .= join_query_opts(\@subtype, "subtype");
+$join_sql .= join_query_opts(\@taxon_id, "taxon_id");
+$join_sql .= join_query_opts(\@taxon_name, "taxon_name");
+
+# getting arrays of interest from database #
+my %arrays;
+if($join_sql){		# table-join query
+	get_arrays_join(\%arrays, $dbh, $DR_loci_r, $extra_query, $join_sql);
+	}
+else{				# simple query of all spacers/DR
+	get_arrays(\%arrays, $dbh, $DR_loci_r, $extra_query);
+	}
+
+
+# getting consensus of sequences #
+my %DR_con;
+foreach my $locus (keys %arrays){
+	warn "...Processing locus '$locus'\n";
+	my $outfile = write_DR_fasta($arrays{$locus}, $dir, $locus);
+	call_mafft($outfile, \%DR_con, $locus, $consensus_cutoff);
+	}
+
+# loading consensus sequences to db #
+add_entries($dbh, \%DR_con);
+
+# disconnect to db #
+$dbh->disconnect();
+exit;
+
+### Subroutines
+sub add_entries{
+# adding entries to DR consensus table #
+	my ($dbh, $DR_con_r) = @_;
+	
+	my $cmd = "INSERT INTO DR_consensus(Locus_ID, Consensus_Sequence_IUPAC, Consensus_Sequence_Threshold) values (?,?,?)";
+	
+	my $sql = $dbh->prepare($cmd);
+	
+	my $cnt = 0;
+	foreach my $locus_id (keys %$DR_con_r){
+		$sql->execute( $locus_id, $DR_con_r->{$locus_id}{"IUPAC"}, $DR_con_r->{$locus_id}{"Threshold"} );
+		if($DBI::err){
+			print STDERR "ERROR: $DBI::errstr for cli.$locus_id\n";
+			}
+		else{ $cnt++; }
+		}
+	$dbh->commit;
+
+	print STDERR "...$cnt entries added/updated in database\n" unless $verbose;
+	}
+
+sub call_mafft{
+	my ($outfile, $DR_con_r, $locus, $consensus_cutoff) = @_;
+	
+	my $alnIO = Bio::AlignIO->new(
+				-file => "mafft --quiet $outfile |",
+				-format => "fasta" );
+	
+	while(my $aln = $alnIO->next_aln){
+		$DR_con_r->{$locus}{"IUPAC"} = $aln->consensus_iupac();
+		$DR_con_r->{$locus}{"Threshold"} = $aln->consensus_string($consensus_cutoff);		
+		$DR_con_r->{$locus}{"Threshold"} =~ s/\?/N/g;			# ambiguous letter = 'N'
+		last;	
+		}
+
+		#print Dumper %$DR_con_r; exit;
+	}
+
+sub write_DR_fasta{
+# writing arrays as fasta
+	my ($DR_r, $dir, $locus) = @_;
+
+	my $outfile = "$dir/cli$locus\_DR.fna";
+	open OUT, ">$outfile" or die $!;
+	foreach my $row (@$DR_r){
+		print OUT join("\n", ">$$row[0]", $$row[1]), "\n";
+		}
+	close OUT;
+	
+	return $outfile;
+	}
+
+sub get_DR_loci{
+# getting DR loci from directrepeats table #
+	my ($dbh) = @_;
+
+	my $query = "SELECT distinct(locus_id) FROM DRs";	
+	my $ret = $dbh->selectall_arrayref($query);
+
+	die " ERROR: no direct repeat entries found in database (DRs table)!\n"
+		unless @$ret;
+	
+	return $ret;
+	}
+
+sub get_arrays{
+	my ($arrays_r, $dbh, $DR_loci_r, $extra_query) = @_;
+	
+	# make query #
+	my $query = "SELECT DR_ID, DR_sequence FROM DRs WHERE Locus_id = ?";
+	$query = join(" ", $query, $extra_query);
+	
+	my $sql = $dbh->prepare($query);
+
+	foreach my $locus (@$DR_loci_r){
+		$locus = $$locus[0];
+		$sql->execute($locus);
+		my $ret = $sql->fetchall_arrayref();
+		
+		die " ERROR: no direct repeats entries for $locus!\n"
+			unless @$ret;
+		
+		$arrays_r->{$locus} = $ret;	
+		}
+		
+		#print Dumper %$arrays_r; exit;
+	}
+	
+sub get_arrays_join{
+	my ($arrays_r, $dbh, $DR_loci_r, $extra_query, $join_sql) = @_;
+	
+	# make query #
+	my $query = "SELECT a.DR_ID, a.DR_sequence FROM DRs a left outer join loci b ON a.locus_id = b.locus_id AND b.locus_id = ? $join_sql";
+	$query = join(" ", $query, $extra_query);
+	
+	my $sql = $dbh->prepare($query);
+
+	# query db #
+	foreach my $locus (@$DR_loci_r){
+		$locus = $$locus[0];
+		$sql->execute($locus);
+		my $ret = $sql->fetchall_arrayref();
+		
+		die " ERROR: no direct repeats entries for $locus!\n"
+			unless @$ret;
+		
+		$arrays_r->{$locus} = $ret;	
+		}
+		
+		#print Dumper %$arrays_r; exit;
+	}
+
+sub make_consensus_dir{
+# making a directory for grouping files	#
+	my ($database_file, $path) = @_;
+	my $dir;
+	if($path){
+		$dir = $path . "consensus/";
+		}
+	else{
+		my @parts = File::Spec->splitpath($database_file);
+		$dir = $parts[1] . "consensus/";
+		}
+	
+	mkdir $dir unless -d $dir;
+	
+	return $dir;
+	}
+
 

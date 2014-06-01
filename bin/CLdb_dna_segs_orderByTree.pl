@@ -1,5 +1,102 @@
 #!/usr/bin/env perl
 
+=pod
+
+=head1 NAME
+
+CLdb_dna_segs_orderByTree.pl -- needed if plotting a tree with CRISPR loci
+
+=head1 SYNOPSIS
+
+=head2 Ordering 'dna_segs' table
+
+CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
+
+=head2 Ordering 'xlims' table
+
+CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
+
+=head2 Required flags
+
+=over
+
+=item -tree  <char>
+
+Tree file name (nexus or newick).
+
+=back
+
+=head2 Optional flags
+
+=over
+
+=item -format  <char>
+
+Tree file format. [newick]
+
+=item -name  <char>
+
+Output file name for pruned tree. ['-tree' + '_prn.nwk']
+
+=item -xlims  <bool>
+
+Ordering xlims table instead of dna_segs. An editted tree will not be written. [FALSE]
+
+=item -verbose  <bool>
+
+Verbose output. [FALSE]
+
+=item -help  <bool>
+
+This help message
+
+=back
+
+=head2 For more information:
+
+perldoc CLdb_dna_segs_orderByTree.pl
+
+=head1 DESCRIPTION
+
+Formatting tree and 'dna_segs' or 'xlims' table for plotting. 
+
+The tree file is pruned to just the taxa found in
+the dna_segs/xlims table.
+
+The dna_segs/xlims tables are ordered to match the pruned
+tree ordering.
+
+Both xlims and dna_segs tables must be ordered by the tree
+if the tree is used for plotting!
+
+=head1 EXAMPLES
+
+=head2 Basis usage
+
+=head3 Ordering a dna_segs table
+
+CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
+
+=head3 Ordering the complemenary xlims table (editted tree not written).
+
+CLdb_dna_segs_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
+
+=head1 AUTHOR
+
+Nick Youngblut <nyoungb2@illinois.edu>
+
+=head1 AVAILABILITY
+
+sharchaea.life.uiuc.edu:/home/git/CLdb/
+
+=head1 COPYRIGHT
+
+Copyright 2010, 2011
+This software is licensed under the terms of the GPLv3
+
+=cut
+
+
 ### modules
 use strict;
 use warnings;
@@ -9,6 +106,18 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Bio::TreeIO;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::query qw/
+	table_exists
+	n_entries
+	join_query_opts/;
+use CLdb::utilities qw/
+	file_exists 
+	connect2db/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -25,7 +134,7 @@ GetOptions(
 	   );
 
 ### I/O error & defaults
-die " ERROR: cannot find tree file!\n" unless -e $tree_in;
+file_exists($tree_in, "tree");
 $format = check_tree_format($format);
 ($tree_name = $tree_in) =~ s/\.[^.]+$|$/_prn.nwk/ unless $tree_name;
 
@@ -69,6 +178,7 @@ sub tree_write{
 	}
 
 sub order_dna_segs{
+# writing out dna segs with new tree order #
 	my ($dna_segs_r, $tree_order_r, $header_r, $name_index_r) = @_;
 	
 	# header #
@@ -80,20 +190,22 @@ sub order_dna_segs{
 		die " ERROR: leaf -> \"$taxon_name\" not found in dna_segs table!\n"
 			unless exists $dna_segs_r->{$taxon_name};
 		
-		if($leaf =~ /__cli\d+$/){							## if lociID already in name (prevents duplicates)
-			(my $locus_id = $leaf) =~ s/.+__cli(\d+).*/$1/ if $leaf =~ /__cli\d+$/;
+		if($leaf =~ /__[^_]+/){				## if lociID already in name (prevents duplicates)
+			(my $locus_id = $leaf) =~ s/^.*?__([^_]+).*/$1/; 	#if $leaf =~ /\|\d+$/;
+			die "ERROR: $taxon_name -> $locus_id not found in dna_segs!\n"
+				unless exists $dna_segs_r->{$taxon_name}{$locus_id};
 			foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 				print join("\t", @$row), "\n";
 				}		
 			}
-		else{												## if 1 lociID per taxon_name
+		else{										## if 1 lociID per taxon_name
 			foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
 				foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 					print join("\t", @$row), "\n";
 					}
 				}
 			}
-		}
+		}	
 	}
 
 sub get_tree_order{
@@ -202,7 +314,6 @@ sub prune_tree{
 			}
 		}
 		
-		
 	# pruning any non-labeled leaves #
 	while(1){
 		my $intern_cnt = 0;
@@ -290,103 +401,4 @@ sub check_tree_format{
 	return $format;
 	}
 
-
-
-__END__
-
-=pod
-
-=head1 NAME
-
-CLdb_dna_segs_orderByTree.pl -- needed if plotting a tree with CRISPR loci
-
-=head1 SYNOPSIS
-
-=head2 Ordering 'dna_segs' table
-
-CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
-
-=head2 Ordering 'xlims' table
-
-CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
-
-=head2 Required flags
-
-=over
-
-=item -tree  <char>
-
-Tree file name (nexus or newick).
-
-=back
-
-=head2 Optional flags
-
-=over
-
-=item -format  <char>
-
-Tree file format. [newick]
-
-=item -name  <char>
-
-Output file name for pruned tree. ['-tree' + '_prn.nwk']
-
-=item -xlims  <bool>
-
-Ordering xlims table instead of dna_segs. An editted tree will not be written. [FALSE]
-
-=item -verbose  <bool>
-
-Verbose output. [FALSE]
-
-=item -help  <bool>
-
-This help message
-
-=back
-
-=head2 For more information:
-
-perldoc CLdb_dna_segs_orderByTree.pl
-
-=head1 DESCRIPTION
-
-Formatting tree and 'dna_segs' or 'xlims' table for plotting. 
-
-The tree file is pruned to just the taxa found in
-the dna_segs/xlims table.
-
-The dna_segs/xlims tables are ordered to match the pruned
-tree ordering.
-
-Both xlims and dna_segs tables must be ordered by the tree
-if the tree is used for plotting!
-
-=head1 EXAMPLES
-
-=head2 Basis usage
-
-=head3 Ordering a dna_segs table
-
-CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
-
-=head3 Ordering the complemenary xlims table (editted tree not written).
-
-CLdb_dna_segs_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
-
-=head1 AUTHOR
-
-Nick Youngblut <nyoungb2@illinois.edu>
-
-=head1 AVAILABILITY
-
-sharchaea.life.uiuc.edu:/home/git/CLdb/
-
-=head1 COPYRIGHT
-
-Copyright 2010, 2011
-This software is licensed under the terms of the GPLv3
-
-=cut
 

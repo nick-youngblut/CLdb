@@ -13,10 +13,11 @@ use Set::IntervalTree;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, @regions, $tRNA);
+my ($verbose, @regions, $tRNA, $strand_b);
 GetOptions(
 		"regions=s{,}" => \@regions,
 		"tRNA" => \$tRNA,
+		"strand" => \$strand_b,			# all + strand? [false]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -76,8 +77,17 @@ sub get_regions_scaffold{
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
 			$feat_tags{$feat_id}{"contig"} = [($feat->location->seq_id)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
+
+	# flipping start-end if strand = -1 #
+	foreach my $feat (keys %feat_tags){
+		if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+			(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+				(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+			}
+		}	
 	
 	# writing out features #
 	my @tags = ("contig", "start", "end");
@@ -122,8 +132,17 @@ sub get_regions{
 				}
 			$feat_tags{$feat_id}{"start"} = [($feat->location->start)];
 			$feat_tags{$feat_id}{"end"} = [($feat->location->end)];
+			$feat_tags{$feat_id}{"strand"} = [($feat->location->strand)];
 			}
 		}
+	
+	# flipping start-end if strand = -1 #
+	foreach my $feat (keys %feat_tags){
+		if(${$feat_tags{$feat}{"strand"}}[0] == -1){
+			(${$feat_tags{$feat}{"start"}}[0],${$feat_tags{$feat}{"end"}}[0]) =
+				(${$feat_tags{$feat}{"end"}}[0], ${$feat_tags{$feat}{"start"}}[0]);
+			}
+		}	
 	
 	# writing out features #
 	my @tags = ("start", "end");
@@ -172,7 +191,6 @@ sub load_itree{
 	return $itree;
 	}
 
-
 sub load_genbank_features{
 	my $seqio = Bio::SeqIO->new(-fh => \*STDIN, -format => "genbank");
 	my @feats;
@@ -180,6 +198,8 @@ sub load_genbank_features{
 		push(@feats, grep { $_->primary_tag eq 'CDS' } $seqo->get_SeqFeatures);
 		push(@feats, grep { $_->primary_tag eq 'tRNA' } $seqo->get_SeqFeatures) if $tRNA;
 		}
+		
+		#print Dumper @feats; exit;
 	return \@feats;
 	}
 

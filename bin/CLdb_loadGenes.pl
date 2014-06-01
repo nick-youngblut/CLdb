@@ -1,125 +1,5 @@
 #!/usr/bin/env perl
 
-### modules
-use strict;
-use warnings;
-use Pod::Usage;
-use Data::Dumper;
-use Getopt::Long;
-use File::Spec;
-use DBI;
-
-### args/flags
-pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
-my ($verbose, $database_file);
-GetOptions(
-	   "database=s" => \$database_file,
-	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
-	   );
-
-### I/O error & defaults
-die " ERROR: provide a database file name!\n"
-	unless $database_file;
-die " ERROR: cannot find database file!\n"
-	unless -e $database_file;
-
-### MAIN
-# connect 2 db #
-my %attr = (RaiseError => 0, PrintError=>0, AutoCommit=>0);
-my $dbh = DBI->connect("dbi:SQLite:dbname=$database_file", '','', \%attr) 
-	or die " Can't connect to $database_file!\n";
-
-# database metadata #
-my $table_list_r = list_tables($dbh);
-check_for_genes_table($table_list_r);
-#get_genes_table_info($dbh);
-
-# loading genes table #
-my ($genes_r, $header_r) = get_gene_table();
-
-# updating / loading_db #
-load_new_entries($dbh, $genes_r, $header_r);
-
-# disconnect to db #
-$dbh->disconnect();
-exit;
-
-
-### Subroutines
-sub load_new_entries{
-# adding new entries to db #
-## conflicts should be replaced (ie. updated ##
-	my ($dbh, $genes_r, $header_r) = @_;
-
-	# making locus_id = NULL #
-	my @keys = keys %$header_r;
-	@keys = grep(!/^sequence$/i, @keys);		# removed from table; not needed
-	my @values = @$header_r{@keys};
-
-	# loading entries #
-	my $cmd = "INSERT INTO genes(" . join(",", @keys) . ") VALUES(?".",?"x$#keys . ")";
-	my $sql = $dbh->prepare($cmd);
-	
-	my $cnt = 0;
-	foreach my $locus_id (keys %$genes_r){
-		foreach my $gene_id (keys %{$genes_r->{$locus_id}}){			
-			#	print Dumper @{$genes_r->{$locus_id}{$gene_id}}[@values]; exit;
-			$sql->execute( @{$genes_r->{$locus_id}{$gene_id}}[@values] );	
-			if($DBI::err){
-				print STDERR "ERROR: $DBI::errstr in: ", join("\t", @{$genes_r->{$locus_id}{$gene_id}}[@values]), "\n";
-				}
-			else{ $cnt++; }
-			}
-		}
-	$dbh->commit;
-
-	print STDERR "...Number of entries added/updated in gene table: $cnt\n"
-		unless $verbose;
-	}
-
-
-sub get_gene_table{
-	my %genes;
-	my %header;
-	while(<>){
-		chomp;
-		next if /^\s*$/;
-
-		if($. == 1){ # loading header
-			tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
-			my @line = split /\t/;
-			for my $i (0..$#line){
-				$header{$line[$i]} = $i;		# column_name => index
-				}
-			}
-		else{
-			my @line = split /\t/;
-			$line[$header{"locus_id"}] =~ s/^cli\.//;
-			$genes{$line[$header{"locus_id"}]}{$line[$header{"gene_id"}]} = \@line;
-			}
-		}
-		#print Dumper %header; exit;
-		#print Dumper %genes; exit; 
-	return (\%genes, \%header);;
-	}
-
-
-sub check_for_genes_table{
-	my ($table_list_r) = @_;
-	die " ERROR: Genes table not found in database!\n"
-		unless grep(/^Genes$/i, @$table_list_r);
-	}
-
-sub list_tables{
-	my ($dbh) = @_;
-	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-	return [keys %$all];
-	}
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -192,4 +72,98 @@ Copyright 2010, 2011
 This software is licensed under the terms of the GPLv3
 
 =cut
+
+
+### modules
+use strict;
+use warnings;
+use Pod::Usage;
+use Data::Dumper;
+use Getopt::Long;
+use File::Spec;
+use DBI;
+
+# CLdb #
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../lib/perl5/";
+use CLdb::utilities qw/
+	file_exists 
+	connect2db
+	lineBreaks2unix/;
+use CLdb::query qw/
+	table_exists/;
+use CLdb::load qw/
+	load_db_table/;
+
+
+### args/flags
+pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
+
+my ($verbose, $database_file);
+GetOptions(
+	   "database=s" => \$database_file,
+	   "verbose" => \$verbose,
+	   "help|?" => \&pod2usage # Help
+	   );
+
+#--- I/O error & defaults ---#
+file_exists($database_file, "database");
+
+#--- MAIN ---#
+# connect 2 db #
+my $dbh = connect2db($database_file);
+
+# database metadata #
+table_exists($dbh, "genes");
+#get_genes_table_info($dbh);
+
+# loading genes table #
+my $tbl_r = lineBreaks2unix(\*STDIN);
+my ($genes_r, $header_r) = get_gene_table($tbl_r);
+
+# removing 'sequence' feature; not included in genes CLdb table #
+delete $header_r->{'sequence'};
+
+# updating / loading_db #
+load_db_table($dbh, "genes", $header_r, $genes_r);
+
+# disconnect to db #
+$dbh->disconnect();
+exit;
+
+
+### Subroutines
+sub get_gene_table{
+	my $tbl_r = shift;
+	my %genes;
+	my %header;
+	my %header_rev;
+	my $cnt = 0;
+	foreach (@$tbl_r){
+		$cnt++;
+
+		if(! %header){ # loading header
+			tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
+			my @line = split /\t/;
+			for my $i (0..$#line){
+				$header{$line[$i]} = $i;		# column_name => index
+				$header_rev{$i} = $line[$i];
+				}
+			}
+		else{
+			my @line = split /\t/;
+			# loading as locus_id=>category=>value #
+			for my $i (0..$#line){
+				my $uID = join("_", $line[$header{"locus_id"}], $cnt);
+				$genes{$uID}{$header_rev{$i}} = $line[$i];
+				}			
+			}
+		}
+		#print Dumper %header; 
+		#print Dumper %genes; exit; 
+	return (\%genes, \%header);;
+	}
+
+
 
