@@ -8,7 +8,7 @@ use Data::Dumper;
 use File::Spec;
 use Parallel::ForkManager;
 use File::Path qw/rmtree/;
-use IPC::Cmd qw/can_run/;
+use IPC::Cmd qw/run can_run/;
 
 # export #
 use base 'Exporter';
@@ -113,7 +113,11 @@ sub call_blastn_short{
     $pm->start and next;
 
     my %output;
-    my $cmd = "blastn -task 'blastn-short' -query $query_file -db $blast_db -outfmt '$outfmt' $blast_params";
+    my $cmd = join(" ", "blastn -task 'blastn-short'",
+		   "-query $query_file",
+		   "-db $blast_db",
+		   "-outfmt '$outfmt'",
+		   "$blast_params");
     open PIPE, "$cmd |" or die $!;
     while(<PIPE>){
       push @{$output{$blast_db}}, $_;
@@ -141,6 +145,12 @@ sub make_blast_db{
   my ($subject_loci_r, $db_path, 
       $blast_dir, $verbose) = @_;
 
+  # checking for makeblastdb in path
+  can_run('makeblastdb') or 
+    croak "ERROR: 'makeblastdb' not in \$PATH." .
+      " Add the blast+ toolkit to your path\n";
+
+  # dir
   my $fasta_dir = "$db_path/fasta";
 
   # sanity check #
