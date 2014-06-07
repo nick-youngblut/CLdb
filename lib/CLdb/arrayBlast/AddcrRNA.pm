@@ -372,10 +372,14 @@ sub getSpacerRegion{
 	  my $region_end = $info_r->{spacer_end} + $ext;
 	  $region_end = $scaf_len if $region_end > $scaf_len; 
 
+	  # sanity check
+	  confess "ERROR: region_start > region_end\n" if $region_start > $region_end;
+
 	  # spacer crDNA
-	  my $crDNA = substr($genome->{$scaffold},
+	  my $crDNA = substr(
+			     $genome->{$scaffold},
 			     $region_start - 1,   # 0-indexing for substr
-			     $region_end - $region_start  # 0-indexing
+			     $region_end - $region_start + 1
 			    );
 
 	  # revcomp crDNA & spacer sequence if array_sense_strand == -1

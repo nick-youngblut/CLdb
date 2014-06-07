@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings FATAL => 'all';
 use Data::Dumper;
-use Carp qw/carp croak/;
+use Carp qw/carp croak confess/;
 use Clone qw/clone/;
 use Data::Uniqid qw/uniqid/;
 
@@ -15,7 +15,7 @@ use Sereal qw/decode_sereal/;
 
 =head1 NAME
 
-sereal - The great new sereal!
+sereal - Subroutines for blast srl files
 
 =head1 VERSION
 
@@ -28,7 +28,7 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-subroutines for editing blast xml converted to json format
+subroutines for editing blast xml converted to json format or sereal
 
 =head1 EXPORT
 
@@ -316,8 +316,14 @@ sub blast_xml2txt {
   my %opts = @_; 
   my $blast_r = $opts{blast} || croak "No 'blast' arg provided $!\n";
   my $fields_r = $opts{fields} || croak "No 'fields' arg provided $!\n";
+  my $sep = $opts{sep};
+
+  print Dumper $blast_r; exit;
 
   # iterating through each hit
+  if(! exists $blast_r->{'BlastOutput_iterations'}){
+  }
+  
   foreach my $iter ( @{$blast_r->{'BlastOutput_iterations'}{'Iteration'}} ){
     my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
 
@@ -330,80 +336,95 @@ sub blast_xml2txt {
 		 join(", ", @{$fields_r->{fields}})
 		), "\n";
     }
-    
-    # multiple hits or just 1?
-    if(ref $hits_ref eq 'ARRAY'){ # multiple
-      foreach my $hit ( @$hits_ref){
-	make_blast_row($blast_r, $iter, $hit, $fields_r);
-      }
-    }
-    else{ 
-      make_blast_row($blast_r, $iter, $hits_ref, $fields_r);
-    }
-    
-    # make blast output row of field values
-    sub make_blast_row{
-      my ($blast_r, $iter, $hit, $fields_r) = @_;
 
-      # parsing for each hsp
-      if( ref $hit->{Hit_hsps}{Hsp} eq 'ARRAY' ){
-	foreach my $hsp (@{$hit->{Hit_hsps}{Hsp}}){
-	  row_by_hsp($blast_r, $iter, $hit, 
-				$hsp, $fields_r);
-	}
-      }
-      else{
-	row_by_hsp($blast_r, $iter, $hit, 
-			      $hit->{Hit_hsps}{Hsp}, $fields_r);
-      }
 
-      sub row_by_hsp{
-	my ($blast_r, $iter, $hit, $hsp, $fields_r) = @_;
+    # getting blast db file name
+    foreach my $run (keys %$blast_r){
+      next unless exists $blast_r->{$run}{'BlastOutput_iterations'};  # must have hit
+
+      # getting blastdbfile
+      my $blastdbfile = exists $blast_r->{$run}{'BlastOutput_db'} ?
+	$blast_r->{$run}{'BlastOutput_db'} :
+	  confess "Cannot find BlastOutput_db in run $run";
+      
+      
+      # each iteration
+      foreach my $iter ( @{$blast_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
 	
-	my @row; # output row
-	foreach my $field ( @{$fields_r->{fields}} ){
-	  my $index = $fields_r->{index}{$field};
+	# skipping iterations without hits or crRNA_info
+	next unless exists $iter->{Iteration_hits} and
+	  $iter->{Iteration_hits} !~ /^\s*$/;
+	next unless exists $iter->{Iteration_hits}{Hit};
+	
+	# iterating through hits
+	foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
+	  next unless exists $hit->{Hit_hsps}{Hsp};
 	  
-	  # if variable undefined
-	  unless(defined $index->[1]){
-	    push @row, 0;  # really, is 'undef'
-	    next;
-	  }
-	  
-	  # determing path to variable 
-	  ## run
-	  if( $index->[0] eq 'run' ){
-	    push @row, $iter->{$index->[1]};
+	  # iterating through each hsp
+	  ## adding protospacer & info to $hsp
+	  foreach my $hsp (keys %{$hit->{Hit_hsps}{Hsp}}){
+	    print Dumper $hsp; exit;
 	    
 	  }
-	  ## hit
-	  if( $index->[0] eq 'hit' ){
-	    push @row, $hit->{$index->[1]};
-	  }
-	  ## hsp
-	  if( $index->[0] eq 'hsp' ){
-	    # hsp -> frames field
-	    if (defined $index->[2]){
-	      push @row, join("/", $hsp->{$index->[1]},
-			  $hsp->{$index->[2]});
-	    }
-	    elsif( $index->[1] eq 'Hsp_identity' ){
-	      push @row, $hsp->{Hsp_identity} / 
-		$hsp->{'Hsp_align-len'} * 100;
-	    }
-	    else{ # other fields
-	      push @row, $hsp->{$index->[1]};
-	    }
-	  }
-	  ## param
-	  if( $index->[0] eq 'param' ){
-	    push @row, $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
-	  }
 	}
-	print join("\t", @row), "\n";
       }
-    }
+    } 
   }
+    
+    # # multiple hits or just 1?
+    # foreach my $hit ( @$hits_ref){
+    	
+    # 	my @row; # output row
+    # 	foreach my $field ( @{$fields_r->{fields}} ){
+    # 	  my $index = $fields_r->{index}{$field};
+	  
+    # 	  # if variable undefined
+    # 	  unless(defined $index->[1]){
+    # 	    push @row, 0;  # really, is 'undef'
+    # 	    next;
+    # 	  }
+	  
+    # 	  # determing path to variable 
+    # 	  ## run
+    # 	  if( $index->[0] eq 'run' ){
+    # 	    push @row, $iter->{$index->[1]};
+	    
+    # 	  }
+    # 	  ## hit
+    # 	  if( $index->[0] eq 'hit' ){
+    # 	    push @row, $hit->{$index->[1]};
+    # 	  }
+    # 	  ## hsp
+    # 	  if( $index->[0] eq 'hsp' ){
+    # 	    # hsp -> frames field
+    # 	    if (defined $index->[2]){
+    # 	      push @row, join("/", $hsp->{$index->[1]},
+    # 			  $hsp->{$index->[2]});
+    # 	    }
+    # 	    elsif( $index->[1] eq 'Hsp_identity' ){
+
+    # 	      if(exists $hsp->{Hsp_identity} && 
+    # 		 $hsp->{Hsp_identity} != 0){
+    # 		push @row, $hsp->{Hsp_identity} / 
+    # 		  $hsp->{'Hsp_align-len'} * 100;
+    # 	      }
+    # 	      else{
+    # 		push @row, 'NA';
+    # 	      }		 
+    # 	    }
+    # 	    else{ # other fields
+    # 	      push @row, $hsp->{$index->[1]};
+    # 	    }
+    # 	  }
+    # 	  ## param
+    # 	  if( $index->[0] eq 'param' ){
+    # 	    push @row, $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
+    # 	  }
+    # 	}
+
+    # 	print join($sep, @row), "\n";
+    #   }
+    # }
   
 
 }

@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-blast-srl2txt.pl -- converting blast output (sereal format) to blast '-outfmt 6' or '-outfmt 7'
+blast-srl2csv.pl -- converting blast output in binary serialization format to blast '-outfmt 6' or '-outfmt 7'
 
 =head1 SYNOPSIS
 
-blast-srl2txt.pl [flags] < blast_output.srl > blast_output.txt
+blast-srl2csv.pl [flags] < blast_output.srl > blast_output.txt
 
 =head2 Required flags
 
@@ -25,6 +25,10 @@ Only '6' or '7' formats are supported.
 ['7 qseqid sseqid pident length mismatch 
 gapopen qstart qend sstart send evalue bitscore']
 
+=item -sep
+
+Field seperator. ['\t']
+
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -33,7 +37,7 @@ gapopen qstart qend sstart send evalue bitscore']
 
 =head2 For more information:
 
-perldoc blast-srl2txt.pl
+perldoc blast-srl2csv.pl
 
 =head1 DESCRIPTION
 
@@ -109,10 +113,13 @@ use CLdb::arrayBlast::sereal qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
-my $outfmt = '7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'; 
+my $outfmt = join(" ", qw/7 qseqid sseqid pident length mismatch 
+			  gapopen qstart qend sstart send evalue bitscore/); 
+my $sep = "\t";
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "verbose" => \$verbose,
+	   "seperator=s" => \$sep,
 	   "help|?" => \&pod2usage # Help
 	   );
 
@@ -122,6 +129,7 @@ die "ERROR: provide '-outfmt'\n"
 my $fields_r = parse_outfmt($outfmt); 
 classify_fields($fields_r); 
 
+
 #--- MAIN ---#
 # loading serealized blast output
 my $srl;
@@ -129,8 +137,11 @@ $srl .= $_ while <>;
 my $decoder = Sereal::Decoder->new();
 my $blast_r =  $decoder->decode( $srl );
 
+
 # making table
 foreach my $blast_run (keys %$blast_r){
-  blast_xml2txt(blast => $blast_r->{$blast_run}, fields => $fields_r);
+  blast_xml2txt( blast => $blast_r->{$blast_run}, 
+		 fields => $fields_r,
+		 sep => $sep);
 }
 

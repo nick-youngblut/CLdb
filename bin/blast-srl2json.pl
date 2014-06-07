@@ -8,7 +8,7 @@ blast-srl2json.pl -- converting blast output binary serialization format to json
 
 =head1 SYNOPSIS
 
-blast-srl2json.pl [flags] < blast_output.xml > blast_output.srl
+blast-srl2json.pl [flags] < blast_output.srl > blast_output.json
 
 =head2 Required flags
 

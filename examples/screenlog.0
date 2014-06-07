@@ -1,0 +1,109 @@
+2014-06-03 21:53:36.530 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-06-03 21:53:36.535 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-06-03 21:53:36.550 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples
+2014-06-03 21:53:36.550 [NotebookApp] 0 active kernels 
+2014-06-03 21:53:36.550 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-06-03 21:53:36.550 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+2014-06-03 21:53:51.926 [NotebookApp] Kernel started: ffcc7bb9-7fef-4bef-a409-70d935b97a06
+2014-06-03 21:55:51.881 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 21:57:51.940 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 21:59:51.929 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 22:01:51.925 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 22:03:51.922 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 22:05:51.891 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 22:07:51.934 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-03 22:08:31.386 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+^C2014-06-04 20:05:16.418 [NotebookApp] interrupted
+Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples
+1 active kernels 
+The IPython Notebook is running at: http://localhost:9091/
+Shutdown this notebook server (y/[n])? nNo answer for 5s: resuming operation...
+2014-06-04 20:07:33.561 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:09:33.472 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:11:33.500 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:13:33.501 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:15:33.508 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:17:33.475 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:19:33.492 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:21:33.474 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:23:33.480 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:25:33.508 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:27:33.464 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:29:33.525 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:31:33.523 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:33:33.514 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:35:33.521 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:39:33.572 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:41:33.506 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:43:33.642 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:51:33.606 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:53:33.500 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:57:33.494 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 20:59:33.511 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:00:54.969 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:01:33.503 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:03:33.590 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:05:33.611 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:07:33.567 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:09:33.579 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:11:33.572 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:13:33.663 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:15:33.881 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:17:33.565 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:19:32.720 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:21:33.568 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:22:04.562 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:22:13.794 [NotebookApp] Creating new notebook in /ecoli_ipynb/
+2014-06-04 21:22:14.718 [NotebookApp] Kernel started: b54d04c1-629c-4994-accd-f3e8ed15fb25
+2014-06-04 21:22:25.295 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:23:33.569 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:25:34.470 [NotebookApp] Saving notebook at /ecoli_ipynb/Setup.ipynb
+2014-06-04 21:26:15.268 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:28:15.306 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+INFO:tornado.access:302 GET /notebooks/ecoli_CLdb/fasta/Escherichia_coli_BL2_DE3.fasta (::1) 1.55ms
+2014-06-04 21:30:15.317 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:32:15.313 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:34:15.315 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:36:15.311 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:38:15.311 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:40:15.339 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:42:15.407 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:44:15.343 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:46:15.341 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:46:55.660 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:48:15.356 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:50:15.349 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:52:15.357 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-04 21:52:51.762 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:04:09.356 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:06:09.339 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:08:09.390 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:10:09.381 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:12:09.430 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:14:09.397 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:14:33.121 [NotebookApp] Kernel interrupted: b54d04c1-629c-4994-accd-f3e8ed15fb25
+2014-06-05 19:16:09.354 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:16:13.989 [NotebookApp] Kernel interrupted: b54d04c1-629c-4994-accd-f3e8ed15fb25
+2014-06-05 19:18:09.386 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:20:09.374 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:24:09.397 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:26:09.452 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:26:21.803 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:28:10.442 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:30:10.424 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:32:10.374 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:34:10.423 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:36:10.740 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:38:10.390 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:40:10.423 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:42:10.404 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:56:10.421 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 19:58:10.360 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:00:10.368 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:02:10.377 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:04:10.361 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:10:10.409 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:12:10.369 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:14:10.360 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 20:16:10.364 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-05 21:40:11.247 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
