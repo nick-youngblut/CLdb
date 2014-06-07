@@ -105,65 +105,65 @@ write_array_files($res_r, $prefix, $coords_b);
 
 #--- Subroutines ---#
 sub write_array_files{
-	my ($res_r, $prefix, $coords_b) = @_;
-	
-	foreach my $array (keys %$res_r){
-		my $outname = join("_", $prefix, $array, $res_r->{$array}{'organism'});
-		$outname = join("_", $outname, $res_r->{$array}{'start'}, $res_r->{$array}{'end'})
-					if $coords_b;
-		
-		open OUT, ">$outname.txt" or die $!;
-		foreach my $line (@{$res_r->{$array}{'array'}}){
-			print OUT join("\t", @$line), "\n";
-			}
-		close OUT;
-		
-		print STDERR "File written: $outname.txt\n";
-		}
-	}
+  my ($res_r, $prefix, $coords_b) = @_;
+  
+  foreach my $array (keys %$res_r){
+    my $outname = join("_", $prefix, $array, $res_r->{$array}{'organism'});
+    $outname = join("_", $outname, $res_r->{$array}{'start'}, $res_r->{$array}{'end'})
+      if $coords_b;
+    
+    open OUT, ">$outname.txt" or die $!;
+    foreach my $line (@{$res_r->{$array}{'array'}}){
+      print OUT join("\t", @$line), "\n";
+    }
+    close OUT;
+    
+    print STDERR "File written: $outname.txt\n";
+  }
+}
 
 sub parse_crt{
-# parsing CRT output 
-	my %res;
-	my $org;
-	while(<>){
-		chomp;
-
-		($org = $_) =~ s/.+ // if /^ORGANISM/;
-		
-		if(/^CRISPR \d+/){
-			my @head = split / +/;	# 1=num; 3=start; 5=end
-			die "ERROR: line $. is not formatted correctly!\n"
-				unless scalar @head == 6;
+  # parsing CRT output 
+  my %res;
+  my $org;
+  while(<>){
+    chomp;
+    
+    ($org = $_) =~ s/.+ // if /^ORGANISM/;
+    
+    if(/^CRISPR \d+/){
+      my @head = split / +/;	# 1=num; 3=start; 5=end
+      die "ERROR: line $. is not formatted correctly!\n"
+	unless scalar @head == 6;
+      
+      $res{$head[1]}{'organism'} = $org if defined $org;
+      $res{$head[1]}{'start'} = $head[3];
+      $res{$head[1]}{'end'} = $head[5];
+      die "ERROR: start > end at line $.\n"
+	unless $head[3] <= $head[5];
 			
-			$res{$head[1]}{'organism'} = $org if defined $org;
-			$res{$head[1]}{'start'} = $head[3];
-			$res{$head[1]}{'end'} = $head[5];
-			die "ERROR: start > end at line $.\n"
-				unless $head[3] <= $head[5];
-			
-			while(<>){
-				chomp;
-				last if /^Repeats:/;
-				next if /^(POSITION|^-)/;
-				
-				my @line = split /\t+/;
-				die "ERROR: line $. does not have 2 or 4 tab-delimited columns!\n"
-					unless scalar @line == 2 || scalar @line == 4;
-
-				# calculating end #
-				my ($DR_len, $spacer_len) = (0,0);
+      while(<>){
+	chomp;
+	last if /^Repeats:/;
+	next if /^(POSITION|^-)/;
+	
+	my @line = split /\t+/;
+	die "ERROR: line $. does not have 2 or 4 tab-delimited columns!\n"
+	  unless scalar @line == 2 || scalar @line == 4;
+	
+	# calculating end #
+	my ($DR_len, $spacer_len) = (0,0);
 				$DR_len = length $line[1] if defined $line[1];
-				$spacer_len = length $line[2] if defined $line[2];				
-				$line[3] = $line[0] + $DR_len + $spacer_len - 1;
-				
-				$line[2] = "\t" unless defined $line[2];
-				push @{$res{$head[1]}{'array'}}, \@line;
-				}
+	$spacer_len = length $line[2] if defined $line[2];				
+	$line[3] = $line[0] + $DR_len + $spacer_len - 1;
+	
+	$line[2] = "\t" unless defined $line[2];
+	push @{$res{$head[1]}{'array'}}, \@line;
+      }
 			}
-		}
-		
-		#print Dumper %res; exit;
-	return \%res;
-	}
+  }
+  
+  #print Dumper %res; exit;
+  return \%res;
+}
 

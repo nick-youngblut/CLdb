@@ -117,7 +117,7 @@ $ :  dbh object
 sub connect2db{
   my $db_file = shift or confess "Provide a database file name";
   
-  my %attr = (RaiseError => 0, PrintError=>1, AutoCommit=>0);
+  my %attr = (RaiseError => 0, PrintError=>1, AutoCommit=>0 );
   my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file", '','', \%attr) 
     or confess " Can't connect to $db_file!\n";
   

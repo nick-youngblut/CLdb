@@ -105,7 +105,8 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
-
+use FindBin;
+use lib "$FindBin::RealBin/../lib/";
 
 ### CLdb
 use CLdb::arrayBlast::PAM qw/ make_pam_index

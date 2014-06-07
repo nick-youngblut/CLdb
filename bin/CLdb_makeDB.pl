@@ -139,7 +139,9 @@ sub make_db{
   }
   
   print STDERR "...sqlite3 database tables created\n";
-	}
+}
+
+
 
 sub get_sql{
   my %sql; 		# all tables individually 

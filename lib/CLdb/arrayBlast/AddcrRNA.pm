@@ -247,6 +247,7 @@ sub queryBySpacerCluster{
   my $dbh = shift || confess "Provide a dbh object\n";
   my $spacerIDs_r = shift ||  confess "Provide an array_ref of spacerIDs\n";
   my $CLdb_info_r = shift || confess "Provide a CLdb_info arg\n";
+  my %h = @_;
 
   my $query = <<HERE;
 SELECT
@@ -274,6 +275,7 @@ HERE
 
   # querying CLdb for each blast query ID
   my %spacer_info;
+  my $fetch_cnt = 0;
   foreach my $ID (@$spacerIDs_r){
     my @l = split /\|/, $ID;
     confess "ERROR: cannot find clusterID and/or cluster cutoff in $ID\n"
@@ -345,10 +347,11 @@ sub getSpacerRegion{
       unless -e "$fasta_dir/$fasta_file";
 
     # status
-    print STDERR "...parsing from genome: $fasta_file\n";
+    print STDERR " Processing genome: $fasta_file...\n";
 
     # loading genome fasta as hashref
     my $genome = read_fasta(-file => "$fasta_dir/$fasta_file");
+    
 
     # substr each spacer region sequence
     foreach my $scaffold (keys %{$CLdb_info_r->{$fasta_file}}){
@@ -365,6 +368,8 @@ sub getSpacerRegion{
 	  map{confess "Cannot find $_ for $locus_id->$spacer_id" unless 
 		exists $info_r->{$_} } qw/spacer_start spacer_end array_sense_strand/;	  
 
+	  print STDERR join(",", $info_r->{spacer_start}, $info_r->{spacer_end}), "\n";
+
 	  # floor & ceiling (1-indexing)
 	  my $region_start = $info_r->{spacer_start} - $ext;
 	  $region_start = 1 if $region_start < 1;
@@ -373,7 +378,12 @@ sub getSpacerRegion{
 	  $region_end = $scaf_len if $region_end > $scaf_len; 
 
 	  # sanity check
-	  confess "ERROR: region_start > region_end\n" if $region_start > $region_end;
+	  if($region_start > $region_end){
+	    print STDERR "WARNING for $fasta_file, locus '$locus_id', spacer '$spacer_id': " . 
+	      "region_start > region_end ($region_start > $region_end).\n\t" . 
+		" Are locus_start, locus_end, array_start, & array_end set correctly?\n";
+	    ($region_start, $region_end) = ($region_end, $region_start);
+	  }
 
 	  # spacer crDNA
 	  my $crDNA = substr(

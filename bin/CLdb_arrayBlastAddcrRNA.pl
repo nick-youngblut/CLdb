@@ -136,6 +136,7 @@ table_exists($dbh, 'loci');
 table_exists($dbh, 'spacers');
 
 # decoding spacer and DR srl
+print STDERR "Decoding .srl file...\n" unless $verbose;
 my $spacer_r = decode_file( fh => \*STDIN );
 
 # getting spacer IDs (either sequence or rep sequence name)
@@ -145,7 +146,7 @@ my $spacerIDs_r = get_query_IDs($spacer_r);
 $spacerIDs_r = detectClusteredSpacers($spacerIDs_r);
 
 # querying CLdb for info on spacer start-end & genome_file
-print STDERR "Getting info from CLdb on each blast query spacer...\n";
+print STDERR "Getting info from CLdb on each blast query spacer...\n" unless $verbose;
 my %CLdb_info;
 ## single spacers
 if( $spacerIDs_r->{single} ){
@@ -155,7 +156,10 @@ if( $spacerIDs_r->{single} ){
 ## cluster spacers
 if( $spacerIDs_r->{cluster} ){
   table_exists($dbh, 'spacer_clusters');
-  queryBySpacerCluster($dbh, $spacerIDs_r->{cluster}, \%CLdb_info);
+  queryBySpacerCluster($dbh, 
+		       $spacerIDs_r->{cluster}, 
+		       \%CLdb_info,
+		       -verbose => $verbose);
 }
 
 

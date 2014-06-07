@@ -180,6 +180,8 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use Sereal qw/ encode_sereal /;
+use FindBin;
+use lib "$FindBin::RealBin/../lib/";
 
 ### CLdb
 use CLdb::arrayBlast::sereal qw/ decode_file /;

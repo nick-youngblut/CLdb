@@ -278,9 +278,17 @@ insert_cluster(dbh => $dbh,
 	      ) if $dr_bool;
 
 
+# finally, making indices of cluster IDs
+print STDERR "\nCreating indices for cluster ids...\n";
+$dbh->do('CREATE INDEX spacerClusterID_idx on spacer_clusters(cluster_id)') or $dbh->err;
+$dbh->do('CREATE INDEX DRClusterID_idx on DR_clusters(cluster_id)') or $dbh->err;
+$dbh->commit;
+
 # disconnect #
 $dbh->disconnect();
 exit;
+
+
 
 
 #--- Subroutines ---#

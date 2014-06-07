@@ -92,6 +92,8 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
+use FindBin;
+use lib "$FindBin::RealBin/../lib/";
 use Sereal qw/ encode_sereal /;
 
 ### CLdb
@@ -123,7 +125,7 @@ my $spacer_r = decode_file( fh => \*STDIN );
 queryBlastDBs( blast => $spacer_r,  
 	       extension => $ext, 
 	       verbose => $verbose,
-	       fork => $fork);
+	       fork => $fork );
 
 # encoding
 print encode_sereal( $spacer_r );

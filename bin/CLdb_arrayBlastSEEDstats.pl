@@ -134,7 +134,8 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
-
+use FindBin;
+use lib "$FindBin::RealBin/../lib/";
 
 ### CLdb
 use CLdb::seq qw/read_fasta

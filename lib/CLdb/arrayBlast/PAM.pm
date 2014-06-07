@@ -181,6 +181,7 @@ sub getPAM{
     my $pam_end = $pam_index_r->[1];
     my $ext_len = length $ext;
     $pam_start = 1 if $pam_start < 1;   # shouldn't happen
+    $pam_start = $ext_len if $pam_start > $ext_len;
     $pam_end = $ext_len if $pam_end > $ext_len; 
   
     # substr out pam

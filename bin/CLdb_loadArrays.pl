@@ -138,12 +138,19 @@ load_db_table($dbh, 'DRs', $dr_header_r, $arrays{'DR'});
 ## spacer entries ##
 load_db_table($dbh, 'spacers', $sp_header_r, $arrays{'spacer'});
 
+
+# making indices
+$dbh->do('CREATE INDEX spacerID_idx on spacers(spacer_id)');
+$dbh->do('CREATE INDEX DRID_idx on DRs(DR_id)');
+$dbh->commit;
+
 # disconnect #
 $dbh->disconnect();
 exit;
 
 
-### Subroutines 
+
+#--- Subroutines 
 sub get_array_file_names{
 # querying genbank names from sqlite loci table #
   my ($dbh) = @_;

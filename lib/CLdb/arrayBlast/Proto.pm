@@ -84,6 +84,9 @@ sub queryBlastDBs{
 
     # each iteration
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+      # status
+      printf STDERR " Getting hits for query: '%s'...\n", $iter->{'Iteration_query-ID'}
+	unless $verbose;
       
       # skipping iterations without hits
       next unless exists $iter->{Iteration_hits} and
@@ -110,13 +113,13 @@ sub queryBlastDBs{
 	      $Hsps{$ret_r->[0]} = $ret_r->[1];   # UID -> hsp			     
 	   });
 
-
 	# getting subject scaffold
 	my $sub_scaf = exists $hit->{Hit_id} ? 
 	  $hit->{Hit_id} : confess "Cannot find 'Hit_id'";
 	my $sub_scaf_len = exists $hit->{Hit_len} ? 
 	  $hit->{Hit_len} : confess "Cannot find 'Hit_len'";
 	
+
 	# iterating through each hsp
 	## adding protospacer & info to $hsp
 	while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
@@ -126,7 +129,7 @@ sub queryBlastDBs{
 			  query_len => $query_len, 
 			  extension => $ext,
 			  subject_scaffold => $sub_scaf,
-			  scaffold_len => $sub_scaf_len);
+			  scaffold_len => $sub_scaf_len );
 	  getProtoFromDB( hsp => $hsp,
 			  blastdb => $blastdbfile );	 
 	  #print Dumper $hsp; exit;
@@ -135,6 +138,7 @@ sub queryBlastDBs{
 	$pm->wait_all_children;
 
 	# replacing old Hsps with udpates
+	#print Dumper \%Hsps; exit;
 	$hit->{Hit_hsps}{Hsp} = \%Hsps;
       }      
     }
