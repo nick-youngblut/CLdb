@@ -8,6 +8,7 @@ use Data::Dumper;
 use List::Util qw/max/;
 use IPC::Cmd qw/can_run run/;
 use Parallel::ForkManager;
+use MCE::Map;
 
 # CLdb
 use CLdb::seq qw/ read_fasta /;
@@ -55,20 +56,23 @@ push @EXPORT_OK, 'queryBlastDBs';
 
 sub queryBlastDBs{
   my %h = @_;
+ 
+  # input check
   my $spacer_r = exists $h{blast} ? $h{blast} : 
     confess "Provide a decoded blast srl as $%";
   my $ext = exists $h{extension} ? $h{extension} :
     confess "Provide the protospacer extension (bp)";
-  my $fork = exists $h{fork} ? $h{fork} : confess "Provide 'fork'";
+  my $workers = exists $h{workers} ? $h{workers} : confess "Provide 'workers'";
   my $verbose = $h{verbose};
 
   # checking for blastdbcmd in path
   can_run('blastdbcmd') or confess "Cannot find 'blastdbcmd' in \$PATH";
 
   # parallel queries by hit
-  my $pm = new Parallel::ForkManager($fork);
+  MCE::Map::init{ max_workers => $workers };
 
   # getting blast db file name
+  my %query_list;
   foreach my $run (keys %$spacer_r){
     next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};  # must have hit
 
@@ -79,22 +83,16 @@ sub queryBlastDBs{
 
     # status
     my @parts = File::Spec->splitpath($blastdbfile);
-    print STDERR "Retrieving sequences from blast db: '$parts[2]'\n"
+    print STDERR "Retrieving proto info from blast db: '$parts[2]'\n"
       unless $verbose;
 
     # each iteration
     foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
-      # status
-      printf STDERR " Getting hits for query: '%s'...\n", $iter->{'Iteration_query-ID'}
-	unless $verbose;
       
       # skipping iterations without hits
       next unless exists $iter->{Iteration_hits} and
         $iter->{Iteration_hits} !~ /^\s*$/;
       next unless exists $iter->{Iteration_hits}{Hit};
-
-      # getting crRNA info if provided
-      # my $crRNA_info = $iter->{crRNA_info} if exists $iter->{crRNA_info};
 
       # getting query length
       my $query_len = exists $iter->{'Iteration_query-len'} ?
@@ -104,14 +102,6 @@ sub queryBlastDBs{
       # iterating through hits
       foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
 	next unless exists $hit->{Hit_hsps}{Hsp};
-
-	# collecting updated Hsps 
-	my %Hsps;
-	$pm->run_on_finish(
-	   sub{ 
-	     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $ret_r) = @_;
-	      $Hsps{$ret_r->[0]} = $ret_r->[1];   # UID -> hsp			     
-	   });
 
 	# getting subject scaffold
 	my $sub_scaf = exists $hit->{Hit_id} ? 
@@ -123,26 +113,81 @@ sub queryBlastDBs{
 	# iterating through each hsp
 	## adding protospacer & info to $hsp
 	while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
-	  $pm->start and next;
 
 	  addProtoCoords( hsp => $hsp, 
 			  query_len => $query_len, 
 			  extension => $ext,
 			  subject_scaffold => $sub_scaf,
 			  scaffold_len => $sub_scaf_len );
-	  getProtoFromDB( hsp => $hsp,
-			  blastdb => $blastdbfile );	 
-	  #print Dumper $hsp; exit;
-	  $pm->finish(0, [$hspUID, $hsp]);
-	}	
-	$pm->wait_all_children;
 
-	# replacing old Hsps with udpates
-	#print Dumper \%Hsps; exit;
-	$hit->{Hit_hsps}{Hsp} = \%Hsps;
+	  # making list for querying
+	  push @{$query_list{$blastdbfile}{hspUID}}, $hspUID;
+	  push @{$query_list{$blastdbfile}{hsp}}, $hsp;
+
+	}	
       }      
     }
   }
+
+
+  # blastdbcmd
+  my %protos;
+  foreach my $blastdbfile (keys %query_list){
+    # status
+    my @parts = File::Spec->splitpath($blastdbfile);
+    print STDERR "Retrieving proto sequences from blast db: '$parts[2]'\n"
+      unless $verbose;
+
+    #-- parallel calls of blastdbcmd --#
+    my @tmp = mce_map { getProtoFromDB( hsp => $_,
+					blastdb => $blastdbfile ) 
+		      } @{$query_list{$blastdbfile}{hsp}};
+
+    # loading hash
+    for my $i (0..$#tmp){  # blastdbfile => hspUID => sequence
+      die $! unless defined $query_list{$blastdbfile}{hspUID}->[$i];
+      $protos{$blastdbfile}{ $query_list{$blastdbfile}{hspUID}->[$i] } =
+	$tmp[$i];
+    }
+  }
+
+
+  # adding values to spacers_r
+  foreach my $run (keys %$spacer_r){
+    next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};  # must have hit
+
+    # getting blastdbfile
+    my $blastdbfile = exists $spacer_r->{$run}{'BlastOutput_db'} ?
+      $spacer_r->{$run}{'BlastOutput_db'} :
+        confess "Cannot find BlastOutput_db in run $run";
+
+
+    # each iteration
+    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+      
+      # skipping iterations without hits
+      next unless exists $iter->{Iteration_hits} and
+        $iter->{Iteration_hits} !~ /^\s*$/;
+      next unless exists $iter->{Iteration_hits}{Hit};
+
+      # iterating through hits
+      foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
+	next unless exists $hit->{Hit_hsps}{Hsp};
+
+	# iterating through each hsp
+	## adding protospacer & info to $hsp
+	while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
+	  
+	  next unless exists $protos{$blastdbfile}{$hspUID};
+
+	  $hsp->{protoFullSeq} = $protos{$blastdbfile}{$hspUID}->[0];
+	  $hsp->{protoFullXSeq} = $protos{$blastdbfile}{$hspUID}->[1];     
+	}
+      }
+    }
+  }
+
+#  print Dumper %$spacer_r; exit;
 }
 
 
@@ -297,11 +342,11 @@ sub getProtoFromDB{
     }
   }
 
-  # adding sequence to hsp
-  $hsp->{protoFullSeq} = call_blastdbcmd($blastdbfile, $entry, $proto_range, $strand);
-  $hsp->{protoFullXSeq} = call_blastdbcmd($blastdbfile, $entry, $protoX_range, $strand);
-  
-  #print Dumper $hsp; exit;
+  # adding sequence to hsp 
+  my $proto = call_blastdbcmd($blastdbfile, $entry, $proto_range, $strand);
+  my $protoX = call_blastdbcmd($blastdbfile, $entry, $protoX_range, $strand);
+
+  return [$proto, $protoX]; 
 }
 
 

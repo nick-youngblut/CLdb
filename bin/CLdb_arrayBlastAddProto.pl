@@ -24,9 +24,9 @@ CLdb_arrayBlastAddProto.pl [flags] < blast_hits.srl > spacer_blast_proto.srl
 
 Number of bp to include on either side of the protospacer. [10].
 
-=item -fork  <int>
+=item -workers  <int>
 
-Number of parallel blast db queriesa. [1]
+Max cpus to utilize. [1]
 
 =item -verbose  <bool>
 
@@ -106,10 +106,10 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose);
 my $ext = 10;
-my $fork = 0;
+my $workers = 1;
 GetOptions(
 	   "extension=i" => \$ext,
-	   "fork=i" => \$fork,
+	   "workers=i" => \$workers,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -125,7 +125,7 @@ my $spacer_r = decode_file( fh => \*STDIN );
 queryBlastDBs( blast => $spacer_r,  
 	       extension => $ext, 
 	       verbose => $verbose,
-	       fork => $fork );
+	       workers => $workers );
 
 # encoding
 print encode_sereal( $spacer_r );
