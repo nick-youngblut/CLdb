@@ -28,15 +28,15 @@ Output file format (see BioPerl SeqIO). [fasta]
 
 =item -trial
 
-Number of trials to attempt for downloading a genome. [5]
+Number of trials to attempt for downloading a genome. [10]
 
 =item -prefix
 
 Output file prefix. [.]
 
-=item -cpus
+=item -forks
 
-Number of genomes to download in parallel. [0]
+Number of genomes to download in parallel (0 = no forking). [0]
 
 =item -h	This help message
 
@@ -122,7 +122,7 @@ GetOptions(
 	   "trial=i" => \$trial_limit,
 	   "format=s" => \$format,
 	   "prefix=s" => \$prefix,
-	   "cpus=i" => \$cpus,
+	   "forks=i" => \$cpus,
 	   "help|?" => \&pod2usage # Help
 	  );
 
@@ -167,10 +167,22 @@ foreach my $acc_GI ( keys %$acc_r ){
     # checking to make sure seqio is defined
     if(defined $seqio){ # all sequences appear to have been written out; writing from tempFile to STDOUT
       # writing out sequences
+      my $seq_cnt = 0;
       while( my $seq = $seqio->next_seq ){
 	$seq_out->write_seq($seq);
+	$seq_cnt++;
       }
-      last;
+      if($seq_cnt > 0){ 
+	last;
+	}
+      elsif( $trials >= $trial_limit ){
+	print STDERR "WARNING: exceded number of trials for $acc_GI. Skipping\n";
+	last;
+      }
+      else{
+	printf STDERR "WARNING: nothing streamed for $acc_GI.Retrying\n";      
+	next;
+      }
     }
     elsif( $trials >= $trial_limit ){
       print STDERR "WARNING: exceded number of trials for $acc_GI. Skipping\n";

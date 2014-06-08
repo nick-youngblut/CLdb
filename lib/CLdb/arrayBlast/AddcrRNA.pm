@@ -259,7 +259,8 @@ s.spacer_id,
 s.spacer_start,
 s.spacer_end,
 s.spacer_sequence,
-sc.cluster_id
+sc.cluster_id,
+?
 FROM
 loci l, spacers s, spacer_clusters sc
 WHERE l.locus_id=s.locus_id
@@ -272,39 +273,40 @@ HERE
   # prepare & get fields of query
   my $sth = $dbh->prepare($query) or confess $dbh->err;
   my $fields = $sth->{NAME_lc_hash} or confess $dbh->err;
+  #my $levels = ['Fasta_File', 'Scaffold', 'Locus_ID', 'Spacer_ID'];
 
   # querying CLdb for each blast query ID
   my %spacer_info;
-  my $fetch_cnt = 0;
   foreach my $ID (@$spacerIDs_r){
     my @l = split /\|/, $ID;
     confess "ERROR: cannot find clusterID and/or cluster cutoff in $ID\n"
       unless defined $l[3] and defined $l[4];
 
-    $sth->bind_param(1, $l[3]);  # clusterID
-    $sth->bind_param(2, $l[4]);  # cluster cutoff
+    $sth->bind_param(1, $ID);
+    $sth->bind_param(2, $l[3]);  # clusterID
+    $sth->bind_param(3, $l[4]);  # cluster cutoff
     
     $sth->execute or confess $dbh->err;
-    my $ret = $sth->fetchall_arrayref( ) or confess $dbh->err;
-    
-    # loading CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
+    my $ret = $sth->fetchall_arrayref(  ) or confess $dbh->err;
+ 
+
+    #loading CLdb_info: {fasta_file}=>{scaffold}=>{locus_id}=>{spacer_id}=>{field}=>value
     foreach my $r (@$ret){
       foreach my $field (keys %$fields){
-	next if $field eq 'fasta_file' or $field eq 'locus_id' 
-	  or $field eq 'spacer_id' or $field eq 'scaffold';
-	$CLdb_info_r->{ $r->[$fields->{fasta_file}] }
-	  { $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
-	  { $r->[$fields->{spacer_id}] }{ $field } = $r->[ $fields->{$field} ];
+    	next if $field eq 'fasta_file' or $field eq 'locus_id' 
+    	  or $field eq 'spacer_id' or $field eq 'scaffold';
+    	$CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+    	  { $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
+    	  { $r->[$fields->{spacer_id}] }{ $field } = $r->[ $fields->{$field} ];
       }
-      # adding query_ID to add info back to decoded blast srl
-      $CLdb_info_r->{ $r->[$fields->{fasta_file}] }
+    #  adding query_ID to add info back to decoded blast srl
+	$CLdb_info_r->{ $r->[$fields->{fasta_file}] }
 	{ $r->[$fields->{scaffold}] }{ $r->[$fields->{locus_id}] }
 	  { $r->[$fields->{spacer_id}] }{ query_id } = $ID;
-            
     }
   }
  
-#  print Dumper %$CLdb_info_r; exit;
+  #print Dumper $CLdb_info_r; exit;
 }
     
 
@@ -340,6 +342,7 @@ sub getSpacerRegion{
   my $fasta_dir = "$CLdb_HOME/fasta";
   confess "ERROR: cannot find '$fasta_dir'" unless -d $fasta_dir;
 
+
   # spacers by genome 
   my %byQuery;  # {queryID}=>[ {field} => {value} ]
   foreach my $fasta_file (keys %$CLdb_info_r){
@@ -368,7 +371,7 @@ sub getSpacerRegion{
 	  map{confess "Cannot find $_ for $locus_id->$spacer_id" unless 
 		exists $info_r->{$_} } qw/spacer_start spacer_end array_sense_strand/;	  
 
-	  print STDERR join(",", $info_r->{spacer_start}, $info_r->{spacer_end}), "\n";
+	  #print STDERR join(",", $info_r->{spacer_start}, $info_r->{spacer_end}), "\n";
 
 	  # floor & ceiling (1-indexing)
 	  my $region_start = $info_r->{spacer_start} - $ext;

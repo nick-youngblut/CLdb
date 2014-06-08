@@ -30,10 +30,6 @@ CRT executable name. [CRT1.2-CLI]
 
 Any opts to provide to crt (eg., '-minNR 4 -minRL 25')
 
-=item -prefix  <str>
-
-Output file(s) prefix. ['']
-
 =item -coord  <bool>
 
 Array start-end coords added to each array file name? [FALSE]
@@ -64,6 +60,8 @@ each genome, crt is run. If >=1 CRISPR array is found
 it is written to an individual file in a directory
 labeled as the input genome fasta file.
 
+The genome and scaffold names are comment lines in the
+written array files.
 
 =head1 AUTHOR
 
@@ -100,11 +98,9 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $coords);
 my $crt_x = 'CRT1.2-CLI';
 my $opts = "";
-my $prefix = "";
 my $forks = 0;
 GetOptions(
 	   "crt=s" => \$crt_x,
-	   "prefix=s" => \$prefix, 
 	   "coords" => \$coords,
 	   "opts=s" => \$opts,
 	   "forks=i" => \$forks,
@@ -134,7 +130,6 @@ foreach my $infile (@ARGV){
 
   # foreach scaffold/chromosome:
   while(my $seqo = $in->next_seq){
-
     $pm->start and next;
     
     # creating temp file
@@ -155,10 +150,10 @@ foreach my $infile (@ARGV){
 			     -verbose => $verbose);
     
     # status
-    printf STDERR  "Genome:\t\t%s\nScaf/chromo:\t%s-%s\n", $infile,
+    printf STDERR  "Genome:\t\t%s\nScaf/chromo:\t%s %s\n", $infile,
 		      $seqo->id, $seqo->desc unless $verbose;
 
-    printf STDERR "Arrays found:\t%i\n\n", scalar keys $arrays_r
+    printf STDERR "Arrays found:\t%i\n", scalar keys $arrays_r
       unless $verbose;
     
     # writing out arrays
