@@ -80,14 +80,25 @@ if you you lack root/superuser privilages.
 
 ## Documentation
 
+### Wiki
+
 See the [wiki](https://github.com/nyoungb2/CLdb/wiki).
+
+
+### Examples
+
+I've started compiling examples as IPython Notebooks
+in the ./examples/ directory. 
+You can quickly view these notebooks by converting
+them to html with nbconvert.
+
 
 ## ISSUES/CONTACT
 
-I'd love to here your feedback. 
+All feedback is welcome, except for bug reports... 
+OK fine, ALL feedback is welcome.
 
 Please provide it via [Issues](https://github.com/nyoungb2/CLdb/issues) on GitHub.
-
 
 ## LICENSE AND COPYRIGHT
 
