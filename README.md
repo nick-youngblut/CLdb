@@ -93,7 +93,7 @@ in the ./examples/ directory.
 
 You can quickly view these notebooks by either:
 
-1. using nbviewer. Example: type `http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/`
+1. using nbviewer. For example: enter the url `http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/` at the nbviewer website.
 2. converting the .ipynb files to html with nbconvert
 
 
