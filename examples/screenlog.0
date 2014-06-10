@@ -176,3 +176,6 @@ INFO:tornado.access:302 GET /notebooks/ecoli_CLdb/fasta/Escherichia_coli_BL2_DE3
 2014-06-07 19:06:32.202 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
 2014-06-07 19:08:32.201 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
 2014-06-07 19:58:33.119 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-07 20:00:33.127 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-08 06:33:42.813 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+2014-06-08 06:35:42.834 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb

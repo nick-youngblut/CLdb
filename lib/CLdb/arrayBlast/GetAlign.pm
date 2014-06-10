@@ -187,6 +187,7 @@ sub get_alignProto{
   my $crDNA_ori = exists $h{crDNA_ori} ?
     $h{crDNA_ori} : confess "Provide 'crDNA_ori'";
   my $verbose = $h{verbose};
+  my $evalue_cut = $h{evalue_cut}; 
   
   foreach my $run (keys %$spacer_r){
     next unless exists $spacer_r->{$run}{'BlastOutput_iterations'};  # must have hit
@@ -215,7 +216,8 @@ sub get_alignProto{
       # iterating through hits
       foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
         next unless exists $hit->{Hit_hsps}{Hsp};
-
+	
+	my $skip = 0;   # skipping if hsp does not meet cutoff
 	foreach my $hspUID (keys %{$hit->{Hit_hsps}{Hsp}}){
 	  # filtering 	  
 	  ## next unless alignment
@@ -245,7 +247,7 @@ sub get_alignProto{
 
 
 	    ## CLdb
-	    if( %$queries_r){
+	    if( defined $queries_r){
 	      # skip if selecting subset and this locus-spacer is not 1 of them
 	      next unless exists $queries_r->{$locus_id}{$spacer_id};
 	      foreach my $field (keys %{$queries_r->{$locus_id}{$spacer_id}}){
@@ -279,6 +281,14 @@ sub get_alignProto{
 	    ## hsp fields
 	    if(exists $outfmt_r->{hsp}){
 	      foreach my $field (keys %{$outfmt_r->{hsp}} ){    
+		# applying evalue cutoff
+		if( $field eq "Hsp_evalue" 
+		    and exists $hit->{Hit_hsps}{Hsp}{$hspUID}{$field}
+		    and defined $evalue_cut){
+		  $skip = 1 if $hit->{Hit_hsps}{Hsp}{$hspUID}{$field} > $evalue_cut;
+		}
+
+		# adding field value
 		my $val = exists $hit->{Hit_hsps}{Hsp}{$hspUID}{$field} ?
 		  $hit->{Hit_hsps}{Hsp}{$hspUID}{$field} :
 		    confess "ERROR: cannot find field '$field' for $locus_spacer\n";
@@ -287,7 +297,9 @@ sub get_alignProto{
 	    }
 
 	    # writing out the alignment
+	    next if $skip == 1;   # skipping if hsp does not meet cutoff(s)
 	    foreach my $ele (sort keys %{$aln_r->{$locus_spacer}}){  # $ele= crDNA|protospacer
+	      # making sequence name
 	      my $seqName = join("", ">", 
 				 join("|", $ele,
 				      $locus_id, 

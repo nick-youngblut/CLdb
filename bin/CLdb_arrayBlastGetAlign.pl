@@ -23,7 +23,7 @@ CLdb_arrayBlastGetAlign.pl [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
 =item -database  <char>
 
 CLdb sqlite file name 
-(if getting metadata on spacer sequences. eg., taxon_name)
+(if getting CLdb metadata on spacer sequences. eg., taxon_name)
 
 =item -subtype  <char>
 
@@ -204,6 +204,7 @@ my $outfmt;
 my ($array, $crDNA_ori);
 my $query = "";
 my (@subtype, @taxon_id, @taxon_name);
+my $evalue_cut;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "array" => \$array,
@@ -213,6 +214,7 @@ GetOptions(
            "taxon_id=s{,}" => \@taxon_id,
            "taxon_name=s{,}" => \@taxon_name,	   
 	   "query=s" => \$query,
+	   "evalue=f" => \$evalue_cut,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -223,12 +225,18 @@ my $outfmt_r = parse_outfmt($outfmt);
 
 #--- MAIN ---#
 # decoding spacer and DR srl
+print STDERR "Decoding .srl file...\n" unless $verbose;
 my $spacer_r = decode_file( fh => \*STDIN );
 
 
 # if database: connect & query
 my $queries_r;   # 
 if(defined $database_file){
+  # status
+  print STDERR "Getting metadata info from CLdb...\n"
+    unless $verbose;
+
+  # connecting to CLdb
   my $dbh = connect2db($database_file);
   table_exists($dbh, 'loci');
   table_exists($dbh, 'spacers');
@@ -248,13 +256,13 @@ if(defined $database_file){
 
 
 # querying blastDBs for proteospacers
+print STDERR "Getting alignments...\n" unless $verbose;
 get_alignProto( blast => $spacer_r,
 		outfmt => $outfmt_r,
 		queries => $queries_r,
 		array => $array,
 		crDNA_ori => $crDNA_ori,
+		evalue_cut => $evalue_cut,
 		verbose => $verbose );
 
-# encoding
-#print encode_sereal( $spacer_r );
 

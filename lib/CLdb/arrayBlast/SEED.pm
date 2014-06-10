@@ -356,7 +356,7 @@ sub write_sum_table{
   my $prefix = shift or confess "Provide file prefix\n";
   my $MMSum_r = shift or confess "Provide mismatchSum as \%\n";
 
-  my $outfile = "$prefix\_summary.txt";
+  my $outfile = "$prefix\_SEEDstats-summary.txt";
   open OUT, ">$outfile" or confess $!;
 
   # header
@@ -396,7 +396,7 @@ sub write_byPos_table{
   my $MMByPos_r = shift or confess "Provide mismatch ByPos as \%\n";
 
 
-  my $outfile = "$prefix\_byPos.txt";
+  my $outfile = "$prefix\_SEEDstats-byPos.txt";
   open OUT, ">$outfile" or confess $!;
 
   # header

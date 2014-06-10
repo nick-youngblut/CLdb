@@ -15,7 +15,7 @@ use Sereal qw/decode_sereal/;
 
 =head1 NAME
 
-sereal - Subroutines for blast srl files
+sereal - The great new sereal!
 
 =head1 VERSION
 
@@ -28,7 +28,7 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-subroutines for editing blast xml converted to json format or sereal
+subroutines for editing blast xml converted to json format
 
 =head1 EXPORT
 
@@ -160,15 +160,20 @@ sub parse_outfmt{
   croak "-outfmt argument must start with '6' or '7'"
     unless $l[0] == 6 || $l[0] == 7;
 
+
   my %fields;
  
   # comments 
   $fields{comments} = $l[0] == 7 ? 1 : 0;
 
+  # all lower case
+#  map{ tr/A-Z/a-z/ } @l[1..$#l];
+
   # fields
-  $fields{fields} = [@l[1..$#l]];
+  $fields{unclassified_fields} = [@l[1..$#l]];
+
  
- # print Dumper %fields; exit;
+#  print Dumper %fields; exit;
   return \%fields;
 }
 
@@ -188,61 +193,6 @@ edited fields hash_ref
 
 %: classification => [fields]
 
-=head3 Index
-
-# header
-blast: 'BlastOutput_version'
-Query: 'BlastOutput_query-def'
-Database: 'BlastOutput_db'
-Fields: user defined
-Hits: 'BlastOutput_iterations' => 'Iteration' => scalar []
-
-# body
-qseqid: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_query-def' 
-qgi: NA
-qacc: NA
-qaccver: NA
-qlen: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_query-len' 
-sseqid: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_id'
-sallseqid: NA
-sgi: NA
-sallgi: NA
-sacc: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_accession'
-accver: NA
-sallacc: NA
-slen: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_len'
-qstart: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-from'
-qend: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-to'
-sstart: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-from'
-send: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-to'
-qseq: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_qseq'
-sseq: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hseq'
-evalue: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_evalue'
-bitscore: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_bit-score'
-score: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_score'
-length: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_align-len'
-pident: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_identity'
-nident: NA
-mismatch: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => ?
-positive: NA
-gapopen: 'BlastOutput_iterations' => 'Parameters' => 'Parameters_gap-open'
-gaps: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_gaps'
-ppos: NA
-frames: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-frame' /
-'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-frame'
-qframe: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_query-frame'
-sframe: 'BlastOutput_iterations' => 'Iteration' => [] => 'Iteration_hits' => 'Hit' => [] => 'Hit_hsp' => 'Hsp' => 'Hsp_hit-frame'
-btop: NA
-staxids: NA
-sscinames: NA
-scomnames: NA
-sblastnames: NA
-sskingdoms: NA
-stitle: NA
-salltitles: NA
-sstrand: NA
-qcovs: NA
-qcovhsp: NA
 
 =cut
 
@@ -253,11 +203,16 @@ sub classify_fields {
 
   # classification table
   my %class = (
-	       qseqid => ['run', 'Iteration_query-def'],
-	       qlen => ['run', 'Iteration_query-len'], 
+	       # run
+	       blastdb => ['run', 'BlastOutput_db'],
+	       # iteration
+	       qseqid => ['iter', 'Iteration_query-def'],
+	       qlen => ['iter', 'Iteration_query-len'], 
+	       # hit
 	       sseqid => ['hit', 'Hit_id'],
 	       sacc => ['hit', 'Hit_accession'],
 	       slen => ['hit', 'Hit_len'],
+	       # hsp
 	       qstart => ['hsp', 'Hsp_query-from'],
 	       qend => ['hsp', 'Hsp_query-to'],
 	       sstart => ['hsp', 'Hsp_hit-from'],
@@ -274,23 +229,61 @@ sub classify_fields {
 	       frames => ['hsp', 'Hsp_query-frame', 'Hsp_hit-frame'],
 	       qframe => ['hsp', 'Hsp_query-frame'],
 	       sframe => ['hsp', 'Hsp_hit-frame'],
-	       gapopen => ['param', 'Parameters_gap-open']
+	       ## CLdb hsp
+	       arrayHit => ['hsp', 'CLdb_array-hit'],
+	       subjectScaffold => ['hsp', 'subjectScaffold'],
+	       protoFullStart => ['hsp', 'protoFullStart'],
+	       protoFullXSeq => ['hsp', 'protoFullXSeq'],
+	       subjectStrand => ['hsp', 'subjectStrand'],
+	       protoFullXStart => ['hsp', 'protoFullXStart'],
+	       protoFullSeq => ['hsp', 'protoFullSeq'],
+	       protoX => ['hsp', 'protoX'],
+	       protoFullEnd => ['hsp', 'protoFullEnd'],
+	       protoFullXEnd => ['hsp', 'protoFullXEnd'],
+	       
+	       # param
+	       gapopen => ['param', 'Parameters_gap-open'],
+	       # crRNA
+	       spacer_start => ['crRNA_info', 'spacer_start'],
+	       spacer_end => ['crRNA_info', 'spacer_end'],
+	       region_start => ['crRNA_info', 'region_start'],
+	       region_end => ['crRNA_info', 'region_end'],
+	       spacer_scaffold => ['crRNA_info', 'scaffold'],
+	       cluster_id => ['crRNA_info', 'cluster_id'],
+	       genome_fasta => ['crRNA_info', 'genome_fasta'],
+	       locus_id => ['crRNA_info', 'locus_id'],
+	       spacer_id => ['crRNA_info', 'spacer_id'],	       
+	       query_id => ['crRNA_info', 'query_id'],
+	       array_sense_strand => ['crRNA_info', 'array_sense_strand'],
+	       spacer_seq =>['crRNA_info', 'spacer_sequence'],
+	       crDNA_seq => ['crRNA_info', 'crDNA']
 	      );
 
 
   # classification
-  foreach my $field ( @{$fields_r->{fields}} ){
-    (my $tmp = $field) =~ tr/A-Z/a-z/;
+  foreach my $field ( @{$fields_r->{unclassified_fields}} ){
+#    (my $tmp = $field) =~ tr/A-Z/a-z/;
 
-    if( exists $class{$tmp} ){
-      $fields_r->{index}{ $tmp } = $class{$tmp};
+    # adding classification for field
+    if( exists $class{$field} ){   # field can be classified
+      if( $class{$field}->[0] eq 'crRNA_info' ){
+	$fields_r->{crRNA_index}{ $field } = $class{$field};
+	push @{$fields_r->{crRNA_fields}}, $field;
+      }
+      else{
+	$fields_r->{index}{ $field } = $class{$field};
+	push @{$fields_r->{classified_fields}}, $field;
+      }
     }
     else{
-      die "ERROR: field '$tmp' not supported\n";
+      print STDERR "ERROR: field '$field' not supported\n";
+      print STDERR "\nSUPPORTED FIELDS:\n" . 
+	join(",\n", sort keys %class) . "\n"; 
+      exit(1);
     }    
   }
 
- # print Dumper $fields_r; exit;
+#  print Dumper $fields_r; exit;
 }
 
 
@@ -316,117 +309,179 @@ sub blast_xml2txt {
   my %opts = @_; 
   my $blast_r = $opts{blast} || croak "No 'blast' arg provided $!\n";
   my $fields_r = $opts{fields} || croak "No 'fields' arg provided $!\n";
-  my $sep = $opts{sep};
 
-  print Dumper $blast_r; exit;
 
   # iterating through each hit
-  if(! exists $blast_r->{'BlastOutput_iterations'}){
-  }
-  
   foreach my $iter ( @{$blast_r->{'BlastOutput_iterations'}{'Iteration'}} ){
-    my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
-
+    # skipping iterations without hits
+    next unless exists $iter->{Iteration_hits} and
+      $iter->{Iteration_hits} !~ /^\s*$/;
+    next unless exists $iter->{Iteration_hits}{Hit};
+    
     # comments for the query (if needed)
     if( $fields_r->{comments} == 1){
       print join(" ", '# blast:', $blast_r->{'BlastOutput_version'}), "\n";
       print join(" ", '# Query:', $blast_r->{'BlastOutput_query-def'}), "\n";
       print join(" ", '# Database:', $blast_r->{'BlastOutput_db'}), "\n";
-      print join(" ", '# Fields:', 
-		 join(", ", @{$fields_r->{fields}})
+      my $crRNA_fields = exists $fields_r->{crRNA_fields} ? 
+	join(", ",  @{$fields_r->{crRNA_fields}} ) : "";
+      print join(" ", '# Fields:',
+		 join(", ", 
+		      @{$fields_r->{classified_fields}}, 
+		      $crRNA_fields ),
 		), "\n";
     }
 
+    # each hit
+    foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
+      next unless exists $hit->{Hit_hsps}{Hsp};
 
-    # getting blast db file name
-    foreach my $run (keys %$blast_r){
-      next unless exists $blast_r->{$run}{'BlastOutput_iterations'};  # must have hit
-
-      # getting blastdbfile
-      my $blastdbfile = exists $blast_r->{$run}{'BlastOutput_db'} ?
-	$blast_r->{$run}{'BlastOutput_db'} :
-	  confess "Cannot find BlastOutput_db in run $run";
-      
-      
-      # each iteration
-      foreach my $iter ( @{$blast_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
+      # each hsp
+      while( my($hspUID, $hsp) = each %{$hit->{Hit_hsps}{Hsp}} ){
 	
-	# skipping iterations without hits or crRNA_info
-	next unless exists $iter->{Iteration_hits} and
-	  $iter->{Iteration_hits} !~ /^\s*$/;
-	next unless exists $iter->{Iteration_hits}{Hit};
-	
-	# iterating through hits
-	foreach my $hit ( @{$iter->{Iteration_hits}{Hit}} ){
-	  next unless exists $hit->{Hit_hsps}{Hsp};
-	  
-	  # iterating through each hsp
-	  ## adding protospacer & info to $hsp
-	  foreach my $hsp (keys %{$hit->{Hit_hsps}{Hsp}}){
-	    print Dumper $hsp; exit;
-	    
+	my @row; # output row	
+	foreach my $field ( @{$fields_r->{classified_fields}} ){
+	  # index to variable: [level, key]
+	  push @row, getFieldValue( 
+				   $field,
+				   $fields_r->{index}{$field},
+				   $blast_r,
+				   $iter,
+				   $hit,
+				   $hsp
+				  );
+	}
+       
+       	## crRNA_info: if provided writing row for each crRNA entry
+	if( exists $fields_r->{crRNA_fields}  ){
+	  foreach my $crRNA_entry ( keys %{$iter->{crRNA_info}} ){  # each entry
+	    my @crRNA_row;	    
+	    # getting info for the entry
+	    foreach my $field ( @{$fields_r->{crRNA_fields}} ){
+	      push @crRNA_row, getcrRNAFieldValue(
+						  $field,
+						  $fields_r->{crRNA_index}{$field},
+						  $iter->{crRNA_info}{$crRNA_entry}
+						 );
+	    }
+	    print join("\t", @row, @crRNA_row), "\n";
 	  }
 	}
+	## else: just 1 row
+	else{	
+	  print join("\t", @row), "\n";
+	}
       }
-    } 
+    }
+  }  
+}
+
+
+sub getcrRNAFieldValue{
+  # input
+  my $field = shift or confess "Provide field\n";
+  my $index = shift or confess "Provide index\n";
+  my $entry_r = shift or confess "Provide entry_r\n";
+
+
+  if( exists $entry_r->{$index->[1]} ){
+    return $entry_r->{$index->[1]};
   }
-    
-    # # multiple hits or just 1?
-    # foreach my $hit ( @$hits_ref){
-    	
-    # 	my @row; # output row
-    # 	foreach my $field ( @{$fields_r->{fields}} ){
-    # 	  my $index = $fields_r->{index}{$field};
-	  
-    # 	  # if variable undefined
-    # 	  unless(defined $index->[1]){
-    # 	    push @row, 0;  # really, is 'undef'
-    # 	    next;
-    # 	  }
-	  
-    # 	  # determing path to variable 
-    # 	  ## run
-    # 	  if( $index->[0] eq 'run' ){
-    # 	    push @row, $iter->{$index->[1]};
-	    
-    # 	  }
-    # 	  ## hit
-    # 	  if( $index->[0] eq 'hit' ){
-    # 	    push @row, $hit->{$index->[1]};
-    # 	  }
-    # 	  ## hsp
-    # 	  if( $index->[0] eq 'hsp' ){
-    # 	    # hsp -> frames field
-    # 	    if (defined $index->[2]){
-    # 	      push @row, join("/", $hsp->{$index->[1]},
-    # 			  $hsp->{$index->[2]});
-    # 	    }
-    # 	    elsif( $index->[1] eq 'Hsp_identity' ){
+  else{
+    warn "WARNING: Cannot find find field '$field'\n";
+    return 'undef';
+  }  
+}
 
-    # 	      if(exists $hsp->{Hsp_identity} && 
-    # 		 $hsp->{Hsp_identity} != 0){
-    # 		push @row, $hsp->{Hsp_identity} / 
-    # 		  $hsp->{'Hsp_align-len'} * 100;
-    # 	      }
-    # 	      else{
-    # 		push @row, 'NA';
-    # 	      }		 
-    # 	    }
-    # 	    else{ # other fields
-    # 	      push @row, $hsp->{$index->[1]};
-    # 	    }
-    # 	  }
-    # 	  ## param
-    # 	  if( $index->[0] eq 'param' ){
-    # 	    push @row, $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
-    # 	  }
-    # 	}
 
-    # 	print join($sep, @row), "\n";
-    #   }
-    # }
+sub getFieldValue{
+  # input
+  my $field = shift or confess "Provide field\n";
+  my $index = shift or confess "Provide index\n";
+  my $blast_r = shift or confess "Provide blast_r\n";
+  my $iter = shift or confess "Provide iter\n";
+  my $hit = shift or confess "Provide hit\n";
+  my $hsp = shift or confess "Porvide hsp\n";
+	  
+	  
+
+  # 'undef' for variables not actually in blast data
+  unless(defined $index->[1]){
+    return 'undef';  
+  }
   
+  
+  # adding field values to @row
+  ## run
+  if( $index->[0] eq 'run'){
+    if( exists $blast_r->{$index->[1]} ){
+      return $blast_r->{$index->[1]};
+    }
+    else{
+      warn "WARNING: Cannot find field '$field'\n";
+      return 'undef';
+    }	    
+  }
+  
+  ## iteration
+  if( $index->[0] eq 'iter' ){
+    if( exists $iter->{$index->[1]} ){
+      return $iter->{$index->[1]};
+    }
+    else{
+      warn "WARNING: Cannot find field '$field'\n";
+      return'undef';
+    }	    
+  }
+  
+  ## hit
+  if( $index->[0] eq 'hit' ){
+    if( exists $hit->{$index->[1]} ){
+      return $hit->{$index->[1]};
+    }
+    else{
+      warn "WARNING: Cannot find field '$field'\n";
+      return 'undef';
+    }	    
+  }
+  
+  ## hsp
+  if( $index->[0] eq 'hsp' ){
+    if( exists $hsp->{$index->[1]} ){
+      # hsp -> frames field
+      if (defined $index->[2]){
+	return join("/", $hsp->{$index->[1]},
+			$hsp->{$index->[2]});
+      }
+      # hsp_identity
+      elsif( $index->[1] eq 'Hsp_identity' ){
+	return $hsp->{Hsp_identity} / 
+	  $hsp->{'Hsp_align-len'} * 100;
+      }
+      # other fields
+      else{ 
+	return $hsp->{$index->[1]};
+      }	      
+    }
+    else{
+      warn "WARNING: Cannot find field '$field'\n";
+      return 'undef';
+    }	    
+  }
+  
+  ## param
+  if( $index->[0] eq 'param' ){
+    if( exists $blast_r->{BlastOutput_param}{Parameters}{$index->[1]} ){
+      return $blast_r->{'BlastOutput_param'}{'Parameters'}{$index->[1]};
+    }
+    else{
+      warn "WARNING: Cannot find field '$field'\n";
+      return 'undef';
+    }
+  }
 
+  # if made it this far, die
+  confess "Internal error\n";
 }
 
 =head1 AUTHOR

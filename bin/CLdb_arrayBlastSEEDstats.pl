@@ -23,7 +23,7 @@ CLdb_arrayBlastSEEDstats.pl [flags] < proto.fasta
 
 =item -prefix  <char>
 
-Output file prefix. [SEED]
+Output file prefix. ['']
 
 =item -SEED  <char>
 
@@ -152,7 +152,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 my ($verbose, $no_gap);
 my @SEED;
 my ($fasta_in, $table_in); 
-my $prefix = "SEED";
+my $prefix = "";
 GetOptions(
 	   "SEED=i{2,2}" => \@SEED,	   
 	   "prefix=s" => \$prefix,
