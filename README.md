@@ -89,8 +89,12 @@ See the [wiki](https://github.com/nyoungb2/CLdb/wiki).
 
 I've started compiling examples as IPython Notebooks
 in the ./examples/ directory. 
-You can quickly view these notebooks by converting
-them to html with nbconvert.
+
+
+You can quickly view these notebooks by either:
+
+1. using nbviewer. Example: type `http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/`
+2. converting the .ipynb files to html with nbconvert
 
 
 ## ISSUES/CONTACT
