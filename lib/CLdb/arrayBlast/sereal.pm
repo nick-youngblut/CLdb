@@ -309,6 +309,7 @@ sub blast_xml2txt {
   my %opts = @_; 
   my $blast_r = $opts{blast} || croak "No 'blast' arg provided $!\n";
   my $fields_r = $opts{fields} || croak "No 'fields' arg provided $!\n";
+  my $keep_path = exists $opts{keep_path} ? $opts{keep_path} : undef;
 
 
   # iterating through each hit
@@ -348,7 +349,8 @@ sub blast_xml2txt {
 				   $blast_r,
 				   $iter,
 				   $hit,
-				   $hsp
+				   $hsp,
+				   $keep_path
 				  );
 	}
        
@@ -402,7 +404,7 @@ sub getFieldValue{
   my $iter = shift or confess "Provide iter\n";
   my $hit = shift or confess "Provide hit\n";
   my $hsp = shift or confess "Porvide hsp\n";
-	  
+  my $keep_path = shift or undef;
 	  
 
   # 'undef' for variables not actually in blast data
@@ -415,7 +417,14 @@ sub getFieldValue{
   ## run
   if( $index->[0] eq 'run'){
     if( exists $blast_r->{$index->[1]} ){
-      return $blast_r->{$index->[1]};
+      my $value = $blast_r->{$index->[1]};
+      if( $field eq 'blastdb' and ! $keep_path){
+	my @parts = File::Spec->splitpath($value);
+	return defined $parts[2] ? $parts[2] : $value;
+      }
+      else{
+	return $value;
+      }
     }
     else{
       warn "WARNING: Cannot find field '$field'\n";

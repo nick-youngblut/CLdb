@@ -18,16 +18,24 @@ NONE
 
 =over
 
-=item -outfmt
+=item -outfmt  <str>
 
 blast fields as in '-outfmt' for blast. 
 Only '6' or '7' formats are supported. 
-['7 qseqid sseqid pident length mismatch 
+['6 qseqid sseqid pident length mismatch 
 gapopen qstart qend sstart send evalue bitscore']
 
-=item -v 	Verbose output. [FALSE]
+=item -path  <bool>
 
-=item -h	This help message
+Keep file path for blastdb field? [FALSE] 
+
+=item -v
+
+Verbose output. [TRUE]
+
+=item -h
+
+This help message
 
 =back
 
@@ -42,71 +50,135 @@ binary data serialization format (Sereal)
 to blast tabular format: either
 with comments '-outfmt 7' or without '-outfmt 6'
 
-Currnently, only some of the possible output fields
+Currnently, only some of the standard blastn fields
 are supported:
 
 =head2 Supported fields:
 
-=head3 Standard blast fields
+=head3 Standard blast fields (see blastn help for more info)
 
-qseqid
-qlen
-sseqid
-sacc
-slen
-qstart
-qend
-sstart
-send
-qseq
-sseq
-evalue
-bitscore
-score
-length
-pident
-mismatch
-gapopen
-gaps
-frames
-qframe
-sframe
+=over
+
+=item qseqid
+
+=item qlen
+
+=item sseqid
+
+=item sacc
+
+=item slen
+
+=item qstart
+
+=item qend
+
+=item sstart
+
+=item send
+
+=item qseq
+
+=item sseq
+
+=item evalue
+
+=item bitscore
+
+=item score
+
+=item length
+
+=item pident
+
+=item mismatch
+
+=item gapopen
+
+=item gaps
+
+=item frames
+
+=item qframe
+
+=item sframe
+
+=back
 
 =head3 CLdb fields
 
-=head4 hsp 
 
-subjectScaffold -- scaffold/chromo of blast the subject
-subjectStrand -- strand of blast hit
-protoFullStart -- start of protospacer (full length)
-protoFullEnd -- end of protospacer (full length)
-protoFullSeq -- protospacer sequence (full length)
-protoFullXStart -- start of protospacer + extension
-protoFullXEnd -- end of protospacer + extension
-protoFullXSeq -- protospacer + extension sequence
-protoX -- extension length (bp)
-arrayHit -- spacer hits a CRISPR array? (1 = True)
+=head4 #-- hsp --#
 
-=head4 crRNA (DNA)
+=over
 
-query_id -- unique ID for query
-locus_id -- locus ID
-spacer_id -- spacer ID (unique to locus ID)
-cluster_id -- cluster ID (spacer cluster)
-genome_fasta -- fasta file containing the spacer
-spacer_scaffold -- scaffold/chromosome containing the spacer
-spacer_start -- start position of spacer
-spacer_end -- end position of spacer
-spacer_seq -- spacer sequence 
-region_start -- start position of spacer + extension (crRNA)
-region_end -- end position of spacer + extension (crRNA)
-crDNA_seq -- crRNA sequence (DNA nucleotides)
-array_sense_strand -- reading strand of crRNA
+=item subjectScaffold -- scaffold/chromo of blast the subject
 
-=head3 misc fields
+=item subjectStrand -- strand of blast hit
+
+=item protoFullStart -- start of protospacer (full length)
+
+=item protoFullEnd -- end of protospacer (full length)
+
+=item protoFullSeq -- protospacer sequence (full length)
+
+=item protoFullXStart -- start of protospacer + extension
+
+=item protoFullXEnd -- end of protospacer + extension
+
+=item protoFullXSeq -- protospacer + extension sequence
+
+=item protoX -- extension length (bp)
+
+=item arrayHit -- spacer hits a CRISPR array? (1 = True)
+
+=back
+
+
+=head4 #-- crRNA (DNA) --#
+
+=over
+
+=item query_id -- unique ID for query
+
+=item locus_id -- locus ID
+
+=item spacer_id -- spacer ID (unique to locus ID)
+
+=item cluster_id -- cluster ID (spacer cluster)
+
+=item genome_fasta -- fasta file containing the spacer
+
+=item spacer_scaffold -- scaffold/chromosome containing the spacer
+
+=item spacer_start -- start position of spacer
+
+=item spacer_end -- end position of spacer
+
+=item spacer_seq -- spacer sequence
+
+=item region_start -- start position of spacer + extension (crRNA)
+
+=item region_end -- end position of spacer + extension (crRNA)
+
+=item crDNA_seq -- crRNA sequence (DNA nucleotides)
+
+=item array_sense_strand -- reading strand of crRNA
+
+=back
+
+
+=head3 Misc fields
+
+=over
 
 blastdb -- blast db file
 
+=back
+
+=head2 Undefined values
+
+'undef' = value missing in blast srl file.
 
 =head1 AUTHOR
 
@@ -144,10 +216,11 @@ use CLdb::arrayBlast::sereal qw/
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
-my $outfmt = '7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'; 
+my ($verbose, $keep_path);
+my $outfmt = '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'; 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
+	   "path" => \$keep_path,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -160,6 +233,7 @@ classify_fields($fields_r);
 
 #--- MAIN ---#
 # loading serealized blast output
+print STDERR "Decoding the srl file...\n" unless $verbose;
 my $srl;
 $srl .= $_ while <>;
 my $decoder = Sereal::Decoder->new();
@@ -169,6 +243,7 @@ my $blast_r =  $decoder->decode( $srl );
 foreach my $blast_run (keys %$blast_r){
 
   blast_xml2txt(blast => $blast_r->{$blast_run}, 
-		fields => $fields_r);
+		fields => $fields_r,
+		keep_path => $keep_path);
 }
 
