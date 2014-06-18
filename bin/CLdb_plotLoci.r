@@ -20,6 +20,7 @@ option_list <- list(
 	make_option(c("-x", "--xlims"), type="character", help="xlims table"),
 	make_option(c("-c", "--comparisons"), type="character", help="comparisons table [optional]"),
 	make_option(c("-t", "--tree"), type="character", help="tree file plotted next to the loci [optional]"),	
+	make_option(c("-p", "--dpi"), type="integer", help="write plot as png with defined dpi (eg., --dpi 300)"),
 	make_option(c("-o", "--outname"), type="character", help="Output file name. [default: modified dna_segs file name]"),
 	make_option(c("-v", "--verbose"), action="store_false", default=TRUE, help="Print extra output")
 	)
@@ -163,7 +164,12 @@ set.plot.size <- function(xlims, dna_segs){
 # I/O error #
 if(is.null(opt$dna_segs)){ stop("ERROR: provide a dna_segs file!") }
 if(is.null(opt$xlims)){ stop("ERROR: provide an xlims file!") }
-outfile <- ext.edit(opt$dna_segs, '.pdf')
+if(is.null(opt$dpi)){
+	outfile <- ext.edit(opt$dna_segs, '.pdf')
+} else {
+       outfile <- ext.edit(opt$dna_segs, '.png')
+}
+  
 
 # loading the pruned tree output by CLdb_dna_segs_orderByTree.pl #
 ## will be plotted with loci
@@ -205,7 +211,11 @@ p.dim <- set.plot.size(xlims, dna_segs)
 # plotting #
 ## comment out any portions that were not provided (e.g. 'tree' or 'compare')
 #quartz(width=p.dim[["width"]], height=p.dim[["height"]])		# plot size
-pdf(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
+if(! is.null(opt$dpi)){
+  png(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]], res=opt$dpi, units='in')
+} else {
+  pdf(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
+}
 plot_gene_map(dna_segs=dna_segs,
 		xlims=xlims,
 		tree=tree,

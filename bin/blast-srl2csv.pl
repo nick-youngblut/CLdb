@@ -165,6 +165,12 @@ are supported:
 
 =item array_sense_strand -- reading strand of crRNA
 
+=item subtype -- CRISPR subtype classification
+
+=item cas_status -- cas_status field from loci table
+
+=item array_status -- array_status field from loci table
+
 =back
 
 

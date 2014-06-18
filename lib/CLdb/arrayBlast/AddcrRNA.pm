@@ -176,6 +176,9 @@ l.fasta_file,
 l.scaffold,
 l.locus_id,
 l.array_sense_strand,
+l.subtype,
+l.cas_status,
+l.array_status,
 s.spacer_id,
 s.spacer_start,
 s.spacer_end,
@@ -255,12 +258,14 @@ l.fasta_file,
 l.scaffold,
 l.locus_id,
 l.array_sense_strand,
+l.subtype,
+l.cas_status,
+l.array_status,
 s.spacer_id,
 s.spacer_start,
 s.spacer_end,
 s.spacer_sequence,
-sc.cluster_id,
-?
+sc.cluster_id
 FROM
 loci l, spacers s, spacer_clusters sc
 WHERE l.locus_id=s.locus_id
@@ -282,9 +287,8 @@ HERE
     confess "ERROR: cannot find clusterID and/or cluster cutoff in $ID\n"
       unless defined $l[3] and defined $l[4];
 
-    $sth->bind_param(1, $ID);
-    $sth->bind_param(2, $l[3]);  # clusterID
-    $sth->bind_param(3, $l[4]);  # cluster cutoff
+    $sth->bind_param(1, $l[3]);  # clusterID
+    $sth->bind_param(2, $l[4]);  # cluster cutoff
     
     $sth->execute or confess $dbh->err;
     my $ret = $sth->fetchall_arrayref(  ) or confess $dbh->err;
@@ -306,7 +310,7 @@ HERE
     }
   }
  
-  #print Dumper $CLdb_info_r; exit;
+#  print Dumper $CLdb_info_r; exit;
 }
     
 

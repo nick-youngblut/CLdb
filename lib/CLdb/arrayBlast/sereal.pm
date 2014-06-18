@@ -156,7 +156,7 @@ push @EXPORT_OK, 'parse_outfmt';
 sub parse_outfmt{
   my ($outfmt) = @_;
 
-  my @l = split / +/, $outfmt;
+  my @l = split /[ \/\\\n\r]+/, $outfmt;
   croak "-outfmt argument must start with '6' or '7'"
     unless $l[0] == 6 || $l[0] == 7;
 
@@ -256,13 +256,15 @@ sub classify_fields {
 	       query_id => ['crRNA_info', 'query_id'],
 	       array_sense_strand => ['crRNA_info', 'array_sense_strand'],
 	       spacer_seq =>['crRNA_info', 'spacer_sequence'],
-	       crDNA_seq => ['crRNA_info', 'crDNA']
+	       crDNA_seq => ['crRNA_info', 'crDNA'],
+	       subtype => ['crRNA_info', 'subtype'],
+	       cas_status => ['crRNA_info', 'cas_status'],
+	       array_status => ['crRNA_info', 'array_status']
 	      );
 
 
   # classification
   foreach my $field ( @{$fields_r->{unclassified_fields}} ){
-#    (my $tmp = $field) =~ tr/A-Z/a-z/;
 
     # adding classification for field
     if( exists $class{$field} ){   # field can be classified
