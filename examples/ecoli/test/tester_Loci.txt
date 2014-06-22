@@ -1,0 +1,11 @@
+Locus_ID	Taxon_ID	Taxon_Name	Subtype	Scaffold	Locus_Start	Locus_End	CAS_Start	CAS_End	Array_Start	Array_End	Array_Sense_Strand	CAS_Status	Array_Status	Genbank_File	Fasta_File	Array_File	Scaffold_count	File_Creation_Date	Author
+F	388476123	Escherichia_coli_K-12_W3110	I-E	NC_007779	2902670	2903063			2902670	2903063	1		intact	Escherichia_coli_K_2_W3.gbk	Escherichia_coli_K_2_W3.fasta	Ecoli_K12_W3110_a2.txt		4/19/14	Nick
+A	49175990	Escherichia_coli_K-12_MG1655	I-E	NC_000913	2875723	2876485			2875723	2876485	1		intact	Escherichia_coli_K_2_MG_655.gbk	Escherichia_coli_K_2_MG_655.fasta	Ecoli_K12_MG1655_a1.txt		4/19/14	Nick
+J	387825439	Escherichia_coli_BL21_DE3	I-E	NC_012971	2736174	2736996			2736174	2736996	1		intact	Escherichia_coli_BL2_DE3.gbk	Escherichia_coli_BL2_DE3.fasta	Ecoli_BL21_DE3_a2.txt		4/19/14	Nick
+E	388476123	Escherichia_coli_K-12_W3110	I-E	NC_007779	2876357	2877119			2876357	2877119	1		intact	Escherichia_coli_K_2_W3.gbk	Escherichia_coli_K_2_W3.fasta	Ecoli_K12_W3110_a1.txt		4/19/14	Nick
+B	49175990	Escherichia_coli_K-12_MG1655	I-E	NC_000913	2902036	2902429			2902036	2902429	1		intact	Escherichia_coli_K_2_MG_655.gbk	Escherichia_coli_K_2_MG_655.fasta	Ecoli_K12_MG1655_a2.txt		4/19/14	Nick
+H	16445223	Escherichia_coli_O157_H7	I-E	NC_002655	3691424	3691513			3691424	3691513	1		intact	Escherichia_coli_O_57_H7.gbk	Escherichia_coli_O_57_H7.fasta	Ecoli_0157_H7_a2.txt		4/19/14	Nick
+C	170079663	Escherichia_coli_K-12_DH10B	I-E	NC_010473	2968265	2969027			2968265	2969027	1		intact	Escherichia_coli_K_2_DH_B.gbk	Escherichia_coli_K_2_DH_B.fasta	Ecoli_K12_DH10B_a1.txt		4/19/14	Nick
+D	170079663	Escherichia_coli_K-12_DH10B	I-E	NC_010473	2994578	2994971			2994578	2994971	1		intact	Escherichia_coli_K_2_DH_B.gbk	Escherichia_coli_K_2_DH_B.fasta	Ecoli_K12_DH10B_a2.txt		4/19/14	Nick
+I	387825439	Escherichia_coli_BL21_DE3	I-E	NC_012971	2717668	2717940			2717668	2717940	1		intact	Escherichia_coli_BL2_DE3.gbk	Escherichia_coli_BL2_DE3.fasta	Ecoli_BL21_DE3_a1.txt		4/19/14	Nick
+G	16445223	Escherichia_coli_O157_H7	I-E	NC_002655	3665521	3665732			3665521	3665732	1		intact	Escherichia_coli_O_57_H7.gbk	Escherichia_coli_O_57_H7.fasta	Ecoli_0157_H7_a1.txt		4/19/14	Nick

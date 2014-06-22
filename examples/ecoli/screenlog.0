@@ -1,0 +1,220 @@
+2014-06-22 07:27:01.855 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-06-22 07:27:01.860 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-06-22 07:27:01.919 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+2014-06-22 07:27:01.919 [NotebookApp] 0 active kernels 
+2014-06-22 07:27:01.919 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-06-22 07:27:01.919 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+2014-06-22 07:27:04.583 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb'
+WARNING:tornado.access:404 GET /api/notebooks/ecoli_ipynb?_=1403439691969 (::1) 2.38ms referer=http://127.0.0.1:9091/tree/ecoli_ipynb
+INFO:tornado.access:302 GET / (::1) 1.60ms
+2014-06-22 07:27:08.090 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb'
+WARNING:tornado.access:404 GET /api/notebooks/ecoli_ipynb?_=1403439691972 (::1) 0.78ms referer=http://127.0.0.1:9091/tree/ecoli_ipynb
+2014-06-22 07:27:15.412 [NotebookApp] Kernel started: 6e401d97-e545-4b4a-a904-5058b2d9c061
+2014-06-22 07:27:34.902 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:27:34.905 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.32ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:29:15.620 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:29:34.896 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:29:34.897 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 2.26ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:31:34.914 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:31:34.916 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.54ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:33:34.896 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:33:34.898 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.13ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:35:15.596 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:35:34.893 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:35:34.895 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 4.77ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:37:15.618 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:37:34.889 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:37:34.891 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 4.95ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:39:15.622 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:39:34.892 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:39:34.895 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.08ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:41:15.616 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:41:34.895 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:41:34.897 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.21ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:43:15.590 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:43:34.883 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:43:34.885 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.21ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:45:15.650 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:45:34.891 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:45:34.894 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.12ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:47:07.799 [NotebookApp] Kernel restarted: 6e401d97-e545-4b4a-a904-5058b2d9c061
+2014-06-22 07:47:15.569 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:47:34.886 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:47:34.888 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 4.98ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:49:15.618 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:49:34.872 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:49:34.875 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.13ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:51:15.559 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:51:34.877 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:51:34.879 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 4.98ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:53:16.114 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:53:34.862 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:53:34.864 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.06ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:55:15.994 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:55:34.863 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:55:34.866 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 4.27ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:57:15.575 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:57:34.859 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:57:34.862 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.01ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:59:15.653 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 07:59:34.859 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 07:59:34.861 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.10ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:01:15.644 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 08:01:34.855 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:01:34.858 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.06ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:03:15.575 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 08:03:34.852 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:03:34.855 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.07ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:05:16.103 [NotebookApp] Kernel started: b6db196b-a788-434d-890e-755b95e54e84
+2014-06-22 08:05:16.618 [NotebookApp] Saving notebook at /ipynb/Setup.ipynb
+2014-06-22 08:05:34.848 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:05:34.851 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.00ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:07:16.247 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:07:34.848 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:07:34.851 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.29ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:09:16.691 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:09:34.896 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:09:34.899 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.27ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:11:16.330 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:11:34.849 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:11:34.852 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.17ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:13:16.328 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:13:34.845 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:13:34.848 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.25ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:15:16.310 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:15:34.837 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:15:34.840 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.12ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:17:16.290 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:17:34.841 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:17:34.843 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.18ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:19:16.310 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:19:34.840 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:19:34.840 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 2.13ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:21:16.346 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:21:34.840 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:21:34.843 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.08ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:23:16.469 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:23:35.836 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:23:35.839 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.22ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:24:53.874 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+ERROR:tornado.application:Uncaught exception, closing connection.
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 354, in wrapper
+    callback(*args)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 331, in wrapped
+    raise_exc_info(exc)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 302, in wrapped
+    ret = fn(*args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/httpserver.py", line 328, in _on_headers
+    self.request_callback(self._request)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/web.py", line 1745, in __call__
+    handler._execute(transforms, *args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 152, in _execute
+    self.ws_connection.accept_connection()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 529, in accept_connection
+    self._accept_connection()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 575, in _accept_connection
+    "\r\n" % (self._challenge_response(), subprotocol_header)))
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 214, in write
+    self._check_closed()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 593, in _check_closed
+    raise StreamClosedError("Stream is closed")
+StreamClosedError: Stream is closed
+ERROR:tornado.application:Exception in callback <functools.partial object at 0x2db5680>
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/tornado/ioloop.py", line 477, in _run_callback
+    callback()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 331, in wrapped
+    raise_exc_info(exc)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 302, in wrapped
+    ret = fn(*args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 354, in wrapper
+    callback(*args)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 331, in wrapped
+    raise_exc_info(exc)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/stack_context.py", line 302, in wrapped
+    ret = fn(*args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/httpserver.py", line 328, in _on_headers
+    self.request_callback(self._request)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/web.py", line 1745, in __call__
+    handler._execute(transforms, *args, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 152, in _execute
+    self.ws_connection.accept_connection()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 529, in accept_connection
+    self._accept_connection()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/websocket.py", line 575, in _accept_connection
+    "\r\n" % (self._challenge_response(), subprotocol_header)))
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 214, in write
+    self._check_closed()
+  File "/usr/local/lib/python2.7/dist-packages/tornado/iostream.py", line 593, in _check_closed
+    raise StreamClosedError("Stream is closed")
+StreamClosedError: Stream is closed
+2014-06-22 08:25:14.388 [NotebookApp] Uploading notebook to /ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:25:14.391 [NotebookApp] WARNING | Unexpected error while autosaving notebook: /home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb [Errno 2] No such file or directory: '/home/nyoungb2/perl/projects/CLdb/examples/ecoli/ecoli_ipynb/database_administration.ipynb'
+WARNING:tornado.access:400 PUT /api/notebooks/ecoli_ipynb/database_administration.ipynb (::1) 5.22ms referer=http://127.0.0.1:9091/notebooks/ecoli_ipynb/database_administration.ipynb
+2014-06-22 08:25:22.619 [NotebookApp] Kernel started: 18fa3b56-228a-4d5d-a7bc-58e987adc58e
+2014-06-22 08:25:48.093 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:27:22.832 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 08:27:37.201 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-06-22 08:29:03.623 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:11:19.284 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:13:19.274 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:15:19.274 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:17:19.323 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+ERROR: cannot find database file: 'CLdb.sqlite'
+ at /home/nyoungb2/perl/projects/CLdb/bin/../lib/CLdb/utilities.pm line 149.
+	CLdb::utilities::file_exists('CLdb.sqlite', 'database') called at ../../../bin/CLdb_summary.pl line 160
+2014-06-22 09:19:19.274 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+ERROR: cannot find database file: 'CLdb.sqlite'
+ at /home/nyoungb2/perl/projects/CLdb/bin/../lib/CLdb/utilities.pm line 149.
+	CLdb::utilities::file_exists('CLdb.sqlite', 'database') called at ../../../bin/CLdb_summary.pl line 160
+sh: 1: perl../../../bin/CLdb_summary.pl: not found
+ERROR: cannot find database file: 'CLdb.sqlite'
+ at /home/nyoungb2/perl/projects/CLdb/bin/../lib/CLdb/utilities.pm line 149.
+	CLdb::utilities::file_exists('CLdb.sqlite', 'database') called at ../../../bin/CLdb_summary.pl line 160
+ERROR: cannot find database file: 'CLdb.sqlite'
+ at /home/nyoungb2/perl/projects/CLdb/bin/../lib/CLdb/utilities.pm line 149.
+	CLdb::utilities::file_exists('CLdb.sqlite', 'database') called at ../../../bin/CLdb_summary.pl line 160
+ERROR: cannot find database file: 'CLdb.sqlite'
+ at /home/nyoungb2/perl/projects/CLdb/bin/../lib/CLdb/utilities.pm line 149.
+	CLdb::utilities::file_exists('CLdb.sqlite', 'database') called at ../../../bin/CLdb_summary.pl line 160
+2014-06-22 09:21:19.273 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:23:19.307 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:25:19.329 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:27:19.319 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:29:19.323 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:31:19.350 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:33:19.348 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:35:19.356 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:37:19.354 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 09:39:19.359 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+2014-06-22 12:07:49.187 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb

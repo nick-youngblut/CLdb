@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-CLdb_writeTable.pl -- write out one or more tables in a CLdb file
+CLdb_writeTable.pl -- write out >=1 table from a CLdb
 
 =head1 SYNOPSIS
 
@@ -28,9 +28,11 @@ CLdb database.
 
 >=1 table to write out. 
 
-=item -list  <bool>
+=item -list  <int> 
 
-Just list table names and number of entries in each table. [FALSE]
+Options: '1' = list table names and number of entries per table
+
+'2' = list table name and fields per table
 
 =item -prefix  <char>
 
@@ -113,45 +115,64 @@ use CLdb::utilities qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file, $list_tables, $prefix);
+my ($verbose, $database_file, $listOpt, $prefix);
 my (@tables);
 GetOptions(
 	   "database=s" => \$database_file,
 	   "table=s{,}" => \@tables,
 	   "prefix=s" => \$prefix,
-	   "list" => \$list_tables,
+	   "list=i" => \$listOpt,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
 
 #--- I/O error & defaults ---#
+die "-list must be '1' or '2'\n" if defined $listOpt
+  and $listOpt != 1 and $listOpt != 2;
+
 file_exists($database_file, "database");
+
 
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
 
-# testing
-my $cmd = ".table";
-my $sth = $dbh->prepare($cmd);
-$sth->execute() or die $dbh->err;
-my $ret = $sth->fetchall_arrayref();
-print Dumper $ret; exit;
+
+# getting all tables if list of tables not provided
+if(@tables){
+  # checking for user-defined tables of interest #
+  map{ table_exists($dbh, $_) or die "ERROR: $_ does not exist!\n" } @tables;
+}
+else{
+  # using all tables
+  @tables = listTables($dbh) unless @tables;
+}
 
 
-# checking for tables of interest #
-my $table_list_r = list_tables($dbh);
-$table_list_r = entry_count($dbh, $table_list_r);
+# listing tables & number_of_entries or tables & fields #
+## tables
+if (defined $listOpt and $listOpt == 1){
+  # getting number of entries per table
+  list_table_entries($dbh, \@tables);
 
-# listing tables #
-if ($list_tables){
-	list_table_entries($table_list_r);
-	$dbh->disconnect();
-	exit;
-	}
+  $dbh->disconnect();
+  exit;
+}
+## fields
+if (defined $listOpt and $listOpt == 2){
+  # getting number of entries per table
+  list_table_fields($dbh, \@tables);
+
+  $dbh->disconnect();
+  exit;
+}
+
+
 	
 # writing tables #
-write_tables($database_file, \@tables, $table_list_r, $prefix);
+write_tables($dbh, 
+	     \@tables, 
+	     $prefix);
 
 # disconnect #
 $dbh->disconnect();
@@ -159,64 +180,103 @@ exit;
 
 
 ### Subroutines
-sub list_table_entries{
-	my ($table_list_r) = @_;
-	
-	print join("\t", qw/Table Number_entries/), "\n";
-	foreach my $table (sort keys %$table_list_r){
-		print join("\t", $table, $table_list_r->{$table}), "\n";
-		}
-	}
 
 sub write_tables{
-	my ($database_file, $tables_r, $table_list_r, $prefix) = @_;
-	
-	foreach my $table (keys %$table_list_r){
-		next if @$tables_r && ! grep /^$table$/i, @$tables_r;	# just tables selected (if -t provided)
+# writing out each table to a file
+  my $dbh = shift or die "ERROR: provide dbh\n";
+  my $tables_r = shift or die "ERROR: provide arrayref of tables\n";
+  my $prefix = shift or die "ERROR: provide output file prefix\n";
 
-		# no entry warning #
-		unless( $table_list_r->{$table} > 0){
-			print STDERR " WARNING: no entries in $table table! Skipping!\n";
-			next;
-			}
-			
-		# sql fed to database #
-		my $outfile = "$table.txt";
-		$outfile = join("_", $prefix, "$table.txt") if $prefix;
-		
-		my $sql = "
-.header on
-.sep \"\\t\"
-.output $outfile
-SELECT * from $table;";
-		
-		open PIPE, "| sqlite3 $database_file" or die $!;
-		print PIPE $sql;
-		close PIPE;
+  
+  foreach my $table (sort @$tables_r){
+    # skipping if not entries for table
+    unless( n_entries($dbh, $table) > 0){    
+      print STDERR " WARNING: no entries in $table table! Skipping!\n";
+      next;
+    }
+    
+    # sql fed to database #
+    my $outfile = "$table.txt";
+    $outfile = join("_", $prefix, "$table.txt") if $prefix;
+    open OUT, ">$outfile" or die $!;
+    
+   
+    # sql 
+    my $sql = "SELECT * from $table";
+    my $sth = $dbh->prepare($sql) or die $dbh->err;
 
-		print STDERR "...$table table written: $table.txt\n";
-		}
+    # header
+    print OUT join("\t", @{$sth->{NAME}}), "\n";
+    
+    # body
+    $sth->execute();
+    my $ret = $sth->fetchall_arrayref();
+    foreach my $row (@$ret){
+      map{ $_ = 'NULL' unless defined $_ } @$row;
+      print OUT join("\t", @$row), "\n";
+    }
 
-	}
+    # finish up
+    close OUT or die $!;
+    print STDERR "...$table table written: $table.txt\n";
+  }
+}
 
-sub entry_count{
-	my ($dbh, $table_list_r) = @_;
-	my %table;
-	foreach my $table (@$table_list_r){
-		my $q = "SELECT count(*) FROM $table";
-		my $res = $dbh->selectall_arrayref($q);
-		$table =~ tr/A-Z/a-z/;
-		$table{$table} = $$res[0][0];
-		}
-		#print Dumper %table; exit;
-	return \%table;
-	}
 
-sub list_tables{
-	my $dbh = shift;
-	my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
-	return [keys %$all];
-	}
+sub list_table_fields{
+  # listing fields in certain tables
+  my $dbh = shift or die "Provide dbh\n";
+  my $tables_r = shift or die "Provide arrayref of table names\n";
+
+  # header
+  print join("\t", qw/Table Field/), "\n";
+
+  # body
+  foreach my $table (sort @$tables_r){
+    my $sql = "SELECT * from $table limit 1";
+
+    my $sth = $dbh->prepare($sql) or die $dbh->err;
+    my $names_r = $sth->{NAME};
+    
+    foreach my $name (@$names_r){
+      print join("\t", $table, $name), "\n";
+    }
+  }
+}
+
+
+
+sub list_table_entries{
+# listing the number entries per table
+  my $dbh = shift or die "Provide dbh\n";
+  my $tables_r = shift or die "Provide arrayref of table names\n";
+
+  # header
+  print join("\t", qw/Table Number_entries/), "\n";
+
+  # body
+  foreach my $table (sort @$tables_r){
+    my $cmd = "SELECT count(*) from $table";
+    my $ret = $dbh->selectrow_arrayref($cmd) or die $dbh->err;
+
+    $ret->[0] = 0 if not defined $ret->[0];
+    print join("\t", $table, $ret->[0]), "\n";
+  }
+}
+
+
+sub listTables{
+# returns array of table names
+  my $dbh = shift or die "Provide dbh\n";
+
+  my %tbls;
+  foreach my $tbl (grep /"main"\./, $dbh->tables()){
+    $tbl =~ s/("main"\."|")//g;
+    $tbls{$tbl} = 1;
+  }
+
+  return keys %tbls;
+}
 
 
 

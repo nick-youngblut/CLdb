@@ -1,4 +1,5 @@
 49175990	Escherichia_coli_K-12_MG1655
+49175990	Escherichia_coli_K-12_MG1655
 170079663	Escherichia_coli_K-12_DH10B
 388476123	Escherichia_coli_K-12_W3110
 16445223	Escherichia_coli_O157_H7

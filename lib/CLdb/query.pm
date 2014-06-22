@@ -475,15 +475,16 @@ sub table_exists {
 
 sub n_entries {
 # getting number of entries in a table #
-	my ($dbh, $table) = @_;
-	confess "ERROR: Provide a DBI database object!\n" if ! defined $dbh;
-	confess "ERROR: Provide a CLdb table name!\n" if ! defined $table;
-	
-	my $q = "SELECT count(*) FROM $table";
-	my $res = $dbh->selectall_arrayref($q);
+  my ($dbh, $table) = @_;
+  confess "ERROR: Provide a DBI database object!\n" if ! defined $dbh;
+  confess "ERROR: Provide a CLdb table name!\n" if ! defined $table;
+  
+  my $q = "SELECT count(*) FROM $table";
+  my $res = $dbh->selectrow_arrayref($q);
+  $res->[0] = 0 unless defined $res->[0];
+  return $res->[0];
+}
 
-	return $$res[0][0];
-	}
 
 sub get_leader_pos{
 # getting spacer or DR sequence from either table #
