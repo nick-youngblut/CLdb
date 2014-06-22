@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-CLdb_writeTable.pl -- write out one or more tables in CLdb
+CLdb_writeTable.pl -- write out one or more tables in a CLdb file
 
 =head1 SYNOPSIS
 
@@ -130,6 +130,14 @@ file_exists($database_file, "database");
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
+
+# testing
+my $cmd = ".table";
+my $sth = $dbh->prepare($cmd);
+$sth->execute() or die $dbh->err;
+my $ret = $sth->fetchall_arrayref();
+print Dumper $ret; exit;
+
 
 # checking for tables of interest #
 my $table_list_r = list_tables($dbh);

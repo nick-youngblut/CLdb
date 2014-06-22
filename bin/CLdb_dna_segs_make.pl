@@ -720,6 +720,7 @@ $extra_query
 GROUP BY loci.locus_id
 ";
 	$query =~ s/\n|\r/ /g;
+
 	
 	# status #
 	print STDERR "$query\n" if $verbose;

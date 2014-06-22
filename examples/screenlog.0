@@ -179,3 +179,30 @@ INFO:tornado.access:302 GET /notebooks/ecoli_CLdb/fasta/Escherichia_coli_BL2_DE3
 2014-06-07 20:00:33.127 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
 2014-06-08 06:33:42.813 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
 2014-06-08 06:35:42.834 [NotebookApp] Saving notebook at /ecoli_ipynb/arrayBlast.ipynb
+INFO:tornado.access:302 GET / (::1) 1.69ms
+2014-06-22 07:07:43.546 [NotebookApp] Creating new notebook in /
+2014-06-22 07:07:53.689 [NotebookApp] Kernel started: d95d20fe-2681-494d-a91b-e406e120d71e
+2014-06-22 07:09:53.619 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:11:53.577 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:13:53.575 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:15:53.574 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:17:53.573 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:19:53.594 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:21:03.038 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:21:03.602 [NotebookApp] Saving notebook at /database_administration.ipynb
+2014-06-22 07:21:34.455 [NotebookApp] Kernel started: 51ddf720-8470-4fc9-b441-97063b75277c
+2014-06-22 07:22:13.537 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/ecoli_ipynb'
+WARNING:tornado.access:404 GET /api/notebooks/ecoli_ipynb?_=1403439691963 (::1) 2.01ms referer=http://127.0.0.1:9091/tree/ecoli_ipynb
+2014-06-22 07:22:17.235 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/ecoli_ipynb'
+WARNING:tornado.access:404 GET /api/notebooks/ecoli_ipynb?_=1403439691966 (::1) 1.76ms referer=http://127.0.0.1:9091/tree/ecoli_ipynb
+^C2014-06-22 07:22:39.096 [NotebookApp] interrupted
+Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples
+4 active kernels 
+The IPython Notebook is running at: http://localhost:9091/
+Shutdown this notebook server (y/[n])? y
+2014-06-22 07:22:41.615 [NotebookApp] CRITICAL | Shutdown confirmed
+2014-06-22 07:22:41.616 [NotebookApp] Shutting down kernels
+2014-06-22 07:22:42.219 [NotebookApp] Kernel shutdown: d95d20fe-2681-494d-a91b-e406e120d71e
+2014-06-22 07:22:43.264 [NotebookApp] Kernel shutdown: b54d04c1-629c-4994-accd-f3e8ed15fb25
+2014-06-22 07:22:44.279 [NotebookApp] Kernel shutdown: ffcc7bb9-7fef-4bef-a409-70d935b97a06
+2014-06-22 07:22:44.881 [NotebookApp] Kernel shutdown: 51ddf720-8470-4fc9-b441-97063b75277c
