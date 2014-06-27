@@ -24,15 +24,19 @@ CLdb database.
 
 =over
 
-=item -table  <char>
+=item -tables <char>
 
 >=1 table to write out. 
 
 =item -list  <int> 
 
-Options: '1' = list table names and number of entries per table
+=over
 
-'2' = list table name and fields per table
+=item '1' = list table names and number of entries per table
+
+=item '2' = list table name and fields per table
+
+=back
 
 =item -prefix  <char>
 
@@ -185,7 +189,8 @@ sub write_tables{
 # writing out each table to a file
   my $dbh = shift or die "ERROR: provide dbh\n";
   my $tables_r = shift or die "ERROR: provide arrayref of tables\n";
-  my $prefix = shift or die "ERROR: provide output file prefix\n";
+  my $prefix = shift; # or die "ERROR: provide output file prefix\n";
+  $prefix = "" unless defined $prefix;
 
   
   foreach my $table (sort @$tables_r){
@@ -218,7 +223,7 @@ sub write_tables{
 
     # finish up
     close OUT or die $!;
-    print STDERR "...$table table written: $table.txt\n";
+    print STDERR "...$table table written: $outfile\n";
   }
 }
 
