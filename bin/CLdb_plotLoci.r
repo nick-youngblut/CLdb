@@ -20,7 +20,8 @@ option_list <- list(
 	make_option(c("-x", "--xlims"), type="character", help="xlims table"),
 	make_option(c("-c", "--comparisons"), type="character", help="comparisons table [optional]"),
 	make_option(c("-t", "--tree"), type="character", help="tree file plotted next to the loci [optional]"),	
-	make_option(c("-p", "--dpi"), type="integer", help="write plot as png with defined dpi (eg., --dpi 300)"),
+	make_option(c("-f", "--format"), type="character", default="pdf", help="Output file format (pdf, png, or svg)"), 
+	make_option(c("-p", "--dpi"), type="integer", default=300, help="write plot with defined dpi (eg., --dpi 300)"),
 	make_option(c("-o", "--outname"), type="character", help="Output file name. [default: modified dna_segs file name]"),
 	make_option(c("-v", "--verbose"), action="store_false", default=TRUE, help="Print extra output")
 	)
@@ -164,11 +165,6 @@ set.plot.size <- function(xlims, dna_segs){
 # I/O error #
 if(is.null(opt$dna_segs)){ stop("ERROR: provide a dna_segs file!") }
 if(is.null(opt$xlims)){ stop("ERROR: provide an xlims file!") }
-if(is.null(opt$dpi)){
-	outfile <- ext.edit(opt$dna_segs, '.pdf')
-} else {
-       outfile <- ext.edit(opt$dna_segs, '.png')
-}
   
 
 # loading the pruned tree output by CLdb_dna_segs_orderByTree.pl #
@@ -211,11 +207,19 @@ p.dim <- set.plot.size(xlims, dna_segs)
 # plotting #
 ## comment out any portions that were not provided (e.g. 'tree' or 'compare')
 #quartz(width=p.dim[["width"]], height=p.dim[["height"]])		# plot size
-if(! is.null(opt$dpi)){
-  png(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]], res=opt$dpi, units='in')
-} else {
+if( opt$format == 'pdf' ){
+  outfile <- ext.edit(opt$dna_segs, '.pdf')
   pdf(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
+} else if( opt$format == 'png' ){
+  outfile <- ext.edit(opt$dna_segs, '.png')
+  png(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]], res=opt$dpi, units='in')
+} else if( opt$format == 'svg' ){
+  outfile <- ext.edit(opt$dna_segs, '.svg')
+  svg(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
+} else {
+  stop("--format argument not recognized")
 }
+
 plot_gene_map(dna_segs=dna_segs,
 		xlims=xlims,
 		tree=tree,
