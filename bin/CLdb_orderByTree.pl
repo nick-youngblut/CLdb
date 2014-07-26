@@ -4,17 +4,17 @@
 
 =head1 NAME
 
-CLdb_dna_segs_orderByTree.pl -- needed if plotting a tree with CRISPR loci
+CLdb_orderByTree.pl -- needed if plotting a tree with CRISPR loci
 
 =head1 SYNOPSIS
 
 =head2 Ordering 'dna_segs' table
 
-CLdb_dna_segs_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
+CLdb_orderByTree.pl [flags] < dna_segs.txt > dna_segs_ordered.txt
 
 =head2 Ordering 'xlims' table
 
-CLdb_dna_segs_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
+CLdb_orderByTree.pl [flags] < xlims.txt > xlims_ordered.txt
 
 =head2 Required flags
 
@@ -54,7 +54,7 @@ This help message
 
 =head2 For more information:
 
-perldoc CLdb_dna_segs_orderByTree.pl
+perldoc CLdb_orderByTree.pl
 
 =head1 DESCRIPTION
 
@@ -69,17 +69,26 @@ tree ordering.
 Both xlims and dna_segs tables must be ordered by the tree
 if the tree is used for plotting!
 
+=head2 Tree pruning
+
+Tree pruning will be done with the 'nw_prune' from
+the newick utilities package, if the 'nw_prune' script
+is in your $PATH. If not, BioPerl will be used for tree
+pruning, which may cause some warnings/errors with downstream
+uses of the pruned tree.
+
+
 =head1 EXAMPLES
 
-=head2 Basis usage
+=head2 Basic usage
 
 =head3 Ordering a dna_segs table
 
-CLdb_dna_segs_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
+CLdb_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
 =head3 Ordering the complemenary xlims table (editted tree not written).
 
-CLdb_dna_segs_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
+CLdb_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
 
 =head1 AUTHOR
 
@@ -106,6 +115,8 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Bio::TreeIO;
+use IPC::Cmd qw/can_run run/;
+use IO::String;
 
 # CLdb #
 use FindBin;
@@ -133,11 +144,16 @@ GetOptions(
 	   );
 
 ### I/O error & defaults
+# checking input files
 file_exists($tree_in, "tree");
 $format = check_tree_format($format);
 ($tree_name = $tree_in) =~ s/\.[^.]+$|$/_prn.nwk/ unless $tree_name;
+# checking for nw_prune in path
+my $nw_prune = can_run('nw_prune') ? 1 : 0;
 
-### Main
+
+
+#--- Main ---#
 # loading tree #
 my $treeio = Bio::TreeIO -> new(-file => $tree_in,
 								-format => $format);
@@ -148,10 +164,15 @@ my ($dna_segs_r, $dna_segs_order_r, $header_r,
 	$dna_segs_ids_r, $name_index_r) = load_dna_segs();
 
 # prune tree by dna_segs (just taxon_names of interest) #
-$treeo = prune_tree($dna_segs_r, $treeo);
+if($nw_prune and $format eq 'newick'){
+  $treeo = nw_prune_tree($dna_segs_r, $tree_in);
+}
+else{
+  $treeo = prune_tree($dna_segs_r, $treeo);
+}
 
 # mutli-loci / multi-subtype problem ##
-## adding leaves if multiple taxon entries; also adding sub ##
+## adding leaves if multiple taxon entries; also adding subtype ##
 $treeo = add_leaves($dna_segs_r, $treeo, $dna_segs_ids_r);
 	
 ## writing editted tree ##
@@ -165,7 +186,8 @@ my $tree_order_r = get_tree_order($treeo);
 order_dna_segs($dna_segs_r, $tree_order_r, $header_r, $name_index_r);
 
 
-### Subroutines
+
+#--- Subroutines ---#
 sub tree_write{
   my ($treeo, $tree_name) = @_;
   
@@ -182,7 +204,6 @@ sub order_dna_segs{
   # header #
   print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
   
-#print Dumper $dna_segs_r; exit;
 
   # body #
   foreach my $leaf (@$tree_order_r){
@@ -286,13 +307,62 @@ sub check_multi{
   
   #print Dumper $multi_loci, $multi_subtype; exit;
   # status #
-  print STDERR "...Found multiple loci for 1 or more taxa. Adding leaves to the tree! Adding loci_ids to leaves & dna_segs table!\n"
-    if $multi_loci;
-  print STDERR "...Found multiple subtypes. Adding subtype to names in tree & dna_segs table!\n"
-    if $multi_subtype;
+  print STDERR join(" ", "...Found multiple loci for 1 or more taxa.",
+		    "Adding leaves to the tree!", 
+		    "Adding loci_ids to leaves & dna_segs table!"), "\n"
+		      if $multi_loci;
+  print STDERR join(" ", "...Found multiple subtypes.",
+		    "Adding subtype to names in tree & dna_segs table!"), "\n"
+		      if $multi_subtype;
   
   return $multi_loci, $multi_subtype;
 }
+
+
+=head2 nw_prune_tree
+
+Using nw_prune_tree for pruning.
+
+=cut
+
+sub nw_prune_tree{
+  my ($dna_segs_r, $tree_in) = @_;
+  
+  # getting taxa not in tree #
+  my %rm;
+  for my $node ($treeo->get_leaf_nodes){
+    $rm{$node->id} = 1 unless exists $dna_segs_r->{$node->id};
+  }
+
+  # status
+  print STDERR "#--- Pruning with nw_prune (from newick utilities) ---#\n";
+  map{ print STDERR "Removing node: $_\n" } keys %rm;
+
+  # calling nw_prune
+  my $cmd = join(" ", "nw_prune $tree_in", keys %rm, "|");
+  
+  open PIPE, $cmd or die $!;
+  my $prune_tree = <PIPE>;
+  close PIPE or die $!;
+
+  # loading tree using bio::treeIO
+  my $strIO = IO::String->new($prune_tree);
+  my $treeio = Bio::TreeIO->new(-fh => $strIO,
+				-format => 'newick');
+
+  # return 1st tree (should only be 1)
+  my $treeo = $treeio->next_tree;
+  return $treeo;
+}
+
+
+=head2 prune_tree
+
+Using Bio::Tree for pruning.
+
+WARNING: appears to create odd newick files.
+
+=cut
 
 sub prune_tree{
   # pruning tree by dna_segs, just dna_segs taxa remaining #
@@ -319,7 +389,8 @@ sub prune_tree{
   for my $node ($treeo->get_leaf_nodes){
     if (exists $rm{$node->id}){
       print STDERR "Pruning node: ", $node->id, "\n";
-      $treeo->remove_Node($node);
+      #$treeo->remove_Node($node);
+      $treeo->splice(-remove_id => $node->id, -preserve_lengths => 1);
     }
   }
   
@@ -328,14 +399,33 @@ sub prune_tree{
     my $intern_cnt = 0;
     for my $node ($treeo->get_leaf_nodes){
       if($node->id =~ /^INTERNAL__/){
-	$treeo->remove_Node($node);
+	#$treeo->remove_Node($node);
+	$treeo->splice(-remove_id => $node->id, -preserve_lengths => 1);
 	$intern_cnt++;
       }
     }
     last unless $intern_cnt;		# continue until all internal node leaves are removed
   }	
-  
-  # editing internal node labels (names back) #
+
+  # splicing out all singleton internal nodes
+  my $root = $treeo->get_root_node;
+  for my $node ($treeo->get_nodes){
+    next if $node->is_Leaf;
+   # next if $node->id eq $root->id;  # skipping root
+    my @Desc = $node->each_Descendent;
+    if(scalar @Desc  == 1){ # singleton internal node
+      if($node->id eq $root->id){
+	# if root = singleton: reroot on desc; removing root 
+	$treeo->reroot($Desc[0]);
+	$treeo->remove_Node($node);
+      }
+      else{  # not root
+	$treeo->splice(-remove_id => $node->id, -preserve_lengths => 1);
+      }
+    }
+  }  
+
+  # editing internal node labels (setting names back) #
   for my $node ($treeo->get_nodes){
     next if $node->is_Leaf;
     next unless $node->id =~ /^INTERNAL__/;
@@ -402,6 +492,7 @@ sub load_dna_segs{
 }
 
 sub check_tree_format{
+# determining tree format based on user input (if provided) or setting default
   my $format = shift;
   $format = "newick" if ! $format;
   $format =~ s/^new$/newick/i;
