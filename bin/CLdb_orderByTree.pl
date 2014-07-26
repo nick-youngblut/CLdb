@@ -60,22 +60,23 @@ perldoc CLdb_orderByTree.pl
 
 Formatting tree and 'dna_segs' or 'xlims' table for plotting. 
 
-The tree file is pruned to just the taxa found in
-the dna_segs/xlims table.
+The dna_segs/xlims tables are ordered to match the provided
+tree ordering. 
 
-The dna_segs/xlims tables are ordered to match the pruned
-tree ordering.
+=head2 Output
+
+If the dna_segs/xlims table has the same taxon present twice
+(eg., if 2 CRISPR loci from the same taxon), then 
+extra leaves (with edited taxon_names) are added to the tree.
+This editted tree is written to a new file.
+
+=head2 Warnings
+
+Extra taxa can be in the tree, but a pruned version of the
+tree is needed for plotting!
 
 Both xlims and dna_segs tables must be ordered by the tree
 if the tree is used for plotting!
-
-=head2 Tree pruning
-
-Tree pruning will be done with the 'nw_prune' from
-the newick utilities package, if the 'nw_prune' script
-is in your $PATH. If not, BioPerl will be used for tree
-pruning, which may cause some warnings/errors with downstream
-uses of the pruned tree.
 
 
 =head1 EXAMPLES
@@ -86,9 +87,9 @@ uses of the pruned tree.
 
 CLdb_orderByTree.pl -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
-=head3 Ordering the complemenary xlims table (editted tree not written).
+=head3 Ordering the complemenary xlims table
 
-CLdb_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims.txt
+CLdb_orderByTree.pl -t tree.nwk -x < xlims.txt > xlims_ordered.txt
 
 =head1 AUTHOR
 
@@ -115,8 +116,7 @@ use Getopt::Long;
 use File::Spec;
 use DBI;
 use Bio::TreeIO;
-use IPC::Cmd qw/can_run run/;
-use IO::String;
+
 
 # CLdb #
 use FindBin;
@@ -147,9 +147,7 @@ GetOptions(
 # checking input files
 file_exists($tree_in, "tree");
 $format = check_tree_format($format);
-($tree_name = $tree_in) =~ s/\.[^.]+$|$/_prn.nwk/ unless $tree_name;
-# checking for nw_prune in path
-my $nw_prune = can_run('nw_prune') ? 1 : 0;
+($tree_name = $tree_in) =~ s/\.[^.]+$|$/_edit.nwk/ unless $tree_name;
 
 
 
@@ -162,14 +160,6 @@ my $treeo = $treeio->next_tree;
 # loading dna_segs table #
 my ($dna_segs_r, $dna_segs_order_r, $header_r, 
 	$dna_segs_ids_r, $name_index_r) = load_dna_segs();
-
-# prune tree by dna_segs (just taxon_names of interest) #
-if($nw_prune and $format eq 'newick'){
-  $treeo = nw_prune_tree($dna_segs_r, $tree_in);
-}
-else{
-  $treeo = prune_tree($dna_segs_r, $treeo);
-}
 
 # mutli-loci / multi-subtype problem ##
 ## adding leaves if multiple taxon entries; also adding subtype ##
@@ -194,7 +184,8 @@ sub tree_write{
   my $out = new Bio::TreeIO(-file => ">$tree_name",
 			    -format => "newick");
   $out->write_tree($treeo);
-  
+
+  print STDERR "Editted tree written: $tree_name\n";
 }
 
 sub order_dna_segs{
@@ -203,14 +194,17 @@ sub order_dna_segs{
   
   # header #
   print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
-  
+
 
   # body #
   foreach my $leaf (@$tree_order_r){
     my $taxon_name = $name_index_r->{$leaf};
-    die " ERROR: leaf->$taxon_name not found in dna_segs table!\n"
-      unless exists $dna_segs_r->{$taxon_name};
-    
+    #die " ERROR: leaf->$taxon_name not found in dna_segs table!\n"
+    unless (exists $dna_segs_r->{$taxon_name}){
+      print STDERR "Warning: leaf->$taxon_name not found in table. Skipping\n";
+      next;
+    }
+      
     if($leaf =~ /__[^_]+/){   	## if lociID already in name (prevents duplicates)
       (my $locus_id = $leaf) =~ s/^.*?__([^_]+).*/$1/; 	#if $leaf =~ /\|\d+$/;
       if(exists $dna_segs_r->{$taxon_name}{$locus_id}){ # locus_id actually in taxon__name
