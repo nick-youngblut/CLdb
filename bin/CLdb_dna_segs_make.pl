@@ -52,6 +52,10 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 Extra sql to refine which sequences are returned.
 
+=item -features  <char>
+
+>=1 plotting feature to include. [spacer DR gene leader]
+
 =item -verbose  <bool> 
 
 Verbose output. [FALSE]
@@ -88,6 +92,10 @@ CLdb_dna_segs_make.pl -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.
 =head2 No broken loci
 
 CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+
+=head2 Just gene features for I-A subtype loci
+
+CLdb_dna_segs_make.pl -da CLdb.sqlite -sub I-A -f 'gene'
 
 =head1 AUTHOR
 
@@ -129,7 +137,7 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $CLdb_sqlite, @ITEP_sqlite);
+my ($verbose, $CLdb_sqlite, @ITEP_sqlite, @feats);
 my (@locus_id, @subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $spacer_cutoff = 1;
@@ -142,6 +150,7 @@ GetOptions(
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
 	   "cutoff=f" =>  \$spacer_cutoff,
+	   "features=s{,}" => \@feats,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -149,6 +158,10 @@ GetOptions(
 #--- I/O error & defaults ---#
 # checking CLdb #
 file_exists($CLdb_sqlite, "database");
+
+# features
+@feats = qw/spacer DR gene leader/
+  unless @feats;
 
 # checking ITEP input #
 if(@ITEP_sqlite){
@@ -190,17 +203,23 @@ my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 
 # getting spacer, DR, leader, gene from CLdb #
 my %dna_segs; 
-my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs,$join_sql, $extra_query, $spacer_cutoff);
-get_DR_info($dbh, \%dna_segs, $join_sql, $extra_query);
-get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
-get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
+if( grep /^spacers*$/i, @feats ){
+  my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs,$join_sql, $extra_query, $spacer_cutoff);
+}
+if( grep /^(DRs*|direct.+repeats*)/i, @feats ){
+  get_DR_info($dbh, \%dna_segs, $join_sql, $extra_query);
+}
+if( grep /^genes*$/, @feats ){
+  get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
+}
+if( grep /^leaders*$/i, @feats){
+  get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
+}
 
 # getting gene cluster info if ITEP provided #
 if (@ITEP_sqlite){
   my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
 					     $ITEP_sqlite[1], \%dna_segs);
-  #my $strand_r = get_cas_strand($dbh, \%dna_segs);		# getting strand of genes
-  #flip_genes_on_neg_strand(\%dna_segs, $strand_r);
 }
 else{	# ITEP note provided: gene cluster = 1 for all
   gene_cluster_same(\%dna_segs);
@@ -299,7 +318,9 @@ sub write_dna_segs{
   my ($dna_segs, $subtypes_r) = @_;
   
   # header #
-  print join("\t", qw/name start end strand col lty lwd pch cex gene_type taxon_name locus_id feat feat_id subtype dna_segs_id/), "\n";
+  print join("\t", qw/name start end strand col lty 
+		      lwd pch cex gene_type taxon_name 
+		      locus_id feat feat_id subtype dna_segs_id/), "\n";
   
   # body #
   foreach my $taxon_name (keys %$dna_segs){
@@ -387,8 +408,10 @@ sub write_dna_segs{
 	# start-end, color #			
 	my $start = $$row[0];
 	my $end = $$row[1];
-	my $strand = get_strand($start, $end); 		# getting strand before possible flip of start-end; needed for plotting genes in correct orientation
-	($start, $end) = flip_se($start, $end);		# all start-end to + strand
+	# getting strand before possible flip of start-end
+	# needed for plotting genes in correct orientation
+	my $strand = get_strand($start, $end); 	
+	($start, $end) = flip_se($start, $end);	# all start-end to + strand
 	
 	my $alias = $$row[2];
 	my $dna_segs_id = $$row[$#$row];
