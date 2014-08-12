@@ -199,9 +199,9 @@ sub order_dna_segs{
   # body #
   foreach my $leaf (@$tree_order_r){
     my $taxon_name = $name_index_r->{$leaf};
-    #die " ERROR: leaf->$taxon_name not found in dna_segs table!\n"
+    next unless defined $taxon_name;
     unless (exists $dna_segs_r->{$taxon_name}){
-      print STDERR "Warning: leaf->$taxon_name not found in table. Skipping\n";
+      warn "Warning: leaf->$taxon_name not found in table. Skipping\n";
       next;
     }
       

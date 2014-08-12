@@ -23,6 +23,8 @@ option_list <- list(
 	make_option(c("-f", "--format"), type="character", default="pdf", help="Output file format (pdf, png, or svg)"), 
 	make_option(c("-p", "--dpi"), type="integer", default=300, help="write plot with defined dpi (eg., --dpi 300)"),
 	make_option(c("-o", "--outname"), type="character", help="Output file name. [default: modified dna_segs file name]"),
+	make_option(c("-w", "--width"), type="numeric", default=1, help="Plot width scaling factor. [default: 1]"),
+	make_option(c("-a", "--height"), type="numeric", default=1, help="Plot height scaling factor. [default: 1]"),
 	make_option(c("-v", "--verbose"), action="store_false", default=TRUE, help="Print extra output")
 	)
 # get command line options, if help option encountered print help and exit, # otherwise if options not found on command line then set defaults, 
@@ -145,7 +147,7 @@ df2list.compare <- function(compare, dna_segs.tbl, color_scheme="grey"){
 	}
 	
 
-set.plot.size <- function(xlims, dna_segs){
+set.plot.size <- function(xlims, dna_segs, height.scale=1, width.scale=1){
 # setting total plot size based on number of loci to plot #
 	xlim.diff <- vector();
 	for (i in names(xlims)){
@@ -154,8 +156,8 @@ set.plot.size <- function(xlims, dna_segs){
 			}
 		}
 		
-	height <- length(dna_segs)
-	width <- log(max(xlim.diff), 1.8)
+	height <- length(dna_segs) * height.scale
+	width <- log(max(xlim.diff), 1.8) * width.scale
 	
 	return(list(width=width, height=height))
 	}
@@ -201,7 +203,7 @@ if(! is.null(opt$comparisons)){
 	}
 
 # setting plot dimensions based on the number & length of loci #
-p.dim <- set.plot.size(xlims, dna_segs)
+p.dim <- set.plot.size(xlims, dna_segs, height.scale=opt$height, width.scale=opt$width)
 
 
 # plotting #
