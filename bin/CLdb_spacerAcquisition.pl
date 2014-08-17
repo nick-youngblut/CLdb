@@ -50,6 +50,10 @@ All loci ending within  '-truncation' bp away from scaffold end
 will be considered truncated, and only compare up to end of truncation. 
 Negative values to turn option off. [500]
 
+=item -out  <char>
+
+Prefix for output files. [psblNewSpacers]
+
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message
@@ -62,7 +66,48 @@ perldoc CLdb_spacerAquisition.pl
 
 =head1 DESCRIPTION
 
-Identify instances of recent spacer acquisition.
+Identify instances of potential recent spacer acquisition.
+
+For all CRISPR arrays selected by query, each will be
+compared pairwise with all other selected loci.
+The arrays will be aligned based on the cluster_ID of
+each spacer. 
+CRISPR arrays are oriented by the leader (and thus must
+have an identified leader region). 
+Mismatches and gaps in the start of the alignment
+prior to any matches are considered potential newly acquired spacers
+since the two loci diverged from a common ancestor.
+The rest of the alignment is used to calculate
+'precent identity' [aln_len - (mismatches + gaps)) / alignment_len],
+matches, mismatches, gaps, etc.
+
+=head2 Trucations
+
+Truncations due to incomplete assemblies could lead to false negatives.
+Artificial truncations can be assessed (distance of array from end of scaffold)
+and if the array is truncated, the alignment will only extend to the end
+of the truncated array. 
+
+=head2 Output
+
+=head3 *_summary.txt
+
+Summary of CRISPR array alignments.
+
+=head3 *_scores.txt
+
+This shows how each position in the alignment was scored 
+(eg., match). Scoring scheme:
+
+=over
+
+=item * 'm' = match (same cluster_ID)
+
+=item * 'x' = mismatch
+
+=item * 'g' = gap
+
+=back
 
 =head1 EXAMPLES
 
@@ -89,6 +134,7 @@ use Pod::Usage;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
+
 use DBI;
 
 # CLdb #
@@ -105,25 +151,29 @@ use CLdb::utilities qw/file_exists
 		       connect2db
 		       get_seq_file_path/;
 use CLdb::seq qw/revcomp/;
+use CLdb::ArrayAlignWeighter;
 
 
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $database_file);
+my ($verbose, $database_file, $compare_all);
 my (@subtype, @taxon_id, @taxon_name);
 my $extra_query = "";
 my $cluster_cutoff = 1;
 my $truncation = 500;
+my $out_prefix = "psblNewSpacers";
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "cutoff=f" => \$cluster_cutoff, 		# clustering cutoff [1.00]
+	   "cutoff=f" => \$cluster_cutoff, 	
 	   "query=s" => \$extra_query, 
 	   "truncation=i" => \$truncation,
+	   "all" => \$compare_all,
+	   "out=s" => \$out_prefix,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -184,63 +234,17 @@ my $leader_info_r = get_leader_info($dbh, [keys %$tbl_r]);
 ## setting spacer position relative to leader, and thus order
 my $spacer_order_r = get_spacer_order($tbl_r, $leader_info_r);
 
+# comparing CRISPR arrays
+my $array_cmp_r = compare_arrays($spacer_order_r, $tbl_r, 
+				 -trunc => $trunc_loci_r,
+				 -all => $compare_all);
 
-# finding newly acquired spacers
-my $newAcqu_r = find_new_spacers($spacer_order_r, $trunc_loci_r, $tbl_r);
-
-
-
-
-# pairwise comparison of arrays (parallel?)
-## comparisons are directed: need lower & upper triangles
-#my @locus_ids = keys %$tbl_r;
-#foreach my $i (0..$#locus_ids){
-#  foreach my $j (0..$#locus_ids){
-# foreach my $locus_idi (keys %$tbl_r){
-#   foreach my $locus_idj (keys %$tbl_r){
-#     next if $locus_idi eq $locus_idj;
-
-#     # unpack
-#     #my $locus_i = $tbl_r->{$locus_ids[$i]};
-#     #my $locus_j = $tbl_r->{$locus_ids[$j]};
-
-#     # iterating over locus i 
-#     my $first_match = 0;    # found first match yet?
-#     foreach my $spacer_id (sort {$tbl_r->{$locus_idi}{$a}{Order} <=>
-# 				   $tbl_r->{$locus_idi}{$b}{Order}}
-# 			   keys %{$tbl_r->{$locus_idi}}){
-#       # unpack
-#       my $cluster_id = exists $tbl_r->{$locus_idi}{$spacer_id}{Cluster_ID} ?
-# 	$tbl_r->{$locus_idi}{$spacer_id}{Cluster_ID} or
-# 	  die "ERROR: cannot find 'Cluster_ID'\n";
-      
-#       # if clusterID in locus_j, where in order?
-      
+# applying cutoffs?
 
 
-#     }
-
-#   }
-#}
-
-# foreach array (array1):
-#  foreach array (array2):
-#   iterate over array1 positions:
-#    match in array2? (1st match)
-#    if match: is position for either > 0 [0-indexing]?
-#    if no: next
-#    if yes:
-#     if no truncation check:
-#      continue from 1st match to end of array
-#     else:
-#      check for end of array at end of scaffold (if yes, stop match check at end of array)
-#     either:
-#      how many matches for same-rank spacers?
-#       number of matches must be >= to cutoff
-#      how many consecutive matches from 1st match?
-#       number of consecutive matches must be >= to cutoff
-# output:
-#  
+# writing out tables
+write_position_scores($array_cmp_r, $out_prefix);
+write_summary($array_cmp_r, $out_prefix);
 
 
 
@@ -252,117 +256,382 @@ exit;
 
 #--- subroutines ---#
 
+=head2 write_summary
+
+Writing summary table of CRISPR array comparisons.
+
+=cut
+
+sub write_summary{
+  my $array_cmp_r = shift or die "Provide array_cmp struct\n";
+  my $out_prefix = shift or die "Provide output file prefix\n";
+
+  # output file
+  my $outFile = $out_prefix . "_summary.txt";
+  open OUT, ">$outFile" or die $!;
+
+  # header 
+  my @fields = qw/aln_len_total first_match concord_matches matches mismatches 
+		  gaps percent_id truncation/;
+  print OUT join("\t", qw/locus_i locus_j/, @fields, 
+		 qw/truncation_i truncation_j
+		    psbl_new_spacers_i psbl_new_spacers_j/), "\n";
+
+  # making 2d-array for sorting
+  my @arr;
+  foreach my $locus_id_i (keys %$array_cmp_r){
+    foreach my $locus_id_j (keys %{$array_cmp_r->{$locus_id_i}}){
+      exists $array_cmp_r->{$locus_id_i}{$locus_id_j}{percent_id}
+	or die "KeyError: percent_id\n";
+      push @arr, [$locus_id_i, $locus_id_j, 
+		  $array_cmp_r->{$locus_id_i}{$locus_id_j}{percent_id}];     
+    }
+  }
+  
+  # writing after sorting by percent id
+  foreach my $row (sort{$b->[2] <=> $a->[2]} @arr){    
+    # check for keys
+    map{ exists $array_cmp_r->{$row->[0]}{$row->[1]}{$_}
+	   or die "KeyError: $_\n" } @fields;
+    map{ exists $array_cmp_r->{$row->[0]}{$row->[1]}{$_}{truncation} 
+	   or die "KeyError: $_ - truncation\n" } qw/i j/;
+
+    # getting values
+    my @vals = map{$array_cmp_r->{$row->[0]}{$row->[1]}{$_}} @fields;
+
+    # write
+    print OUT join("\t", $row->[0], $row->[1], 
+		   @vals,
+		   $array_cmp_r->{$row->[0]}{$row->[1]}{i}{truncation},
+		   $array_cmp_r->{$row->[0]}{$row->[1]}{j}{truncation},
+		   $array_cmp_r->{$row->[0]}{$row->[1]}{i}{psbl_new_spacers},
+		   $array_cmp_r->{$row->[0]}{$row->[1]}{j}{psbl_new_spacers}
+		  ), "\n";
+    
+  }
+  close OUT or die $!;
+
+  # status
+  print STDERR "File written: $outFile\n";
+}
+
+
+=head2 write_position_scores
+
+Writing a table of position scores.
+Sorting by percent identity scores.
+
+=cut
+
+sub write_position_scores{
+  my $array_cmp_r = shift or die "Provide array_cmp struct\n";
+  my $out_prefix = shift or die "Provide output file prefix\n";
+ 
+  # output file
+  my $outFile = $out_prefix . "_scores.txt";
+  open OUT, ">$outFile" or die $!;
+  
+  # header
+  print OUT join("\t", qw/locus_i locus_j scores/), "\n";
+
+  # making 2d-array for sorting
+  my @arr;
+  foreach my $locus_id_i (keys %$array_cmp_r){
+    foreach my $locus_id_j (keys %{$array_cmp_r->{$locus_id_i}}){
+      exists $array_cmp_r->{$locus_id_i}{$locus_id_j}{percent_id}
+	or die "KeyError: percent_id\n";
+      push @arr, [$locus_id_i, $locus_id_j, 
+		  $array_cmp_r->{$locus_id_i}{$locus_id_j}{percent_id}];     
+    }
+  }
+  
+  # writing after sorting by percent id
+  foreach my $row (sort{$b->[2] <=> $a->[2]} @arr){
+    exists $array_cmp_r->{$row->[0]}{$row->[1]}{position_score}
+      or die "KeyError: position_score\n";
+    print OUT join("\t", 
+		   $row->[0], 
+		   $row->[1], 
+		   join("", @{$array_cmp_r->{$row->[0]}{$row->[1]}{position_score}})
+		  ), "\n";
+  }
+
+  close OUT or die $!;
+
+  # status
+  print STDERR "File written: $outFile\n";
+}
+
+
 =head2 find_new_spacers
 
 # comparisons of loci spacers
 # using order hash: {locus_id : order : cluster_id}
 ## foreach locus_i
 ### foreach locus_j
-#### scan locus_j starting at beginning of order locus_i
-#### find spacer 1st match: flag
-#### from 1st match: check 1-1 order matching; mark how many spacers prior to 1st match for locus_i
-##### if no more spacers, see if truncation
-      # if yes: stop (no more mismatches)
-      # if no: mark all remaining spacer queries as mismatches
-##### if no match, check next over with same query; mark as mismatch
+#### alignment of CRISPR i,j arrays based on clusterIDs
+#### determine end-gaps at start of alignment (psbl new spacers)
+#### If either array a psbl truncation, trim end of alignment to shortest array
+#### For rest of alignment: calc percent identity of alignment (aln_len - gaps / aln_len)
+#### Save info in hash
+
+=head3 IN
+
+
+=head3 OUT
 
 =cut
 
-sub align_arrays{
-# aligning arrays based on ordering relative to spacer
+sub compare_arrays{
+  my $spacer_order_r = shift or die "Provide spacer orderings\n";
+  my $tbl_r = shift or die "Provide hashref output from get_array_elem_pos()\n";
+  my %opts = @_;
 
-}
+  # unpack opts
+  my $trunc_loci_r = $opts{-trunc};
 
-sub find_new_spacers{
-# comparing array alignments
-}
+  # just need lower triangle of pairwise
+  my %array_cmp;
+  my @locus_ids = keys %$spacer_order_r;
 
+  # status
+  my $nloci = scalar @locus_ids;
+  printf STDERR "Number of loci to pairwise align: %i\n", $nloci;
+  printf STDERR "Number of pairwise comparisons: %i\n", $nloci * ($nloci - 1) / 2;
 
-sub find_new_spacers_OLD{
-  my $spacer_order_r = shift or die "Provide spacer order\n";
-  my $trunc_loci_r = shift or die "Provide trunc loci\n";
-  my $tbl_r = shift or die "Provide output from get_array_elem_pos()\n";
+  ## interating
+  for my $i (0..$#locus_ids){
+    # status
+    printf STDERR "Processing array alignments to locus_id: %s\n", $locus_ids[$i];
 
+    for my $j (0..$#locus_ids){
+      next if $i >= $j;   # lower triangle
 
-  my %new_spacers;
-  foreach my $locus_i (keys %$spacer_order_r){
-    foreach my $locus_j (keys %$spacer_order_r){
-      # no self-hits
-      next if $locus_i eq $locus_j;
-
-      # initialize
-      $new_spacers{$locus_i}{$locus_j}{matches} = 0;
-      $new_spacers{$locus_i}{$locus_j}{mismatches} = 0;
-      $new_spacers{$locus_i}{$locus_j}{psbl_new_spacers} = 0;
-      
-      #-- first match --#
-      ## iterating over locus_i spacers by order
-      foreach my $order_i (sort{$a <=> $b} keys %{$spacer_order_r->{$locus_i}}){
-	my $cluster_id_i = $spacer_order_r->{$locus_i}{$order_i};
-
-	# looking for match in spacers
-	foreach my $order_j (sort{$a <=> $b} keys %{$spacer_order_r->{$locus_j}}){
-	  if ($spacer_order_r->{$locus_j}{$order_j} eq $cluster_id_i){
-	    $new_spacers{$locus_i}{$locus_j}{first_match} = $order_i;
-	    $new_spacers{$locus_i}{$locus_j}{first_match_order_i} = $order_i;
-	    $new_spacers{$locus_i}{$locus_j}{first_match_order_j} = $order_j;
-	    $new_spacers{$lcous_i}{$locus_j}{psbl_new_spacers} = $order_i - 1;
-	  }
-	}
-	# end if found 1st match
-	last if exists $new_spacers{$locus_i}{$locus_j}{first_match};
-      }
- 	
-      #-- scoring from first match --#
-      next unless eixsts $new_spacers{$locus_i}{$locus_j}{first_match};
       # unpack
-      #my $first_match_order_i = $new_spacers{$locus_i}{$locus_j}{first_match_order_i};
-      #my $first_match_order_j = $new_spacers{$locus_i}{$locus_j}{first_match_order_j};
+      my $locus_id_i = $locus_ids[$i];
+      my $locus_id_j = $locus_ids[$j];
+      my $locus_i = $spacer_order_r->{$locus_id_i}{cluster_ids};
+      my $locus_j = $spacer_order_r->{$locus_id_j}{cluster_ids};
 
-      # iterating from first match
-      #foreach my $i ($first_match_order_i..(
+      # alignment of cluster_id arrays
+      my $aln = ArrayAlignWeighter->new(left => $locus_i, right => $locus_j);
 
+      # assessing alignment (eg., mismatches, matches, etc)
+      my $aln_stats_r = _aln_stats($aln);
+      
+      # determining whether any psbl new spacers found
+      ## must be mismatches in alignment to start
+      next if $aln_stats_r->{first_match} <= 1 and not $opts{-all};
 
-      ## iterating over locus_i spacers by order
-      my $array_len = scalar keys %{$spacer_order_r->{$locus_i}};   # length of array_i
-      foreach my $order_i (sort{$a <=> $b} keys %{$spacer_order_r->{$locus_i}}){
+      # take into account truncations if exists
+      ## if truncations will set aln_len_total to last alignment position of shortest truncated array
+      ## matches, mismatches, and gaps changed to reflect 
+      _apply_trunc($aln_stats_r, $locus_i, $locus_j, $trunc_loci_r)
+	if defined $trunc_loci_r;
 
-	# skipping up to first match
-	my $cluster_id_i = $spacer_order_r->{$locus_i}{$order_i};
-	next if $cluster_id_i <= $new_spacers{$locus_i}{$locus_j}{first_match};
-	
-	# looking for match in spacers beyond first match
-	while(
-	my $order_shift = 0;   # checking next in order with same one if necessary
-	for my $i ($order_i..$array_len){
-	  my $j = $i - $order_shift
-	  # setting cluster id for current place in array_i
-	  my $cluster_id_i = $spacer_order_r->{$locus_i}{$i};
+      # scoring and saving 
+      ## psbl_new_spacers
+      ## percent_id = (aln_len_total - (mismatches + gaps)) / aln_len_total
+      _aln_score($aln_stats_r);
 
-	  # no more spacers in array_j
-	  if (not exists $spacer_order_r->{$locus_j}{$i}){
-
-	  }
-	  # match in array_j
-	  elsif ($spacer_order_r->{$locus_j}{$i} == $cluster_id_i){
-	    
-	  }
-	  # mismatch in array_j
-	  elsif ($spacer_order_r->{$locus_j}{$i} != $cluster_id_i){
-	    
-	  }
-
-	}
-
-	#foreach my $order_j (sort{$a <=> $b} keys %{$spacer_order_r->{$locus_j}}){
-	#  # match
-	#  if ($spacer_order_r->{$locus_j}{$order_j} eq $cluster_id_i){
-	#  }
-	#}	
-      }
+      # saving
+      $array_cmp{$locus_id_i}{$locus_id_j} = $aln_stats_r;
     }
   }
+  
+  return \%array_cmp;
 }
+
+
+sub _aln_score{
+  my $aln_stats_r = shift or die "Provide aln_stats\n";
+
+  # sanity check
+  map{ exists $aln_stats_r->{$_} or die "KeyError: $_\n" }
+    qw/position_score first_match aln_len_total/;
+
+  # unpack 
+  my $pos_score_r = $aln_stats_r->{position_score};
+  my $first_match = $aln_stats_r->{first_match};
+  my $aln_len_total = $aln_stats_r->{aln_len_total};
+  
+  # scoreing
+  ## initialize
+  $aln_stats_r->{matches} = 0;
+  $aln_stats_r->{mismatches} = 0;
+  $aln_stats_r->{gaps} = 0;
+  ## iterating over position score
+  for my $i ($first_match..$aln_len_total){
+    $i--;  # 0-index
+    if($pos_score_r->[$i] eq 'm'){ $aln_stats_r->{matches}++; }
+    elsif($pos_score_r->[$i] eq 'x'){ $aln_stats_r->{mismatches}++; }
+    elsif($pos_score_r->[$i] eq 'g'){ $aln_stats_r->{gaps}++; }
+    else{ die "Logic error\n"; }   
+  }
+
+  # calculating percent identity
+  my $aln_len = $aln_len_total - $first_match + 1;
+  $aln_stats_r->{percent_id} = (( $aln_len - 
+				($aln_stats_r->{mismatches} + $aln_stats_r->{gaps})
+			       ) / $aln_len) * 100;
+
+    
+  # getting number of concordinant matches beyond first (+ first)
+  $aln_stats_r->{concord_matches} = 0;
+  for my $i ($first_match..$aln_len_total){
+    $i--;
+    last if $pos_score_r->[$i] =~ /^[xg]$/;
+
+    if ($pos_score_r->[$i] eq 'm'){ $aln_stats_r->{concord_matches}++; }
+    else{ die "Logic error\n"; }
+  }
+}
+
+
+sub _apply_trunc{
+  my $aln_stats_r = shift or die "Provide aln_stats\n";
+  my $locus_i = shift or die "Provide locus i id\n";
+  my $locus_j = shift or die "Provide locus j id\n";
+  my $trunc_loci_r = shift or die "Provide trunc_loci_r\n";
+
+  # sanity check
+  map{ exists $trunc_loci_r->{$_} or die "KeyError: $_" }
+    ($locus_i, $locus_j);
+
+  # is either a truncation?
+  if( $trunc_loci_r->{$locus_i} or $trunc_loci_r->{$locus_j} ){
+    $aln_stats_r->{truncation} = 1;  # marked as truncation comparison
+
+    # getting last spacer position of both
+    my $last_sp_i = $aln_stats_r->{i}{last_spacer};
+    my $last_sp_j = $aln_stats_r->{j}{last_spacer};
+    
+    # setting new last (truncated) position of alignment
+    my $new_last = $aln_stats_r->{aln_len_total};
+    if( $trunc_loci_r->{$locus_i} and $trunc_loci_r->{$locus_j} ){
+      $aln_stats_r->{i}{truncation} = 1;
+      $aln_stats_r->{j}{truncation} = 1;
+
+      if( $last_sp_i < $last_sp_j){ $new_last = $last_sp_i; }
+      else{ $new_last = $last_sp_j; }
+    }
+    elsif( $trunc_loci_r->{$locus_i} and not $trunc_loci_r->{$locus_j} ){
+      $aln_stats_r->{i}{truncation} = 1;
+
+      $new_last = $last_sp_i;
+    }
+    elsif( not $trunc_loci_r->{$locus_i} and $trunc_loci_r->{$locus_j} ){
+      $aln_stats_r->{j}{truncation} = 1;
+
+      $new_last = $last_sp_j;
+    }
+    else{ die "Logic error\n"; }
+  
+    # change aln_len_total to truncate just to 
+    $aln_stats_r->{aln_len_total} = $new_last;
+
+  }
+  # no truncation
+  else{
+    return 1;
+  }
+}
+
+sub _aln_stats{
+  # processing alignment
+  #### determine end-gaps at start of alignment (psbl new spacers)
+  #### If either array a psbl truncation, trim end of alignment to shortest array
+  #### For rest of alignment: calc percent identity of alignment 
+  # positioning: 1-index
+  my $aln = shift or die "Provide Array::Align object\n";
+  my %opts = @_;
+  
+  my %ret = (
+	     aln_len_total => 0,
+	     first_match => 0,
+	     last_match => 0,
+	     position_score => [],
+	     truncation => 0,
+	     i => { psbl_new_spacers => 0,
+		    last_spacer => 0,
+		    len => 0,
+		    truncation => 0},
+	     j => { psbl_new_spacers => 0, 
+		    last_spacer => 0,
+		    len => 0,
+		    truncation => 0}
+	     );
+
+
+  # interate over alignment
+  for my $pair ($aln->pairwise){  # each column of the alignment
+    # alignment running count in position
+    $ret{aln_len_total}++;
+
+    # match
+    if (defined $pair->[0] and defined $pair->[1]
+	and $pair->[0] == $pair->[1]){
+      push @{$ret{position_score}}, 'm';  # m = match
+      
+      # first match?
+      $ret{first_match} = $ret{aln_len_total}
+	if not $ret{first_match};
+		  
+      # last match found
+      $ret{last_match} = $ret{aln_len_total};      
+    }
+    # mismatch
+    elsif(defined $pair->[0] and defined $pair->[1]
+	  and $pair->[0] != $pair->[1]) {
+      push @{$ret{position_score}}, 'x';  # x = mismatch
+      
+      # number of gaps for array at start of alignment
+      $ret{i}{ngap_start}++ if not defined $pair->[0]
+	and not $ret{first_match};	
+      $ret{j}{ngap_start}++ if not defined $pair->[1]
+	and not $ret{first_match};      
+    }
+    # gap
+    elsif(not defined $pair->[0] or not defined $pair->[1]){
+      push @{$ret{position_score}}, 'g';  # g = gap
+    }
+    else{
+      die "Logic error\n";
+    }	
+
+    # stats for each array character (if present)
+    if (defined $pair->[0]){  # charcter, no gap
+      $ret{i}{len}++ if defined $pair->[0];
+      $ret{i}{last_spacer} = $ret{aln_len_total};
+      $ret{i}{psbl_new_spacers}++ unless $ret{first_match};
+    }
+    if (defined $pair->[1]){  # character, no gap
+      $ret{j}{len}++ if defined $pair->[1];
+      $ret{j}{last_spacer} = $ret{aln_len_total};
+      $ret{j}{psbl_new_spacers}++ unless $ret{first_match};
+    }
+
+  }
+  
+  # sanity checks
+  die "ERROR: position_score len != aln_len_total\n"
+    unless scalar @{$ret{position_score}} == $ret{aln_len_total};
+
+  #print Dumper %ret; exit;
+  return \%ret;
+}
+
+
+sub _print_alignment{
+  # simple printing of array alignment
+  my $aln = shift or die "Provide Array::Align object\n";
+
+  for my $pair ($aln->pairwise) {
+    map{ $pair->[$_] = '' unless defined $pair->[$_]} 0..1;
+    printf "%s - %s\n", @$pair;
+  }
+}
+
 
 
 =head2 get_spacer_order
@@ -377,7 +646,8 @@ $leader_info_r -- hashref -- leader table with locus_id as key
 =head4 OUT
 
 #Edited $tbl_r. "Order" category added.
-{locus_id : order : cluster_id}
+#{locus_id : order : cluster_id}
+{locus_id : [order-1, order-2, ..., order-n]
 
 =cut
 
@@ -426,17 +696,16 @@ sub get_spacer_order{
       }
     }
     
-    ## getting order (1-indexing)
-    my $order_cnt = 0;
+    ## getting order: persisting as array
     foreach my $spacer_id (sort{$leaderDist{$a} <=> $leaderDist{$b}}
 			   keys %leaderDist){
-      $order_cnt++;
       my $cluster_id = exists $tbl_r->{$locus_id}{$spacer_id}{Cluster_ID} ?
 	$tbl_r->{$locus_id}{$spacer_id}{Cluster_ID} : 
 	  die "Cannot find 'Cluster_ID'\n";
 	  
-      #$tbl_r->{$locus_id}{$spacer_id}{Order} = $order_cnt;
-      $spacer_order{$locus_id}{$order_cnt} = $cluster_id;
+      push @{$spacer_order{$locus_id}{spacer_ids}}, $spacer_id;
+      push @{$spacer_order{$locus_id}{cluster_ids}}, $cluster_id;
+      #push @{$spacer_order{$locus_id}{spacer_start}}, $tbl_r->{$locus_id}{$spacer_id}{Spacer_Start};      
     }
   }
 
