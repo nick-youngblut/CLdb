@@ -24,14 +24,8 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
-    use CRISPR_db;
-
-    my $foo = CRISPR_db->new();
-    ...
+Subroutines to create, manage, and analyze a database of CRISPR
+loci information.
 
 =head1 EXPORT
 

@@ -61,6 +61,46 @@ sub get_file_path{
   return $parts[1];
 }
 
+=head2 get_seq_file_path
+
+Getting abs path to sequence files associated with CLdb
+
+=head3 IN
+
+database_file -- file to CLdb database
+opts:
+  -seqType -- sequence file type ('fasta' or 'genbank' supported). [default: 'fasta']
+
+=cut
+
+push @EXPORT_OK, qw/get_seq_file_path/;
+
+sub get_seq_file_path{
+  my $db_file = shift or confess "Provide database file as string\n";
+  my %opts = @_;
+
+  # Input check
+  $opts{-seqType} ||= 'fasta';
+  $opts{-seqType} =~ tr/A-Z/a-z/;
+
+  # getting base path
+  my $path = get_file_path($db_file);
+
+  # adding directory
+  if($opts{-seqType} eq 'fasta'){
+    $path = File::Spec->catpath($path, 'fasta');
+  }
+  elsif($opts{-seqType} eq 'genbank'){
+    $path = File::Spec->catpath($path, 'genbank');
+  }
+  else{
+    printf STDERR "'%s' not supported seqType\n", $opts{-seqType};
+    return 0;
+  }
+ 
+  return $path;
+}
+
 
 =head2 lineBreaks2unix
 

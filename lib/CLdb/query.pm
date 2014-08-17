@@ -147,6 +147,7 @@ sub getLociSpacerInfo{
   return $ret_r;
 }
 
+
 =head2 list_columns
 
 listing all columns in specified table (table must exist) 
@@ -434,17 +435,180 @@ $opts_r->{'refine_sql'}";
 }
 
 
-sub join_query_opts{
-# making sql refinement statment
-## joining query options for with 'AND' 
+=head2 get_array_elem_pos
 
-	my ($vals_r, $cat) = @_;
-	
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
-	}
+=head3 description
+
+Getting the position infomation on array elemnts.
+Will also get cluster info.
+
+=head3 IN
+ 
+ $dbh = DBI database object
+ $opts_r = hash of options 
+
+=head3 Options
+ 
+ refine_sql = refinement sql (part of WHERE; must start with 'AND')
+ cutoff = cluster sequenceID cutoff [1]
+ spacer_DR_b = booleen on spacers/DRs (0 = spacers)
+
+=head3 OUT
+
+locus_id : spacer_id : {hashref of columns}
+
+=cut
+
+push @EXPORT_OK, 'get_array_elem_pos';
+
+sub get_array_elem_pos{	
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+  my $opts_r = shift or confess "ERROR: provide a hashref of options\n";
+
+  # opts
+  my $cutoff = exists $opts_r->{cutoff} ? $opts_r->{cutoff} : 1;
+  my $refine_sql = exists $opts_r->{refine_sql} ? 
+    $opts_r->{refine_sql} : '';
+
+  # getting table info #
+  my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+      
+  # query
+  my $query = <<HERE;
+SELECT
+loci.Locus_ID,
+$tbl_oi.$tbl_prefix\_ID,
+loci.array_sense_strand,
+$tbl_oi.$tbl_prefix\_start,
+$tbl_oi.$tbl_prefix\_end,
+$tbl_prefix\_clusters.cluster_ID
+FROM loci, $tbl_oi, $tbl_prefix\_clusters
+WHERE loci.locus_id = $tbl_oi.locus_id
+AND loci.locus_id = $tbl_prefix\_clusters.locus_id
+AND $tbl_oi.$tbl_prefix\_ID = $tbl_prefix\_clusters.$tbl_prefix\_ID
+AND $tbl_prefix\_clusters.cutoff = $cutoff
+$refine_sql
+HERE
+ 
+  # execute
+  my $sth = $dbh->prepare($query);
+  $sth->execute();
+  my $colnames_r = $sth->{NAME_lc_hash};
+  my $ret = $sth->fetchall_hashref( [qw/Locus_ID Spacer_ID/] );
+  ## error handling
+  confess "ERROR: no matching entries for query:\n\t'$ret'\n"
+    unless scalar keys %$ret > 0;
+ 
+  return $ret;
+}
+
+
+=head2 get_array_start_end
+
+Getting array_start-end for select loci
+
+=head3 IN
+
+$dbh -- DBI object
+$loci_r -- arrayref -- locus_ids
+
+=head3 OUT
+
+locus_id : columeName : value
+
+=cut
+
+push @EXPORT_OK, 'get_array_start_end';
+
+sub get_array_start_end{
+  my $dbh = shift or confess "Provide dbh object\n";
+  my $loci_r = shift or confess "Provide arrayref of locus_ids\n";
+
+  my $sql = <<HERE;
+SELECT array_start, array_end
+FROM loci
+WHERE locus_id = ?
+HERE
+
+  my $sth = $dbh->prepare($sql);
+ 
+  my %tbl;
+  foreach my $locus_id (@$loci_r){
+    $sth->bind_param(1, $locus_id);
+    $sth->execute();
+    confess $DBI::err,"\n" if $DBI::err;
+    
+    while(my $row = $sth->fetchrow_arrayref()){
+      $tbl{$locus_id}{array_start} = $row->[0];
+      $tbl{$locus_id}{array_end} = $row->[1];
+    }
+  }
+ 
+  # check
+  confess "No entries for sql:\n\t'$sql'\n"
+    unless scalar keys %tbl > 0;
+
+  # return
+  return \%tbl;
+}
+
+
+=head2 get_leader_info
+
+Getting all info from leaders table
+
+=head3 Out
+
+locus_id : columnName : value
+
+=cut
+
+push @EXPORT_OK, 'get_leader_info';
+
+sub get_leader_info{
+  my $dbh = shift or confess "Provide DBI object\n";
+  my $locus_ids = shift or confess "Provide arrayref of locus_ids\n";
+  
+  my $sql = <<HERE;
+SELECT *
+FROM leaders
+WHERE locus_id = ?
+HERE
+
+  my $sth = $dbh->prepare($sql);
+
+
+  my %tbl;
+  foreach my $locus_id (@$locus_ids){
+    $sth->bind_param(1, $locus_id);
+
+    $sth->execute() or confess $DBI::err;
+    my $ret = $sth->fetchall_hashref('Locus_ID');
+
+    map{ $tbl{$_} = $ret->{$_} } keys %$ret;
+  }
+
+ # print Dumper %tbl; exit;
+  return \%tbl;
+}
+
+
+=head2 join_query_opts
+
+Making sql refinement statement.
+Joining query options for with 'AND'.
+
+=cut
+
+sub join_query_opts{
+  my ($vals_r, $cat) = @_;
+  
+  return "" unless @$vals_r;	
+  
+  map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+  return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
+}
 
 
 =head2 table_exists
@@ -486,38 +650,47 @@ sub n_entries {
 }
 
 
-sub get_leader_pos{
-# getting spacer or DR sequence from either table #
-#-- input --#
-# $dbh = DBI database object
-# $opts_r = hash of options 
-#-- options --#
-# extra_query = extra sql
-# join_sql = "AND" statements 
-	
-	my ($dbh, $opts_r) = @_;
-	
-	my $query = "SELECT leaders.locus_ID, leaders.leader_start, leaders.leader_end
+=head2 get_leader_pos
+
+Getting spacer or DR sequence from either table
+
+=head3 IN
+
+dbh -- DBI database object
+opts -- hash of options 
+
+=head3 Opts
+
+extra_query = extra sql
+join_sql = "AND" statements 
+
+=cut
+
+sub get_leader_pos{	
+  my ($dbh, $opts_r) = @_;
+  
+  my $query = "SELECT leaders.locus_ID, leaders.leader_start, leaders.leader_end
 		FROM leaders, loci WHERE loci.locus_id = leaders.locus_id $opts_r->{'join_sql'}";
-	
-	$query =~ s/[\n\t]+/ /g;
-	$query = join(" ", $query, $opts_r->{"extra_query"});
-	
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	confess " ERROR: no matching entries!\n"
-		unless $$ret[0];
+  
+  $query =~ s/[\n\t]+/ /g;
+  $query = join(" ", $query, $opts_r->{"extra_query"});
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  confess " ERROR: no matching entries!\n"
+    unless $$ret[0];
+  
+  # making hash of sequences #
+  my %leaders;
+  foreach my $row (@$ret){
+    $leaders{$$row[0]}{"start"} = $$row[1];
+    $leaders{$$row[0]}{"end"} = $$row[2];
+  }
+  
+  #print Dumper %leaders; exit;
+  return \%leaders;	
+}
 
-	# making hash of sequences #
-	my %leaders;
-	foreach my $row (@$ret){
-		$leaders{$$row[0]}{"start"} = $$row[1];
-		$leaders{$$row[0]}{"end"} = $$row[2];
-		}
-
-		#print Dumper %leaders; exit;
-	return \%leaders;	
-	}
 
 
 =head1 AUTHOR

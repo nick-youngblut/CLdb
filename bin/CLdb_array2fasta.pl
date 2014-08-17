@@ -133,18 +133,14 @@ use DBI;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::query qw/
-		    table_exists
-		    n_entries
-		    join_query_opts
-		    get_array_seq
-		    get_array_seq_preCluster
-		  /;
-use CLdb::utilities qw/
-			file_exists 
-			connect2db/;
-use CLdb::seq qw/
-		  revcomp/;
+use CLdb::query qw/table_exists
+		   n_entries
+		   join_query_opts
+		   get_array_seq
+		   get_array_seq_preCluster/;
+use CLdb::utilities qw/file_exists 
+		       connect2db/;
+use CLdb::seq qw/revcomp/;
 
 
 
