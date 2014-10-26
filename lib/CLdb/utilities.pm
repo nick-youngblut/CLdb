@@ -55,8 +55,7 @@ $ :  file path
 =cut
 
 sub get_file_path{
-  my ($file) = @_;
-  confess "ERROR: no file provided!\n" unless defined $file;
+  my $file = shift or die "Provide file name\n";
   my @parts = File::Spec->splitpath(File::Spec->rel2abs($file));
   return $parts[1];
 }
@@ -87,18 +86,19 @@ sub get_seq_file_path{
   my $path = get_file_path($db_file);
 
   # adding directory
+  my $filePath;
   if($opts{-seqType} eq 'fasta'){
-    $path = File::Spec->catpath($path, 'fasta');
+    $filePath = File::Spec->catdir($path, 'fasta');
   }
   elsif($opts{-seqType} eq 'genbank'){
-    $path = File::Spec->catpath($path, 'genbank');
+    $filePath = File::Spec->catdir($path, 'genbank');
   }
   else{
     printf STDERR "'%s' not supported seqType\n", $opts{-seqType};
     return 0;
   }
- 
-  return $path;
+
+  return $filePath;
 }
 
 

@@ -495,8 +495,8 @@ sub _apply_trunc{
   my $trunc_loci_r = shift or die "Provide trunc_loci_r\n";
 
   # sanity check
-  map{ exists $trunc_loci_r->{$_} or die "KeyError: $_" }
-    ($locus_i, $locus_j);
+  map{ exists $trunc_loci_r->{$_} or return 0 }
+    ($locus_i, $locus_j);   # no truncation info for loci, then return 0
 
   # is either a truncation?
   if( $trunc_loci_r->{$locus_i} or $trunc_loci_r->{$locus_j} ){
