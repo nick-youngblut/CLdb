@@ -140,8 +140,8 @@ load_db_table($dbh, 'spacers', $sp_header_r, $arrays{'spacer'});
 
 
 # making indices
-$dbh->do('CREATE INDEX spacerID_idx on spacers(spacer_id)');
-$dbh->do('CREATE INDEX DRID_idx on DRs(DR_id)');
+$dbh->do('CREATE INDEX IF NOT EXISTS spacerID_idx on spacers(spacer_id)');
+$dbh->do('CREATE INDEX IF NOT EXISTS DRID_idx on DRs(DR_id)');
 $dbh->commit;
 
 # disconnect #
