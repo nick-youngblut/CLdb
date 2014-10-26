@@ -122,7 +122,7 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
-my $HOME = get_file_path($database_file);
+my $CLdb_HOME = get_file_path($database_file);
 die "'-extension' must be an integer >=0"
   unless $ext >= 0;
 
@@ -167,7 +167,7 @@ if( $spacerIDs_r->{cluster} ){
 print STDERR "Getting spacer regions from each genome...\n";
 my $byQuery_r = getSpacerRegion(
 		CLdb => \%info, 
-		HOME => $CLdb_HOME, 
+		CLdb_HOME => $CLdb_HOME, 
 		extension => $ext );
 
 # adding crRNA info to *srl data structure

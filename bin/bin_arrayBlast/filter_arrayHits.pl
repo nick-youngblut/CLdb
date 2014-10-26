@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-filter_DRs -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
+filter_arrayHits -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
 
 =head1 SYNOPSIS
 
-filter_DRs [options] spacer_blast.srl DR_blast.srl > spacer_blast_filtered.srl
+filter_arrayHits [options] spacer_blast.srl DR_blast.srl > spacer_blast_filtered.srl
 
 =head2 options
 
@@ -46,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc filter_DRs
+perldoc filter_arrayHits
 
 =head1 DESCRIPTION
 
@@ -58,7 +58,7 @@ to >= '-DR' direct repeat blast hits.
 
 =head2 Basic Usage:
 
-filter_DRs.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
+filter_arrayHits.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
 
 =head1 AUTHOR
 

@@ -70,7 +70,8 @@ my ($verbose, $listSubcmds, $getPerlDoc);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
-	    "--verbose" => \$verbose
+	    "--verbose" => \$verbose,
+	    "-help|?" => \&pod2usage
 	   );
 
 

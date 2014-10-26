@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-blast-srl2txt.pl -- converting blast output (sereal format) to blast '-outfmt 6' or '-outfmt 7'
+srl2csv -- converting blast output (sereal format) to blast '-outfmt 6' or '-outfmt 7'
 
 =head1 SYNOPSIS
 
-blast-srl2txt.pl [flags] < blast_output.srl > blast_output.txt
+srl2csv [flags] < blast_output.srl > blast_output.txt
 
 =head2 Required flags
 
@@ -41,7 +41,7 @@ This help message
 
 =head2 For more information:
 
-perldoc blast-srl2txt.pl
+perldoc srl2csv
 
 =head1 DESCRIPTION
 
@@ -212,7 +212,7 @@ use Sereal qw/ decode_sereal /;
 
 # CLdb #
 use FindBin;
-use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../../lib";
 use CLdb::arrayBlast::sereal qw/
 				 parse_outfmt
 				 classify_fields

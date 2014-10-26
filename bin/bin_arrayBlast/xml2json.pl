@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-blast-xml2json.pl -- converting blast output (xml format) to JSON format
+xml2json -- converting blast output (xml format) to JSON format
 
 =head1 SYNOPSIS
 
-blast-xml2json.pl [flags] < blast_output.xml > blast_output.json
+xml2json [flags] < blast_output.xml > blast_output.json
 
 =head2 Required flags
 
@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-perldoc blast-xml2json.pl
+perldoc xml2json
 
 =head1 DESCRIPTION
 
@@ -61,7 +61,7 @@ use XML::XML2JSON;
 
 # CLdb #
 use FindBin;
-use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../../lib";
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));

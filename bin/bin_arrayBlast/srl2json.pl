@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-blast-srl2json.pl -- converting blast output binary serialization format to json format
+srl2json -- converting blast output binary serialization format to json format
 
 =head1 SYNOPSIS
 
-blast-srl2json.pl [flags] < blast_output.srl > blast_output.json
+srl2json [flags] < blast_output.srl > blast_output.json
 
 =head2 Required flags
 
@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-perldoc blast-srl2json.pl
+perldoc srl2json
 
 =head1 DESCRIPTION
 
@@ -62,7 +62,7 @@ use JSON;
 
 # CLdb #
 use FindBin;
-use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../../lib";
 
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));

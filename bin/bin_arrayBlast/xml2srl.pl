@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-blast-xml2srl.pl -- converting blast output (xml format) to binary serialization format
+xml2srl -- converting blast output (xml format) to binary serialization format
 
 =head1 SYNOPSIS
 
-blast-xml2srl.pl [flags] < blast_output.xml > blast_output.srl
+xml2srl [flags] < blast_output.xml > blast_output.srl
 
 =head2 Required flags
 
@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-perldoc blast-xml2srl.pl
+perldoc xml2srl
 
 =head1 DESCRIPTION
 
@@ -67,7 +67,7 @@ use Sereal qw/ encode_sereal /;
 
 # CLdb #
 use FindBin;
-use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../../lib";
 use CLdb::arrayBlast::sereal qw/
 				 blast_all_array
 			       /;
