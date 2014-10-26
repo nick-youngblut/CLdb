@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastAddProto.pl -- adding protospacer to blast srl file
+add_proto -- adding protospacer to blast srl file
 
 =head1 SYNOPSIS
 
-arrayBlastAddProto.pl [flags] < blast_hits.srl > spacer_blast_proto.srl
+add_proto [flags] < blast_hits.srl > spacer_blast_proto.srl
 
 =head2 Required flags
 
@@ -40,7 +40,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastAddProto.pl
+perldoc add_proto
 
 =head1 DESCRIPTION
 
@@ -93,7 +93,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use FindBin;
-use lib "$FindBin::RealBin/../lib/";
+use lib "$FindBin::RealBin/../../lib/";
 use Sereal qw/ encode_sereal /;
 
 ### CLdb

@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastGetAlign.pl -- making fasta alignment of crDNA & protospacer
+get_align -- making fasta alignment of crDNA & protospacer
 
 =head1 SYNOPSIS
 
-arrayBlastGetAlign.pl [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
+get_align [flags] < blast_hits_crDNA_proto_aln.srl > aln.fasta
 
 =head2 Required flags
 
@@ -71,7 +71,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastGetAlign.pl
+perldoc get_align
 
 =head1 DESCRIPTION
 
@@ -181,7 +181,7 @@ use Getopt::Long;
 use File::Spec;
 use Sereal qw/ encode_sereal /;
 use FindBin;
-use lib "$FindBin::RealBin/../lib/";
+use lib "$FindBin::RealBin/../../lib/";
 
 ### CLdb
 use CLdb::arrayBlast::sereal qw/ decode_file /;

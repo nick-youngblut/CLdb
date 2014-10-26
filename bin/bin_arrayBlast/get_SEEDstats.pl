@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastSEEDstats.pl -- getting mismatch stats on the seed region
+get_SEEDstats -- getting mismatch stats on the seed region
 
 =head1 SYNOPSIS
 
-arrayBlastSEEDstats.pl [flags] < proto.fasta
+get_SEEDstats [flags] < proto.fasta
 
 =head2 Required flags
 
@@ -46,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastSEEDstats.pl
+perldoc get_SEEDstats
 
 =head1 DESCRIPTION
 
@@ -135,7 +135,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use FindBin;
-use lib "$FindBin::RealBin/../lib/";
+use lib "$FindBin::RealBin/../../lib/";
 
 ### CLdb
 use CLdb::seq qw/read_fasta

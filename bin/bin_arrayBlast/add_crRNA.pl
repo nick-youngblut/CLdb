@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastAddcrRNA.pl -- recreate crRNA extracting spacer & part of its adjacent DRs
+add_crRNA -- recreate crRNA extracting spacer & part of its adjacent DRs
 
 =head1 SYNOPSIS
 
-arrayBlastAddcrRNA.pl [flags] < blast_hits.srl > blast_hits_crRNA.srl
+add_crRNA [flags] < blast_hits.srl > blast_hits_crRNA.srl
 
 =head2 Required flags
 
@@ -40,7 +40,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastAddcrRNA.pl
+perldoc add_crRNA
 
 =head1 DESCRIPTION
 
@@ -89,7 +89,7 @@ use File::Spec;
 use DBI;
 use Sereal qw/ encode_sereal /;
 use FindBin;
-use lib "$FindBin::RealBin/../lib/";
+use lib "$FindBin::RealBin/../../lib/";
 
 ### CLdb
 use CLdb::utilities qw/

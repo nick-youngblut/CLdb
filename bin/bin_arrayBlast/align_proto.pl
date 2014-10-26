@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastGetProto.pl -- getting protospacer from blast srl (assuming no crDNA info)
+align_proto -- aligning protospacer & crDNA 
 
 =head1 SYNOPSIS
 
-arrayBlastGetProto.pl [flags] < blast_hits.srl > spacer_blast_proto.txt
+align_proto [flags] < blast_hits_crDNA_proto.srl > spacer_blast_crDNA_proto_align.srl
 
 =head2 Required flags
 
@@ -32,26 +32,25 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastGetProto.pl
+perldoc align_proto
 
 =head1 DESCRIPTION
 
-Run arrayBlastAddProto.pl 
-prior to this script!
+SCRIPTS TO RUN PRIOR TO THIS ONE: 
+arrayBlastAddcrRNA.pl &
+arrayBlastAddProto.pl 
 
-Extracting the protospacer sequence
-(extension from proto lower case)
-and writing as a tab-delimited table (with header).
-Protospacer sequences are written to their orientation
-(ie., sequence start = 5' of protospacer; 
-sequence end = 3')
+Any query-hit without a crDNA 
+sequence for the query and a protospacer 
+sequence for the hit will be skipped.
 
-This script can be used without a CLdb.
-Just blast your sequences, run arrayBlastAddProto.pl,
-then this script.
+The crDNA & protospacer will be aligned
+with clustalw, and the extension sequences
+flanking the protospacer will be set to lower
+case, which will help for determining the PAM.
 
-The output is a tab-delimited table (with header).
-Convert this to a fasta with 'table2fasta.pl'
+The alignment will be added to the *.srl
+data structure.
 
 =head1 EXAMPLES
 
@@ -82,10 +81,12 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use Sereal qw/ encode_sereal /;
+use FindBin;
+use lib "$FindBin::RealBin/../../lib/";
 
 ### CLdb
 use CLdb::arrayBlast::sereal qw/ decode_file /;
-use CLdb::arrayBlast::Proto qw/ getProto /;
+use CLdb::arrayBlast::Align qw/ alignProto /;
 
 
 ### args/flags
@@ -105,7 +106,9 @@ GetOptions(
 my $spacer_r = decode_file( fh => \*STDIN );
 
 # querying blastDBs for proteospacers
-getProto( blast => $spacer_r,  
-	  verbose => $verbose);
+alignProto( blast => $spacer_r,
+	    verbose => $verbose );
 
+# encoding
+print encode_sereal( $spacer_r );
 

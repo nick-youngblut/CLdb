@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastDRFilter.pl -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
+filter_DRs -- filter out spacers hitting CRISPR arrays based on adjacency to DR blast hits
 
 =head1 SYNOPSIS
 
-arrayBlastDRFilter.pl [options] spacer_blast.srl DR_blast.srl > spacer_blast_filtered.srl
+filter_DRs [options] spacer_blast.srl DR_blast.srl > spacer_blast_filtered.srl
 
 =head2 options
 
@@ -46,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastDRFilter.pl
+perldoc filter_DRs
 
 =head1 DESCRIPTION
 
@@ -58,7 +58,7 @@ to >= '-DR' direct repeat blast hits.
 
 =head2 Basic Usage:
 
-arrayBlastDRFilter.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
+filter_DRs.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
 
 =head1 AUTHOR
 
@@ -84,7 +84,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use FindBin;
-use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../../lib";
 use Sereal qw/ encode_sereal /;
 
 ### CLdb

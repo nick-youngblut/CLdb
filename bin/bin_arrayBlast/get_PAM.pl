@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-arrayBlastGetPAM.pl -- getting PAM for each protospacer
+get_PAM -- getting PAM for each protospacer
 
 =head1 SYNOPSIS
 
-arrayBlastGetPAM.pl [flags] > PAMs
+get_PAM [flags] > PAMs
 
 =head2 Required flags
 
@@ -55,7 +55,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc arrayBlastGetPAM.pl
+perldoc get_PAM
 
 =head1 DESCRIPTION
 
@@ -106,7 +106,7 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use FindBin;
-use lib "$FindBin::RealBin/../lib/";
+use lib "$FindBin::RealBin/../../lib/";
 
 ### CLdb
 use CLdb::arrayBlast::PAM qw/ make_pam_index
