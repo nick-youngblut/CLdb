@@ -46,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc filter_arrayHits
+CLdb_perldoc filter_arrayHits
 
 =head1 DESCRIPTION
 

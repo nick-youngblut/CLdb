@@ -56,7 +56,7 @@ This help message
 
 =head2 For more information:
 
-perldoc delete.pl
+CLdb_perldoc delete.pl
 
 =head1 DESCRIPTION
 

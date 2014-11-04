@@ -60,7 +60,7 @@ Extra sql to refine which sequences are returned.
 
 =head2 For more information:
 
-perldoc array2fasta.pl
+CLdb_perldoc array2fasta.pl
 
 =head1 DESCRIPTION
 

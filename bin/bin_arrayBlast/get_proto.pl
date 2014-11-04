@@ -32,7 +32,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc get_proto
+CLdb_perldoc get_proto
 
 =head1 DESCRIPTION
 

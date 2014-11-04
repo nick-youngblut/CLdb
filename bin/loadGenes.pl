@@ -36,7 +36,7 @@ This help message
 
 =head2 For more information:
 
-perldoc Cldb_loadGenes.pl
+CLdb_perldoc Cldb_loadGenes.pl
 
 =head1 DESCRIPTION
 

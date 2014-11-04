@@ -72,7 +72,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc loci2GFF.pl
+CLdb_perldoc loci2GFF.pl
 
 =head1 DESCRIPTION
 

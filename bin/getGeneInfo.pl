@@ -48,7 +48,7 @@ Extra sql to refine which sequences are returned.
 
 =head2 For more information:
 
-perldoc getGeneInfo.pl
+CLdb_perldoc getGeneInfo.pl
 
 =head1 DESCRIPTION
 

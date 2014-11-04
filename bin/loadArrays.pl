@@ -36,7 +36,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc loadArrays.pl
+CLdb_perldoc loadArrays.pl
 
 =head1 DESCRIPTION
 

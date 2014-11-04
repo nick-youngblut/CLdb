@@ -6,23 +6,15 @@ use warnings;
 
 =head1 NAME
 
-arrayBlast -- blast of CRISPR array sequences
+CLdb_bashComplete -- adding BASH subcommand completion for CLdb
 
 =head1 SYNOPSIS
 
-arrayBlast [options] subcommand -- [subcommand_options]
+CLdb_bashComplete
 
 =head2 Options
 
 =over
-
-=item --list
-
-List all subcommands.
-
-=item --perldoc
-
-Get perldoc of subcommand.
 
 =item -v        Verbose output
 
@@ -32,7 +24,7 @@ Get perldoc of subcommand.
 
 =head2 For more information:
 
-CLdb_perldoc arrayBlast
+perldoc CLdb_bashComplete
 
 =head1 DESCRIPTION
 
@@ -43,7 +35,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/arrayBlast/
+sharchaea.life.uiuc.edu:/home/git/CLdb_bashComplete/
 
 =head1 COPYRIGHT
 
@@ -61,6 +53,11 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use IPC::Cmd qw/run can_run/;
 use File::Spec;
+use Term::Bash::Completion::Generator;
+
+Term::Bash::Completion::Generator->generate_bash_completion_function('CLdb', ['arrayBlast', 'plotLoci']);
+
+exit;
 
 
 #--- option parsing ---#
@@ -68,8 +65,6 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $listSubcmds, $getPerlDoc);
 GetOptions (
-	    "--list" => \$listSubcmds,
-	    "--perldoc" => \$getPerlDoc,
 	    "--verbose" => \$verbose,
 	    "-help|?" => \&pod2usage
 	   );
@@ -78,7 +73,9 @@ GetOptions (
 
 
 #--- I/O error ---#
-my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin_arrayBlast');
+my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin');
+
+
 
 # check that script exists 
 my $scripts_r = list_scripts($bindir, $listSubcmds);

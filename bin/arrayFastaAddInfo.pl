@@ -53,7 +53,7 @@ Add spacer-leader order? [FALSE]
 
 =head2 For more information:
 
-perldoc arrayFastaAddInfo.pl
+CLdb_perldoc arrayFastaAddInfo.pl
 
 =head1 DESCRIPTION
 

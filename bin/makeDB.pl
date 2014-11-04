@@ -34,7 +34,7 @@ This help message
 
 =head2 For more information:
 
-perldoc makeDB.pl
+CLdb_perldoc makeDB.pl
 
 =head1 DESCRIPTION
 

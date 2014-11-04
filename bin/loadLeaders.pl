@@ -46,7 +46,7 @@ This help message
 
 =head2 For more information:
 
-perldoc loadLeaders.pl
+CLdb_perldoc loadLeaders.pl
 
 =head1 DESCRIPTION
 

@@ -54,7 +54,7 @@ This help message
 
 =head2 For more information:
 
-perldoc writeTable.pl
+CLdb_perldoc writeTable.pl
 
 =head1 DESCRIPTION
 

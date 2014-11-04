@@ -64,7 +64,7 @@ This help message
 
 =head2 For more information:
 
-perldoc subtypePA_ITOL.pl
+CLdb_perldoc subtypePA_ITOL.pl
 
 =head1 DESCRIPTION
 

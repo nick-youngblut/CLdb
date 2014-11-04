@@ -44,7 +44,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc clusterLeaders.pl
+CLdb_perldoc clusterLeaders.pl
 
 =head1 DESCRIPTION
 

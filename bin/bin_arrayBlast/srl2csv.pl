@@ -41,7 +41,7 @@ This help message
 
 =head2 For more information:
 
-perldoc srl2csv
+CLdb_perldoc srl2csv
 
 =head1 DESCRIPTION
 

@@ -60,7 +60,7 @@ This help message
 
 =head2 For more information:
 
-perldoc getSpacerPairwiseBlast.pl
+CLdb_perldoc getSpacerPairwiseBlast.pl
 
 =head1 DESCRIPTION
 

@@ -55,7 +55,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc get_PAM
+CLdb_perldoc get_PAM
 
 =head1 DESCRIPTION
 

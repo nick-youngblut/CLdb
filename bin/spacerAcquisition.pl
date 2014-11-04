@@ -62,7 +62,7 @@ Prefix for output files. [psblNewSpacers]
 
 =head2 For more information:
 
-perldoc spacerAquisition.pl
+CLdb_perldoc spacerAquisition.pl
 
 =head1 DESCRIPTION
 

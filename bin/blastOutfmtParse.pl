@@ -36,7 +36,7 @@ Index hash size (>= number of comments in BLAST file). [1000000]
 
 =head2 For more information:
 
-perldoc blastOutfmtParse.pl
+CLdb_perldoc blastOutfmtParse.pl
 
 =head1 DESCRIPTION
 

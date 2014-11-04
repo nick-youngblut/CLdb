@@ -40,7 +40,7 @@ This help message
 
 =head2 For more information:
 
-perldoc loadLoci.pl
+CLdb_perldoc loadLoci.pl
 
 =head1 DESCRIPTION
 

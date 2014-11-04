@@ -52,7 +52,7 @@ This help message
 
 =head2 For more information:
 
-perldoc summary.pl
+CLdb_perldoc summary.pl
 
 =head1 DESCRIPTION
 

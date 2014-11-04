@@ -40,7 +40,7 @@ This help message
 
 =head2 For more information:
 
-perldoc positionByScaffold.pl
+CLdb_perldoc positionByScaffold.pl
 
 =head1 DESCRIPTION
 

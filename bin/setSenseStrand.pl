@@ -66,7 +66,7 @@ Query refinement flags can be used.
 
 =head2 For more information:
 
-perldoc setSenseStrand.pl
+CLdb_perldoc setSenseStrand.pl
 
 =head1 DESCRIPTION
 

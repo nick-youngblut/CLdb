@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-perldoc xml2json
+CLdb_perldoc xml2json
 
 =head1 DESCRIPTION
 

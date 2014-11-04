@@ -46,7 +46,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc get_SEEDstats
+CLdb_perldoc get_SEEDstats
 
 =head1 DESCRIPTION
 

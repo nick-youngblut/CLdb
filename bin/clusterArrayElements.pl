@@ -64,7 +64,7 @@ This help message
 
 =head2 For more information:
 
-perldoc clusterArrayElements.pl
+CLdb_perldoc clusterArrayElements.pl
 
 =head1 DESCRIPTION
 

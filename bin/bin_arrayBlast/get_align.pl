@@ -71,7 +71,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc get_align
+CLdb_perldoc get_align
 
 =head1 DESCRIPTION
 

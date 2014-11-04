@@ -36,7 +36,7 @@ This help message
 
 =head2 For more information:
 
-perldoc addScaffoldCount.pl
+CLdb_perldoc addScaffoldCount.pl
 
 =head1 DESCRIPTION
 

@@ -32,7 +32,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc align_proto
+CLdb_perldoc align_proto
 
 =head1 DESCRIPTION
 

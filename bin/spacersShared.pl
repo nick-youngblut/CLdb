@@ -60,7 +60,7 @@ This help message
 
 =head2 For more information:
 
-perldoc spacersShared.pl
+CLdb_perldoc spacersShared.pl
 
 =head1 DESCRIPTION
 

@@ -66,7 +66,7 @@ This help message
 
 =head2 For more information:
 
-perldoc run.pl
+CLdb_perldoc run.pl
 
 =head1 DESCRIPTION
 

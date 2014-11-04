@@ -6,11 +6,11 @@ use warnings;
 
 =head1 NAME
 
-arrayBlast -- blast of CRISPR array sequences
+plotLoci -- plotting CRISPR loci
 
 =head1 SYNOPSIS
 
-arrayBlast [options] subcommand -- [subcommand_options]
+plotLoci [options] subcommand -- [subcommand_options]
 
 =head2 Options
 
@@ -32,7 +32,7 @@ Get perldoc of subcommand.
 
 =head2 For more information:
 
-CLdb_perldoc arrayBlast
+CLdb_perldoc plotLoci
 
 =head1 DESCRIPTION
 
@@ -43,7 +43,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/arrayBlast/
+sharchaea.life.uiuc.edu:/home/git/plotLoci/
 
 =head1 COPYRIGHT
 
@@ -78,29 +78,31 @@ GetOptions (
 
 
 #--- I/O error ---#
-my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin_arrayBlast');
+my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin_plotLoci');
 
 # check that script exists 
 my $scripts_r = list_scripts($bindir, $listSubcmds);
-(my $subcmd = $ARGV[0]) =~ s/\.pl$//i;
-if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
+(my $subcmd = $ARGV[0]) =~ s/\.(pl|r)$//i;
+my @scriptHits = grep(/^$subcmd(\.pl|\.r)*$/, @$scripts_r);
+if (! @scriptHits){
   die "ERROR: '" . $ARGV[0] . "' is not a a valid subcommand\n";
 }
 
 
 #--- MAIN ---#
-call_subcommand($bindir, \@ARGV, $getPerlDoc);
+call_subcommand($bindir, $scriptHits[0], \@ARGV, $getPerlDoc);
 
 
 #--- subroutines ---#
 sub call_subcommand{
   my $bindir = shift or die $!;
+  my $subcmd = shift or die $!;
   my $argv_r = shift or die $!;
   my $getPerlDoc = shift;
 
   
   # check exists
-  (my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
+  #(my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
   $subcmd = File::Spec->join($bindir, $subcmd);  
 
   unless (can_run($subcmd)){
@@ -109,14 +111,32 @@ sub call_subcommand{
 
 
   # calling subcommand
-  if ($getPerlDoc){
-    print `perldoc -T $subcmd`;
+  ## perl
+  if(grep(/\.pl$/i, $subcmd)){
+    if ($getPerlDoc){
+      print `perldoc -T $subcmd`;
+    }    
+    else{
+      $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
+      print `$subcmd`;
+    }
   }
+  ## R
+  if(grep(/\.r$/i, $subcmd)){
+    if ($getPerlDoc){
+      print `Rscript $subcmd -h`;
+    }    
+    else{
+      $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
+      print `Rscript $subcmd`;
+    }
+  }
+  ## other
   else{
-    $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
-    print `$subcmd`;
+    die "ERROR: subcommand format not recognized\n"
   }
 }
+
 
 sub list_scripts{
   my $bindir = shift or die $!;
@@ -124,12 +144,12 @@ sub list_scripts{
 
   # getting scripts
   opendir INDIR, $bindir or die $!;
-  my @scripts = grep(/\.pl$/i, readdir INDIR);
+  my @scripts = grep(/\.(pl|r)$/i, readdir INDIR);
   closedir INDIR or die $!;
 
   # listing or returning
   if ($listSubcmds){
-    map(s/\.pl//i, @scripts);
+    map(s/\.(pl|r)//i, @scripts);
     print join("\n", sort  @scripts), "\n";
     exit;
   }

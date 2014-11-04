@@ -1,0 +1,13 @@
+#!/bin/bash
+## run instead of perldoc for getting more info on subcommands
+
+# getting last arg passed to script
+for last; do true; done
+echo $last
+
+# finding script in bin dir
+subcmd="$last.pl"
+SCRIPTS=`find ./bin -name $subcmd`
+
+# calling perldoc
+perldoc ${SCRIPTS[0]}

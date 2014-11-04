@@ -60,7 +60,7 @@ This help message
 
 =head2 For more information:
 
-perldoc loadDRConsensus.pl
+CLdb_perldoc loadDRConsensus.pl
 
 =head1 DESCRIPTION
 

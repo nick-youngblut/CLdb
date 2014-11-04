@@ -44,7 +44,7 @@ Number of genomes to download in parallel (0 = no forking). [0]
 
 =head2 For more information:
 
-perldoc accession-GI2fastaGenome.pl
+CLdb_perldoc accession-GI2fastaGenome.pl
 
 =head1 DESCRIPTION
 

@@ -71,7 +71,7 @@ This help message.
 
 =head2 For more information:
 
-perldoc getGenesInLoci.pl
+CLdb_perldoc getGenesInLoci.pl
 
 =head1 DESCRIPTION
 

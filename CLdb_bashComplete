@@ -1,0 +1,52 @@
+#!/bin/bash
+# General bash setup for command-subcommand autocomplete.
+# Add to your .profile or .bashrc to make permanent.
+
+# edit path to where the SIPdb bin directory is:
+BINDIR='/home/nyoungb2/perl/projects/CLdb/bin/'
+
+
+#--- do not edit ---#
+subcmds=`find $BINDIR -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+arrayBlastDir='/home/nyoungb2/perl/projects/CLdb/bin/bin_arrayBlast/'
+arrayBlastSubcmds=`find $arrayBlastDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+plotLociDir='/home/nyoungb2/perl/projects/CLdb/bin/bin_plotLoci/'
+plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+
+_addSubcmds()
+{
+    local cur prev prev2
+
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+    prev2=${COMP_WORDS[COMP_CWORD-2]}
+
+    case ${COMP_CWORD} in
+        1)
+            COMPREPLY=($(compgen -W "$subcmds" ${cur}))
+            ;;
+        2)
+            case ${prev} in 
+                arrayBlast)
+                    COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
+                    ;;
+                plotLoci)
+                    COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
+                    ;;
+            esac
+            ;;
+        *)
+            COMPREPLY=()
+            ;;
+    esac
+}
+
+
+complete -F _addSubcmds CLdb
+
+complete -F _addSubcmds CLdb_perldoc
