@@ -124,7 +124,7 @@ sub list_scripts{
 
   # getting scripts
   opendir INDIR, $bindir or die $!;
-  my @scripts = grep(/\.pl$/, readdir INDIR);
+  my @scripts = grep(/\.pl$/i, readdir INDIR);
   closedir INDIR or die $!;
 
   # listing or returning
