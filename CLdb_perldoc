@@ -7,7 +7,8 @@ echo $last
 
 # finding script in bin dir
 subcmd="$last.pl"
-SCRIPTS=`find ./bin -name $subcmd`
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPTS=`find $DIR/bin -name $subcmd`
 
 # calling perldoc
 perldoc ${SCRIPTS[0]}

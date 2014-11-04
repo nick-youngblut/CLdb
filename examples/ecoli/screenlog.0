@@ -320,3 +320,9 @@ Usage:
 2014-10-26 14:39:54.371 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
 2014-10-26 14:41:54.466 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
 2014-10-26 14:42:48.499 [NotebookApp] Saving notebook at /ipynb/database_administration.ipynb
+INFO:tornado.access:302 GET / (::1) 1599.01ms
+2014-11-03 19:43:50.472 [NotebookApp] Kernel shutdown: 6e401d97-e545-4b4a-a904-5058b2d9c061
+2014-11-03 19:43:51.580 [NotebookApp] Kernel shutdown: 18fa3b56-228a-4d5d-a7bc-58e987adc58e
+2014-11-03 20:38:08.486 [NotebookApp] Kernel started: 086f6385-3b6f-47b2-abc7-68bbb60c4a8a
+2014-11-03 20:52:01.037 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-11-03 21:06:00.575 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb

@@ -26,24 +26,21 @@ _addSubcmds()
     prev=${COMP_WORDS[COMP_CWORD-1]}
     prev2=${COMP_WORDS[COMP_CWORD-2]}
 
-    case ${COMP_CWORD} in
-        1)
-            COMPREPLY=($(compgen -W "$subcmds" ${cur}))
-            ;;
-        2)
-            case ${prev} in 
-                arrayBlast)
-                    COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
-                    ;;
-                plotLoci)
-                    COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
-                    ;;
-            esac
-            ;;
-        *)
-            COMPREPLY=()
-            ;;
-    esac
+    lastToken=${COMP_WORDS[$COMP_CWORD-1]}
+
+
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb ]]; then
+	COMPREPLY=($(compgen -W "$subcmds" ${cur}))
+    fi
+    
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+	COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
+    fi
+
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
+	COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
+    fi
+
 }
 
 

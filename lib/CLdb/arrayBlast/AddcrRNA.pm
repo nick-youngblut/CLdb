@@ -173,6 +173,7 @@ sub queryBySpacer{
   my $query = <<HERE;
 SELECT
 l.fasta_file,
+l.genbank_file,
 l.scaffold,
 l.locus_id,
 l.array_sense_strand,
@@ -223,7 +224,7 @@ HERE
             
     }
   }
- 
+
 #  print Dumper %$CLdb_info_r; exit;
 }
 
@@ -255,6 +256,7 @@ sub queryBySpacerCluster{
   my $query = <<HERE;
 SELECT
 l.fasta_file,
+l.genbank_file,
 l.scaffold,
 l.locus_id,
 l.array_sense_strand,

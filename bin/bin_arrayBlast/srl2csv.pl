@@ -21,9 +21,10 @@ NONE
 =item -outfmt  <str>
 
 blast fields as in '-outfmt' for blast. 
-Only '6' or '7' formats are supported. 
-['6 qseqid sseqid pident length mismatch 
-gapopen qstart qend sstart send evalue bitscore']
+Blast csv formats '6' and '7' are supported.
+Fields must be a comma-separated list!
+['6,qseqid,sseqid,pident,length,mismatch, 
+gapopen,qstart,qend,sstart,send,evalue,bitscore']
 
 =item -path  <bool>
 
@@ -50,8 +51,8 @@ binary data serialization format (Sereal)
 to blast tabular format: either
 with comments '-outfmt 7' or without '-outfmt 6'
 
-Currnently, only some of the standard blastn fields
-are supported:
+Of the fields that are standard to blastn output,
+only some are currently supported.
 
 =head2 Supported fields:
 
@@ -103,6 +104,8 @@ are supported:
 
 =item sframe
 
+=item sdef -- definition line for subject
+
 =back
 
 =head3 CLdb fields
@@ -147,7 +150,9 @@ are supported:
 
 =item cluster_id -- cluster ID (spacer cluster)
 
-=item genome_fasta -- fasta file containing the spacer
+=item genome_fasta -- fasta file of genome containing the spacer
+
+=item genome_genbank -- genbank file of genome containing the spacer
 
 =item spacer_scaffold -- scaffold/chromosome containing the spacer
 
@@ -182,7 +187,7 @@ blastdb -- blast db file
 
 =back
 
-=head2 Undefined values
+=head2 Note: undefined values
 
 'undef' = value missing in blast srl file.
 
@@ -223,13 +228,14 @@ use CLdb::arrayBlast::sereal qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $keep_path);
-my $outfmt = '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'; 
+my $outfmt = join(',', qw/6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore/); 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "path" => \$keep_path,
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
+
 
 #--- I/O error & defaults ---#
 die "ERROR: provide '-outfmt'\n"
@@ -244,6 +250,8 @@ my $srl;
 $srl .= $_ while <>;
 my $decoder = Sereal::Decoder->new();
 my $blast_r =  $decoder->decode( $srl );
+
+
 
 # making table
 foreach my $blast_run (keys %$blast_r){

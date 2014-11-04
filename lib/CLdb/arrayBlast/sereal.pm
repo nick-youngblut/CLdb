@@ -156,7 +156,7 @@ push @EXPORT_OK, 'parse_outfmt';
 sub parse_outfmt{
   my ($outfmt) = @_;
 
-  my @l = split /[ \/\\\n\r]+/, $outfmt;
+  my @l = split /,/, $outfmt;
   croak "-outfmt argument must start with '6' or '7'"
     unless $l[0] == 6 || $l[0] == 7;
 
@@ -212,6 +212,7 @@ sub classify_fields {
 	       sseqid => ['hit', 'Hit_id'],
 	       sacc => ['hit', 'Hit_accession'],
 	       slen => ['hit', 'Hit_len'],
+	       sdef => ['hit', 'Hit_def'],
 	       # hsp
 	       qstart => ['hsp', 'Hsp_query-from'],
 	       qend => ['hsp', 'Hsp_query-to'],
@@ -251,6 +252,7 @@ sub classify_fields {
 	       spacer_scaffold => ['crRNA_info', 'scaffold'],
 	       cluster_id => ['crRNA_info', 'cluster_id'],
 	       genome_fasta => ['crRNA_info', 'genome_fasta'],
+	       genome_genbank => ['crRNA_info', 'genbank_file'],
 	       locus_id => ['crRNA_info', 'locus_id'],
 	       spacer_id => ['crRNA_info', 'spacer_id'],	       
 	       query_id => ['crRNA_info', 'query_id'],
