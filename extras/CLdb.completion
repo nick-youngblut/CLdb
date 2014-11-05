@@ -1,4 +1,3 @@
-#!/bin/bash
 # General bash setup for command-subcommand autocomplete.
 # Add to your .profile or .bashrc to make permanent.
 
@@ -18,7 +17,7 @@ plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe
 
 
 
-_addSubcmds()
+_CLdb()
 {
     local cur prev prev2
 
@@ -44,6 +43,6 @@ _addSubcmds()
 }
 
 
-complete -F _addSubcmds CLdb
+complete -F _CLdb CLdb
 
-complete -F _addSubcmds CLdb_perldoc
+complete -F _CLdb CLdb_perldoc
