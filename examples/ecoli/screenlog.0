@@ -326,3 +326,5 @@ INFO:tornado.access:302 GET / (::1) 1599.01ms
 2014-11-03 20:38:08.486 [NotebookApp] Kernel started: 086f6385-3b6f-47b2-abc7-68bbb60c4a8a
 2014-11-03 20:52:01.037 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
 2014-11-03 21:06:00.575 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-11-04 18:25:20.012 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+2014-11-04 18:27:20.542 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
