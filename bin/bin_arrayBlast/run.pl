@@ -86,7 +86,7 @@ Genome fasta files should be in the $HOME/fasta/ directory
 originally used to make the CLdb).
 
 Blast databases for each genome will be created
-in $HOME/spacer_blast/blast_db/.
+in $HOME/arrayBlast/blast_db/.
 
 The blast output from the blast against each genome
 will be written be in xml format (-outfmt 5) to

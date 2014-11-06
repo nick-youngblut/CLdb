@@ -1,3 +1,4 @@
+#!/bin/bash
 # General bash setup for command-subcommand autocomplete.
 # Add to your .profile or .bashrc to make permanent.
 
@@ -17,30 +18,31 @@ plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe
 
 
 
-_CLdb()
+_CLdb_perldoc()
 {
     local cur prev prev2
 
     cur=${COMP_WORDS[COMP_CWORD]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
     prev2=${COMP_WORDS[COMP_CWORD-2]}
+    COMPREPLY=()
 
-    lastToken=${COMP_WORDS[$COMP_CWORD-1]}
 
-
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb ]]; then
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb_perldoc ]]; then
 	COMPREPLY=($(compgen -W "$subcmds" ${cur}))
-    fi
     
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
 	COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
-    fi
-
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
+    
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
 	COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
+       
+    else
+	COMPREPLY=()
     fi
 
+       
 }
 
 
-complete -F _CLdb CLdb
+complete -o default -F _CLdb_perldoc CLdb_perldoc
