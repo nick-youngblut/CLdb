@@ -363,8 +363,11 @@ sub load_regions{
     chomp;
     s/#.+//;
     next if /^\s*$/;
-    
-    push(@regions, [split /[ ,]+/]);
+
+    my @line = split /\t/;
+    die "ERROR: row $. of region file does not contain >=3 columns\n"
+      unless scalar @line >= 3;
+    push(@regions, [@line[0..2]]);
   }
   close IN or confess $!;
 
