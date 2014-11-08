@@ -31,7 +31,7 @@ region file name. Region file: comma-delimited; each line = contig, region_start
 
 List of region contig,region_start,region_stop values (use instead of region_file). 
 >=1 region can be specified in this manner.
-Example: '-r contig_1 1 1000' for region: {contig_1: 1-1000}
+Example: '-r contig_1 1 1000' for bp 1 to bp 1000 of 'contig_1'
 
 =item -tRNA  <bool>
 
@@ -53,27 +53,17 @@ Get all CDS features in >=1 specified genome region.
 Regions can be provided either by '-region' flag or
 by a region file.
 
+=head2 Output
+
+A tab-delimited table.
+
 The tag values of all features falling at least 
 partially with a region are written out in a table.
 "NA" is written if the tag value is not present in
 the feature. Multiple values for the same tag are 
 combined with "::"
 
-Contig name is optional (needed if multi-locus genbank).
-
 =head1 EXAMPLES
-
-=head2 CDS features in 1-locus genbank (positions: 1-1000bp):
-
-genbank_get_region.pl -r 1 1000 < file.gbk > regions.txt
-
-=head2 CDS features in multi-locus genbank (positions: 1-1000bp)::
-
-genbank_get_region.pl -r Contig_1 1 1000 < file.gbk > regions.txt
-
-=head2 CDS & tRNA features in 1-locus genbank:
-
-genbank_get_region.pl -r 1 1000 -t < file.gbk > regions.txt
 
 =head1 AUTHOR
 
@@ -99,7 +89,9 @@ use Bio::SeqIO;
 use Set::IntervalTree;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::genbank::genbank_get_region qw/genbank_get_regions load_regions/;
+use CLdb::genbank::genbank_get_region qw/genbank_get_regions
+					 load_regions/;
+
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -128,16 +120,59 @@ else{ die " ERROR: provide at least 1 region (scaffold,start,end). Either via '-
 my $all_feats_r = genbank_get_regions($regions_r, $genbank_file);
 
 
+# getting hash of all tags (finding uniques)
+my $all_tags_r = get_all_unique_tags($all_feats_r);
+
+
 # writing
-foreach my $region_r (@$all_feats_r){
-  foreach my $feat_r (@{$region_r->{features}}){
-    print join("\t", @{$region_r->{region}}, @$feat_r), "\n";
+write_feat_tags($all_feats_r, $all_tags_r); 
+
+
+#-- Subroutines --#
+sub write_feat_tags{
+  my $all_feats_r = shift or die "Provide all_feats object";
+  my $all_tags_r = shift or die "Provide all_tags object";
+
+
+  my @utags = sort keys %$all_tags_r;
+  print join("\t", @utags), "\n";
+
+  foreach my $region_r (@$all_feats_r){
+    foreach my $feat (keys %{$region_r->{features}}){
+      my @line = @{$region_r->{region}};
+
+      foreach my $tag (@utags){
+	if (exists $region_r->{features}{$feat}{$tag}){
+	  if (ref $region_r->{features}{$feat}{$tag} eq 'ARRAY'){
+	    push @line, join("::", @{$region_r->{features}{$feat}{$tag}});
+	  }
+	  else{
+	    push @line, $region_r->{features}{$feat}{$tag};
+	  }
+	}
+	else{
+	  push @line, 'NA';
+	}
+      }
+      
+      print join("\t", @line), "\n";
+    }
   }
 }
- 
-# TODO: account for possible differences in feature tags returned for features
+
+sub get_all_unique_tags{
+# getting all tag features from feature-tag object
+  my $all_feats_r = shift or die "Provide ref: [{feature=>feat=>tag=>value}]";
 
 
+  my %tags;
+  foreach my $region_r (@$all_feats_r){
+    foreach my $feat (keys %{$region_r->{features}}){      
+      map{$tags{$_} = 1} keys %{$region_r->{features}{$feat}};
+    }
+  }
+  return \%tags;
+}
 
 ### Subroutines
 # sub load_regions{

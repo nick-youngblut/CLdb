@@ -43,7 +43,7 @@ sub genbank_get_regions{
 
   
   # loading features
-  my $feats_r = load_genbank_features($genbank_file,$tRNA);  
+  my $feats_r = load_genbank_features($genbank_file,$tRNA);    
   my $itrees_r = load_itrees($feats_r);
 
   # getting regions
@@ -53,8 +53,9 @@ sub genbank_get_regions{
       confess "ERROR: region must contain 'scaffold, start, stop'\n"
     }
 
-    my $feats_r = get_regions_scaffold($itrees_r, $region_r, $strand_b);
-    push @all_feats, {region => $region_r, features => $feats_r};
+    my ($feat_tags_r, $tags_r) = get_regions_scaffold($itrees_r, $region_r, $strand_b, 0, 1);
+    join_tag_values($feat_tags_r, $tags_r);
+    push @all_feats, {region => $region_r, features => $feat_tags_r};
   }
 
 
@@ -87,7 +88,8 @@ sub genbank_get_region{
   my $itrees_r = load_itrees($feats_r);
 
   # getting regions
-  my $ret_r = get_regions_scaffold($itrees_r, $regions_r, $strand_b, 0);
+  my ($feat_tags_r, $tags_r) = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
+  my $ret_r = feat_tag_table($feat_tags_r, $tags_r);
   
   return $ret_r;
 }
@@ -96,11 +98,16 @@ sub genbank_get_region{
 #--- accessory subroutines ---#
 sub get_regions_scaffold{
 # getting CDS tag info that falls into regions #
+# Input:
 ## regions_r = @{scaf, start, end}
+## add_tags_b -- if True, feature tags will be 1st row of output list of lists
+# Output:
+## list of lists
+## if tag  not found for feature, using 'NA'
+
   my $itrees_r = shift or die "Provide hashref of interval trees\n";
   my $regions_r = shift or die "Provide regions object\n";
   my $strand_b = shift;
-  my $add_tags_b = shift;   # adding tags (header) to output
   
   my %feat_tags;
   my %tags;
@@ -113,7 +120,8 @@ sub get_regions_scaffold{
       $res = $itrees_r->{$$regions_r[0]}->fetch($$regions_r[2], $$regions_r[1]);
     }
   }
-  else{ warn "WARNING: '$$regions_r[0]' not found in genbank or no features for that scaffold in genbank!\n"; }
+  else{ warn "WARNING: '$$regions_r[0]' not found in".
+	  "genbank or no features for that scaffold in genbank!\n"; }
 
   my $feat_id = 0;
   foreach my $feat (@$res){
@@ -137,22 +145,35 @@ sub get_regions_scaffold{
       }
     }	
   }
-  
-  # returning features #
+
+  return \%feat_tags, \%tags; 
+}
+
+
+sub feat_tag_table{
+# create a feature-tag table (list of lists)
+  my $feat_tags_r = shift or die "Provide feat_tags hashref";
+  my $tags_r = shift or die "Provide tags hashref";
+  my $add_tags_b = shift;   # adding tags (header) to output
+
+  # creating list of features to return
+  ## if tag  not found for feature, using 'NA'
   my @ret;
   my @tags = ("contig", "start", "end");
-  push(@tags, sort keys %tags);
+  push(@tags, sort keys %$tags_r);
   
-  if ($add_tags_b){
+  if ($add_tags_b){ # tags added as first row in table
     push @ret, ["Feature_num", @tags];
   }
   
-  foreach my $feat (keys %feat_tags){
+  foreach my $feat (keys %$feat_tags_r){
     my @line;
     foreach my $tag (@tags){
-      if(exists $feat_tags{$feat}{$tag}){
-	push(@line, join("::", @{$feat_tags{$feat}{$tag}}));
+      # values for tag joined with '::'
+      if(exists $feat_tags_r->{$feat}{$tag}){
+	push(@line, join("::", @{$feat_tags_r->{$feat}{$tag}}));
       }
+      # if tag not in feature, return 'NA'
       else{
 	push(@line, "NA");
       }
@@ -160,9 +181,40 @@ sub get_regions_scaffold{
     push @ret, [$feat, @line];
   }
   
-  #print Dumper @ret; exit;
   return \@ret;
 }
+
+
+
+sub join_tag_values{
+# joining tag values (defaut: '::')
+  my $feat_tags_r = shift or die "Provide feat_tags hash";
+  my $tags_r = shift or die "Provide tags hashref";
+  my $join_val = shift // '::';
+  
+
+  # creating list of features to return
+  ## if tag  not found for feature, using 'NA'
+  my @tags = ("contig", "start", "end");
+  push(@tags, sort keys %$tags_r);
+  
+  
+  #my %ret;
+  foreach my $feat (keys %$feat_tags_r){
+    my @line;
+    foreach my $tag (@tags){
+      # values for tag joined with '::'
+      if(exists $feat_tags_r->{$feat}{$tag}){
+	$feat_tags_r->{$feat}{$tag} =  join("::", @{$feat_tags_r->{$feat}{$tag}});
+      }
+      # if tag not in feature, return 'NA'
+      else{
+	$feat_tags_r->{$feat}{$tag} = 'NA';
+      }
+    }
+  }
+}
+
 
 
 =head2 get_regions
@@ -269,7 +321,9 @@ sub load_itrees{
 
 	
 sub load_itree{
-  my ($feats_r) = @_;
+# loading interval tree of genbank features
+# Input: list of genbank feature objects
+  my ($feats_r) = @_;  
   
   my $itree = Set::IntervalTree->new();
   foreach my $feat (@$feats_r){
@@ -282,6 +336,12 @@ sub load_itree{
 
 sub load_genbank_features{
   my ($genbank_file, $tRNA) = @_;
+
+  # check that $genbank_file exists
+  die "ERROR: cannot find '$genbank_file'\n"
+    if ! -e $genbank_file or -d $genbank_file;
+
+  # loading genbank as Bio::SeqIO object
   my $seqio = Bio::SeqIO->new(-file => $genbank_file, -format => "genbank");
   my @feats;
   while ( my $seqo = $seqio->next_seq){
