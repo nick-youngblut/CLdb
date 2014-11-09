@@ -52,33 +52,49 @@ dramatically in the future.
 
 
 
-## INSTALLATION
+## INSTALLATION 
 
-	git clone https://github.com/nyoungb2/CLdb.git
-	
+Currently, only unix/linux supported.
 
-You can either:
+~~~
+git clone https://github.com/nyoungb2/CLdb.git
+cd CLdb
+echo 'export PATH=$PATH:'`pwd` >> ~/.profile
+source ~/.profile
 
-1. add the CLdb/bin/ to your $PATH
-2. or install the perl/R scripts and packages
+~~~
 
-#### Adding CLdb/bin to your $PATH
+'CLdb' and 'CLdb_perldoc' should now be in your $PATH.
+See [this link](http://kb.iu.edu/data/acar.html) for more info
+on the $PATH variable.
 
-See [this link](http://kb.iu.edu/data/acar.html) for more info.
 
-#### Installing the scripts and packages
+### Setting command-subcommand tab-completion
 
-     cd CLdb/
-     perl Build.PL
-     ./Build
-     ./Build test
-     sudo ./Build install
+CLdb is set up as a command-subcommand app, much like git. 
 
-You may need to use `Build install --install_base=/path/that/I/can/write/to/`
-if you you lack root/superuser privilages.
+Like git, tab completion can be used to view subcommands of
+the main command.
+
+Bash tab-completion will allow you to list the subcommands
+or sub-subcommands of CLdb.
+
+__To set up bash completion:__
+
+Assuming that you are in the CLdb home directory...
+
+* Temporarily:
+  * `source ./extras/*completion`
+* Permanently:
+  * edit the 'BINDIR' variable in the *completion files to point at the CLdb directory
+  * add the *completion files to /etc/bash_completion.d/
+
 
 
 ## Documentation
+
+__WARNING: the documentation is currently very sparce and needes updating.__
+
 
 ### Wiki
 
@@ -100,7 +116,7 @@ You can quickly view these notebooks by either:
 ## ISSUES/CONTACT
 
 All feedback is welcome, except for bug reports... 
-OK fine, ALL feedback is welcome.
+OK fine, *ALL* feedback is welcome.
 
 Please provide it via [Issues](https://github.com/nyoungb2/CLdb/issues) on GitHub.
 

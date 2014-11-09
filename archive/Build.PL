@@ -9,6 +9,7 @@ my @binfiles = readdir IN;
 my @binscripts = grep(/.pl$/, @binfiles);
 @binscripts = map{$_ = "./bin/" . $_} @binscripts;
 
+# build object
 my $builder = Module::Build->new(
     module_name         => 'CLdb',
     license             => 'perl',
@@ -22,8 +23,9 @@ my $builder = Module::Build->new(
         'Test::More' => 0,
     },
     requires => {
-        #'ABC'              => 1.6,
-        #'Foo::Bar::Module' => 5.0401,
+		 'Parallel::ForkManager' => 0.7,
+		 'Bio::SeqIO' => 1.6,
+		 'Set::IntervalTree' => 0.02
     },
     add_to_cleanup     => [ 'CLdb-*' ],
     create_makefile_pl => 'traditional',

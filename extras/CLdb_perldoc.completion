@@ -2,18 +2,20 @@
 # General bash setup for command-subcommand autocomplete.
 # Add to your .profile or .bashrc to make permanent.
 
-# edit path to where the SIPdb bin directory is:
+
+# Edit path to where CLdb bin directory is:
 BINDIR='/home/nyoungb2/perl/projects/CLdb/bin/'
 
 
-#--- do not edit ---#
+
+#---------- DO NOT EDIT BELOW ----------#
 subcmds=`find $BINDIR -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
 
 
-arrayBlastDir='/home/nyoungb2/perl/projects/CLdb/bin/bin_arrayBlast/'
+arrayBlastDir=$BINDIR'/bin_arrayBlast/'
 arrayBlastSubcmds=`find $arrayBlastDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
 
-plotLociDir='/home/nyoungb2/perl/projects/CLdb/bin/bin_plotLoci/'
+plotLociDir=$BINDIR'/bin_plotLoci/'
 plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
 
 
