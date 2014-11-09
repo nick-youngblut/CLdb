@@ -58,10 +58,12 @@ Currently, only unix/linux supported.
 
 ~~~
 git clone https://github.com/nyoungb2/CLdb.git
-cd CLdb
-echo 'export PATH=$PATH:'`pwd` >> ~/.profile
-source ~/.profile
 
+cd CLdb
+
+echo 'export PATH=$PATH:'`pwd` >> ~/.profile
+
+source ~/.profile
 ~~~
 
 'CLdb' and 'CLdb_perldoc' should now be in your $PATH.
@@ -84,9 +86,10 @@ __To set up bash completion:__
 Assuming that you are in the CLdb home directory...
 
 * Temporarily:
-  * `source ./extras/*completion`
+  * `source ./extras/*.completion`
 * Permanently:
-  * edit the 'BINDIR' variable in the *completion files to point at the CLdb directory
+  * edit the 'BINDIR' variable in the *completion files to point 
+  at the CLdb home directory
   * add the *completion files to /etc/bash_completion.d/
 
 
@@ -106,11 +109,9 @@ See the [wiki](https://github.com/nyoungb2/CLdb/wiki).
 I've started compiling examples as IPython Notebooks
 in the ./examples/ directory. 
 
+Example notebooks on nbviewer:
 
-You can quickly view these notebooks by either:
-
-1. using nbviewer. For example: enter the url `http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/` at the nbviewer website.
-2. converting the .ipynb files to html with nbconvert
+* [E. coli](http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/) 
 
 
 ## ISSUES/CONTACT
