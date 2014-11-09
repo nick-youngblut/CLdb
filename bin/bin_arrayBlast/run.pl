@@ -20,7 +20,8 @@ CLdb database.
 
 =item -query  <char>
 
-A fasta of either spacer and/or DR group sequences (use: array2fasta.pl -g -l)
+A fasta of either spacer and/or DR group sequences.
+(to make needed file, use: `array2fasta.pl -d CLdb.sqlite -g -l`)
 
 =back
 
@@ -40,11 +41,6 @@ Refine blast subject genomes to a specific taxon_id(s) (>1 argument allowed).
 =item -taxon_name  <char>
 
 Refine blast subject genomes to a specific taxon_name(s) (>1 argument allowed). 
-
-=item -extra  <char>
-
-Extra sql to refine which genomes are used
-as blast DBs. ['']
 
 =item -blast  <char>
 

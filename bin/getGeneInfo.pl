@@ -36,10 +36,6 @@ ITEP database (if you want clusterIDs).
 
 ITEP cluster runID (for selecting cluster IDs).
 
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message

@@ -28,22 +28,17 @@ CLdb sqlite file name
 =item -subtype  <char>
 
 Refine query to specific a subtype(s) (>1 argument allowed).
-Only works with -database.
+Only works with '-database'.
 
 =item -taxon_id  <char>
 
 Refine query to specific a taxon_id(s) (>1 argument allowed).
-Only works with -database.
+Only works with '-database'.
 
 =item -taxon_name  <char>
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
-Only works with -database.
-
-=item -query  <char>
-
-Extra sql to refine CLdb query (must start with 'AND').
-Only works with -database.
+Only works with '-database'.
 
 =item -outfmt  <char>
 

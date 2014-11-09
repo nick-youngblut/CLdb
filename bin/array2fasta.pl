@@ -48,10 +48,6 @@ Get just cluster representatives of array elements (from clustering)? [FALSE]
 
 Get array elements at the specified sequence identity cutoff. [1]
 
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
 =item -v 	Verbose output. [FALSE]
 
 =item -h	This help message

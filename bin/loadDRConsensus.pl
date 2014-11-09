@@ -36,10 +36,6 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query  <char>
-
-sql to refine query (see EXAMPLES).
-
 =item -cutoff  <int>
 
 Cutoff (threshold) using a residue in the consensus (%). [51]

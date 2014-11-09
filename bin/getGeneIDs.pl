@@ -36,10 +36,6 @@ Refine query to specific a taxon_id(s) (>1 argument allowed).
 
 Refine query to specific a taxon_name(s) (>1 argument allowed).
 
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
 =item -verbose  <bool>
 
 Verbose output

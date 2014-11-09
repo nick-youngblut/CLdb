@@ -8,7 +8,7 @@ spacersShared.pl -- write a table of spacers shared among taxa, subtypes, and/or
 
 =head1 SYNOPSIS
 
-spacersShared.pl [flags] > shared.txt
+spacersShared.pl [flags] -- ['extra sql'] > shared.txt
 
 =head2 Required flags
 
@@ -43,10 +43,6 @@ Group count data by locus_id? [FALSE]
 =item -cutoff  <float>
 
 Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
-
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
 
 =item -verbose  <bool>
 
@@ -136,6 +132,8 @@ GetOptions(
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
 
+
+
 #--- MAIN ---#
 # connect 2 db #
 my $dbh = connect2db($database_file);
@@ -187,6 +185,7 @@ sub write_shared_matrix{
   }
 }
 
+
 sub get_arrays_join_clust{
   my ($dbh, $extra_query, $group_by_r) = @_;
   
@@ -235,6 +234,7 @@ GROUP BY $group_by";
   return \%arrays, \%groups;
 }
 
+
 sub make_group_by_sql{
   my ($subtype, $taxon_id, $taxon_name, $locus_id) = @_;
   my @group_by;
@@ -244,6 +244,7 @@ sub make_group_by_sql{
   push @group_by, "loci.locus_id" if $locus_id;
   return \@group_by;
 }
+
 
 sub entry_count{
   my ($dbh, $table_list_r) = @_;
@@ -258,11 +259,13 @@ sub entry_count{
   return \%table;
 }
 
+
 sub list_tables{
   my $dbh = shift;
   my $all = $dbh->selectall_hashref("SELECT tbl_name FROM sqlite_master", 'tbl_name');
   return [keys %$all];
 }
+
 
 sub join_query_opts_OLD{
   # joining query options for selecting loci #

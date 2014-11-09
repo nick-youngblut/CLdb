@@ -32,10 +32,6 @@ Refine query to specific a subject taxon_id(s) (>1 argument allowed).
 
 Refine query to specific a subject taxon_name(s) (>1 argument allowed).
 
-=item -query  <char>
-
-Extra sql to refine the query.
-
 =item -loci  <char>
 
 Write CRISPR loci features. [FALSE]

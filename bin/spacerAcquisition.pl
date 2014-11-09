@@ -40,10 +40,6 @@ Refine query to specific a taxon_name(s) (>1 argument allowed).
 
 Compare spacers at the specified sequence identity cutoff. [1]
 
-=item -query  <char>
-
-Extra sql to refine which sequences are returned.
-
 =item -truncation  <int>
 
 All loci ending within  '-truncation' bp away from scaffold end 

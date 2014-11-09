@@ -24,6 +24,12 @@ List all subcommands.
 
 Get perldoc of subcommand.
 
+=item --sql
+
+SQL passed to subcommand for limiting queries.
+(e.g., --sql "loci.subtype == 'I-B' or loci.subtype == 'I-C'").
+Use single quotes if quotes are needed.
+
 =item -v        Verbose output
 
 =item -h        This help message
@@ -36,6 +42,20 @@ perldoc CLdb
 
 =head1 DESCRIPTION
 
+CLdb is a local database of CRISPR-Cas systems
+and a set of tools to analyses that data.
+
+This is the main command which calls all
+subcommands (much like git). 
+
+=head2 Command completion
+
+Subcommands will be listed after ' -- '.
+For example: `CLdb -- <tab><tab>`
+will list all primary subcommands for CLdb.
+
+Some secondary subcommands exists.
+For example: `CLdb -- arrayBlast -- run`
 
 =head1 AUTHOR
 
@@ -67,17 +87,17 @@ use File::Spec;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $listSubcmds, $getPerlDoc);
+my $sql = '';
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
+	    "--sql=s" => \$sql,
 	    "--verbose" => \$verbose,
 	    "-help|?" => \&pod2usage
 	   );
 
 
-
-
-#--- I/O error ---#
+#-- intial assertions/defaults --#
 my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin');
 
 # check that script exists 
@@ -87,9 +107,15 @@ if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
   die "ERROR: '" . $ARGV[0] . "' is not a a valid subcommand\n";
 }
 
+# sql
+if ($sql){
+  $sql =~ s/^\s*(and )*/AND /i;
+  $sql =~ s/ *$/ /;
+}
+
 
 #--- MAIN ---#
-call_subcommand($bindir, \@ARGV, $getPerlDoc);
+call_subcommand($bindir, \@ARGV, $getPerlDoc, $sql);
 
 
 #--- subroutines ---#
@@ -97,7 +123,7 @@ sub call_subcommand{
   my $bindir = shift or die $!;
   my $argv_r = shift or die $!;
   my $getPerlDoc = shift;
-
+  my $sql = shift;
   
   # check exists
   (my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
@@ -114,6 +140,8 @@ sub call_subcommand{
   }
   else{
     $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
+    $subcmd = join(" ", $subcmd, "-q \"$sql\"") if $sql;
+    print Dumper $subcmd;
     print `$subcmd`;
   }
 }
