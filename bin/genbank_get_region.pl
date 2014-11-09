@@ -63,6 +63,10 @@ partially with a region are written out in a table.
 the feature. Multiple values for the same tag are 
 combined with "::"
 
+The 1st 3 columns of the table are the user-define regions
+(column names start with 'region_*'). The rest are values
+associated with the features.
+
 =head1 EXAMPLES
 
 =head1 AUTHOR

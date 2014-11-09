@@ -1,3 +1,4 @@
+#!/bin/bash
 # General bash setup for command-subcommand autocomplete.
 # Add to your .profile or .bashrc to make permanent.
 
@@ -19,28 +20,36 @@ plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe
 
 _CLdb()
 {
-    local cur prev prev2
+    local fileNames dirNames cur prev prev2
 
     cur=${COMP_WORDS[COMP_CWORD]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
     prev2=${COMP_WORDS[COMP_CWORD-2]}
 
-    lastToken=${COMP_WORDS[$COMP_CWORD-1]}
-
+    fileNames=''
+    dirNames=''
 
     if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb ]]; then
 	COMPREPLY=($(compgen -W "$subcmds" ${cur}))
-    fi
     
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
 	COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
-    fi
 
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
 	COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
-    fi
+
+    else
+	# no hiddne files/directories
+	fileNames=$( compgen -f -X '.*' -- "$cur" )
+      	dirNames=$( compgen -d -X '.*' -- "$cur" )
+
+    	COMPREPLY=(
+		$( compgen -W "$fileNames $dirNames" -- $cur )
+    	)
+
+    fi	
 
 }
 
 
-complete -F _CLdb CLdb
+complete -F _CLdb -o default CLdb

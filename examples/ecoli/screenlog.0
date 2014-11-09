@@ -329,3 +329,53 @@ INFO:tornado.access:302 GET / (::1) 1599.01ms
 2014-11-04 18:25:20.012 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
 2014-11-04 18:27:20.542 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
 2014-11-05 19:20:58.132 [NotebookApp] Saving notebook at /ipynb/arrayBlast.ipynb
+^C2014-11-08 10:27:04.695 [NotebookApp] interrupted
+Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+2 active kernels 
+The IPython Notebook is running at: http://localhost:9091/
+Shutdown this notebook server (y/[n])? y
+2014-11-08 10:27:07.033 [NotebookApp] CRITICAL | Shutdown confirmed
+2014-11-08 10:27:07.036 [NotebookApp] Shutting down kernels
+2014-11-08 10:27:07.642 [NotebookApp] Kernel shutdown: 086f6385-3b6f-47b2-abc7-68bbb60c4a8a
+2014-11-08 10:27:08.867 [NotebookApp] Kernel shutdown: b6db196b-a788-434d-890e-755b95e54e84
+2014-11-08 10:45:12.709 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-11-08 10:45:12.714 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-11-08 10:45:12.729 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+2014-11-08 10:45:12.729 [NotebookApp] 0 active kernels 
+2014-11-08 10:45:12.729 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-11-08 10:45:12.729 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+INFO:tornado.access:302 GET / (::1) 2.72ms
+2014-11-08 10:45:29.824 [NotebookApp] Creating new notebook in /ipynb/
+2014-11-08 10:45:30.821 [NotebookApp] Kernel started: 131fabe4-1409-4141-b6c2-166d33a1dd5d
+2014-11-08 10:47:30.872 [NotebookApp] Saving notebook at /ipynb/Untitled0.ipynb
+2014-11-08 10:48:46.867 [NotebookApp] Kernel shutdown: 131fabe4-1409-4141-b6c2-166d33a1dd5d
+^C2014-11-08 10:48:56.241 [NotebookApp] interrupted
+Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+0 active kernels 
+The IPython Notebook is running at: http://localhost:9091/
+Shutdown this notebook server (y/[n])? y
+2014-11-08 10:48:57.004 [NotebookApp] CRITICAL | Shutdown confirmed
+2014-11-08 10:48:57.005 [NotebookApp] Shutting down kernels
+2014-11-08 12:01:55.165 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-11-08 12:01:55.170 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-11-08 12:01:55.185 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+2014-11-08 12:01:55.186 [NotebookApp] 0 active kernels 
+2014-11-08 12:01:55.186 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-11-08 12:01:55.186 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+2014-11-08 12:02:06.054 [NotebookApp] Kernel started: 89701752-6383-4c6b-8200-ab10378cf5e4
+2014-11-08 12:02:45.263 [NotebookApp] Saving notebook at /ipynb/Untitled0.ipynb
+2014-11-08 12:02:45.554 [NotebookApp] Saving notebook at /ipynb/Untitled0.ipynb
+2014-11-08 12:02:49.414 [NotebookApp] Kernel shutdown: 89701752-6383-4c6b-8200-ab10378cf5e4
+^[[A^C2014-11-08 12:09:14.762 [NotebookApp] interrupted
+Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+0 active kernels 
+The IPython Notebook is running at: http://localhost:9091/
+Shutdown this notebook server (y/[n])? y
+2014-11-08 12:09:16.520 [NotebookApp] CRITICAL | Shutdown confirmed
+2014-11-08 12:09:16.521 [NotebookApp] Shutting down kernels
+2014-11-08 12:09:21.033 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-11-08 12:09:21.038 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-11-08 12:09:21.052 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples/ecoli
+2014-11-08 12:09:21.053 [NotebookApp] 0 active kernels 
+2014-11-08 12:09:21.053 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-11-08 12:09:21.053 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
