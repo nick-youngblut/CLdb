@@ -141,7 +141,6 @@ sub call_subcommand{
   else{
     $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
     $subcmd = join(" ", $subcmd, "-q \"$sql\"") if $sql;
-    print Dumper $subcmd;
     print `$subcmd`;
   }
 }
