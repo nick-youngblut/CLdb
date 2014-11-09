@@ -83,8 +83,8 @@ $opt{refine}
 HERE
   
   my $sth = $dbh->prepare($sql);
-  my $rv = $sth->execute;
-  my $ret = $sth->fetchall_arrayref;
+  my $rv = $sth->execute() or croak $dbh->err;
+  my $ret = $sth->fetchall_arrayref();
 
   die "ERROR: no matching entries for query:\n'$sql'\n"
     unless scalar @$ret;
@@ -140,7 +140,7 @@ sub getLociSpacerInfo{
   # querying
   $dbh->{FetchHashKeyName} = 'NAME_lc';
   my $sth = $dbh->prepare($sql) or confess $dbh->err;
-  $sth->execute;
+  $sth->execute or confess $dbh->err;
   my $ret_r = $sth->fetchall_hashref(['locus_id', 'spacer_id']);
 
   # print Dumper $ret_r; exit;
@@ -330,21 +330,24 @@ $refine_sql";
   }
     
   # query db #
-  my $ret = $dbh->selectall_arrayref($query);
+#  my $ret = $dbh->selectall_arrayref($query);
+  my $sth = $dbh->prepare($query);
+  $sth->execute() or confess $dbh->err;
+  my $ret = $sth->fetchall_arrayref();
   confess "ERROR: no matching $tbl_prefix entries!\n"
-    unless $$ret[0];
+    unless defined $$ret[0];
  
+  # parsing output
   my %fasta;
   foreach my $row (@$ret){
     # revcomp sequence if array_sense_strand == -1
     ## ACTUALLY: don't need to revcomp because cluster rep sequences already rev-comped
     croak "ERROR: sense strand must be 1 or -1\n"
       unless $row->[5] == 1 or $row->[5] == -1;
-    
-#    $row->[4] = revcomp($row->[4]) if $row->[5] == -1;  # flip to - strand
 
     my $seq_name = join("|", @{$row}[0..3], 
 		       $opts_r->{by_cluster} ? $cutoff : 'NA');
+
     $fasta{ $seq_name } = $row->[4];
   }
 
@@ -410,10 +413,10 @@ $opts_r->{'refine_sql'}";
 
   # query db #
   my $sth = $dbh->prepare($query) or croak $dbh->err;
-  $sth->execute;
+  $sth->execute() or confess $dbh->err;
   my $ret = $sth->fetchall_arrayref() or croak $dbh->err;
   die " ERROR: no matching entries!\n"
-    unless $$ret[0];
+    unless defined $$ret[0];
 
   # making fasta #
   my %fasta;
@@ -493,7 +496,7 @@ HERE
  
   # execute
   my $sth = $dbh->prepare($query);
-  $sth->execute();
+  $sth->execute() or confess $dbh->err;
   my $colnames_r = $sth->{NAME_lc_hash};
   my $ret = $sth->fetchall_hashref( [qw/Locus_ID Spacer_ID/] );
   ## error handling
@@ -536,8 +539,7 @@ HERE
   my %tbl;
   foreach my $locus_id (@$loci_r){
     $sth->bind_param(1, $locus_id);
-    $sth->execute();
-    confess $DBI::err,"\n" if $DBI::err;
+    $sth->execute() or confess $dbh->err;
     
     while(my $row = $sth->fetchrow_arrayref()){
       $tbl{$locus_id}{array_start} = $row->[0];
@@ -583,7 +585,7 @@ HERE
   foreach my $locus_id (@$locus_ids){
     $sth->bind_param(1, $locus_id);
 
-    $sth->execute() or confess $DBI::err;
+    $sth->execute() or confess $dbh->err;
     my $ret = $sth->fetchall_hashref('Locus_ID');
 
     map{ $tbl{$_} = $ret->{$_} } keys %$ret;
@@ -676,9 +678,11 @@ sub get_leader_pos{
   $query = join(" ", $query, $opts_r->{"extra_query"});
   
   # query db #
-  my $ret = $dbh->selectall_arrayref($query);
+  my $sth = $dbh->prepare($query) or confess $dbh->err;
+  $sth->execute() or confess $dbh->err;
+  my $ret = $sth->fetchall_arrayref($query);
   confess " ERROR: no matching entries!\n"
-    unless $$ret[0];
+    unless defined $$ret[0];
   
   # making hash of sequences #
   my %leaders;

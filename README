@@ -10,7 +10,8 @@ git clone https://github.com/nyoungb2/CLdb.git
 ~~~
 The scripts are all in the bin folder.
 
-__To add the scripts and perl packages to your PATH:
+
+### To add the scripts and perl packages to your PATH:
 
 ~~~
 perl Build.PL

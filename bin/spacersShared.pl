@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-spacersShared.pl -- write a matrix of spacers shared among taxa, subtypes, and/or loci
+spacersShared.pl -- write a table of spacers shared among taxa, subtypes, and/or loci
 
 =head1 SYNOPSIS
 
@@ -75,24 +75,6 @@ By default, total counts of each spacer cluster are written
 
 WARNING: '-cutoff' can only be used if hclusterArrays.pl
 has been run first.
-
-=head1 EXAMPLES
-
-=head2 Write table of spacers shared among subtypes
-
-spacersShared.pl -d CLdb.sqlite -s > subtype_shared.txt
-
-=head2 Write table of spacers shared among taxa (by taxon_name)
-
-spacersShared.pl -d CLdb.sqlite -n > taxa_shared.txt
-
-=head2 Write table of spacers shared among subtypes/taxa
-
-spacersShared.pl -d CLdb.sqlite -s -n > subtype_taxa_shared.txt
-
-=head2 Write table of spacers shared among loci (names include taxon_name & subtype)
-
-spacersShared.pl -d CLdb.sqlite -l -s -n > loci_subtype-taxa_shared.txt
 
 =head1 AUTHOR
 
@@ -180,7 +162,7 @@ $dbh->disconnect();
 exit;
 
 
-### Subroutines
+#-- Subroutines --#
 sub write_shared_matrix{
 # writing matrix of shared spacers (based on spacer groups/clusters) #
   my ($arrays_r, $groups_r) = @_;		# cluster_ID => grouping_ID => count
@@ -225,15 +207,16 @@ GROUP BY $group_by";
   print STDERR "$q\n" if $verbose;
   
   # query db #
-  my $ret = $dbh->selectall_arrayref($q);
-  die " ERROR: no matching entries!\n"
-    unless $$ret[0];
-  
+  my $sth = $dbh->prepare($q);
+  $sth->execute() or print STDERR $dbh->err;
+  my $ret = $sth->fetchall_arrayref();
+
+  # parsing query results
   my %arrays;
   my %groups;
   foreach my $row (@$ret){
     die " ERROR: not matching entries!\n"
-      unless $$row[0]; 
+      unless defined $$row[0]; 
     my $id;
     if(! @$group_by_r){			# just total for each cluster
       $id = "Total";
