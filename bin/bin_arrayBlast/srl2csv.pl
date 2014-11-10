@@ -51,6 +51,10 @@ binary data serialization format (Sereal)
 to blast tabular format: either
 with comments '-outfmt 7' or without '-outfmt 6'
 
+Note: the order of fields in the output will not 
+always match the order provided via '-outfmt'.
+So, a header with field IDs is written for '-outfmt 6'.
+
 Of the fields that are standard to blastn output,
 only some are currently supported.
 
@@ -254,10 +258,12 @@ my $blast_r =  $decoder->decode( $srl );
 
 
 # making table
+my $run_cnt = 0;
 foreach my $blast_run (keys %$blast_r){
-
+  $run_cnt++;
   blast_xml2txt(blast => $blast_r->{$blast_run}, 
 		fields => $fields_r,
-		keep_path => $keep_path);
+		keep_path => $keep_path,
+		run_cnt => $run_cnt);
 }
 

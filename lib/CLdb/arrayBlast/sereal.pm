@@ -297,9 +297,10 @@ convert blast from parsed xml format to a blast table
 
 =head3 Input (hashref)
 
-'blast': hash_ref; blast xml parsed to hash 
-
-'fields': fields: fields structure from parse_outfmt & classify_fields
+blast -- hash_ref; blast xml parsed to hash 
+fields -- fields: fields structure from parse_outfmt & classify_fields
+keep_path -- keep file path
+run_cnt -- blast run index (1-indexed)
 
 =head3 Output
 
@@ -314,7 +315,16 @@ sub blast_xml2txt {
   my $blast_r = $opts{blast} || croak "No 'blast' arg provided $!\n";
   my $fields_r = $opts{fields} || croak "No 'fields' arg provided $!\n";
   my $keep_path = exists $opts{keep_path} ? $opts{keep_path} : undef;
+  my $run_cnt = exists $opts{run_cnt} ? $opts{run_cnt} : 1;
 
+  # writing header for outfmt 6
+  if ($run_cnt == 1 and $fields_r->{comments} != 1){
+    my $crRNA_fields = exists $fields_r->{crRNA_fields} ? 
+      join("\t",  @{$fields_r->{crRNA_fields}} ) : "";
+    print join("\t", @{$fields_r->{classified_fields}}, 
+	       $crRNA_fields),"\n";
+  }
+ 
 
   # iterating through each hit
   foreach my $iter ( @{$blast_r->{'BlastOutput_iterations'}{'Iteration'}} ){
@@ -333,7 +343,8 @@ sub blast_xml2txt {
       print join(" ", '# Fields:',
 		 join(", ", 
 		      @{$fields_r->{classified_fields}}, 
-		      $crRNA_fields ),
+		      $crRNA_fields
+		     ),
 		), "\n";
     }
 
