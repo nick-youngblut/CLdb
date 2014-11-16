@@ -89,9 +89,12 @@ sub genbank_get_region{
 
   # getting regions
   my ($feat_tags_r, $tags_r) = get_regions_scaffold($itrees_r, $regions_r, $strand_b);
-  my $ret_r = feat_tag_table($feat_tags_r, $tags_r);
-  
-  return $ret_r;
+  join_tag_values($feat_tags_r, $tags_r);
+  #my $ret_r = feat_tag_table($feat_tags_r, $tags_r);
+
+  #print Dumper $feat_tags_r; exit;
+  #return $ret_r;
+  return $feat_tags_r
 }
 
 
@@ -151,7 +154,7 @@ sub get_regions_scaffold{
 
 
 sub feat_tag_table{
-# create a feature-tag table (list of lists)
+  # create a feature-tag table (list of lists)
   my $feat_tags_r = shift or die "Provide feat_tags hashref";
   my $tags_r = shift or die "Provide tags hashref";
   my $add_tags_b = shift;   # adding tags (header) to output
