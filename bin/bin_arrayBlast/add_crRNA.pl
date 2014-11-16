@@ -47,8 +47,12 @@ CLdb_perldoc add_crRNA
 For each spacer, extracting spacer & adjacent 
 sequence (defined by '-extension') 
 from its genome location in order
-to make the crRNA (actually the crDNA sequence).
-This can then be aligned to the protospacer region
+to make the DNA template of the crRNA.
+Note: this script finds the DNA template of the crRNA, 
+not the crRNA itself. This is for easier downstream analysis.
+
+The DNA template of the crRNA can then be
+aligned to the protospacer region
 in order to determine the PAM, protospacer,
 and SEED sequence.
 
@@ -57,11 +61,6 @@ CLdb and get the genome position (and genome
 fasta file location). 
 The 'crRNA' sequence is then extracted from the genome
 and added to the blast hit srl file.
-
-=head1 EXAMPLES
-
-=head2 Basic Usage:
-
 
 =head1 AUTHOR
 

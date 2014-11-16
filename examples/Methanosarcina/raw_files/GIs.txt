@@ -1,0 +1,3 @@
+19918815	Methanosarcina_acetivorans_str_C2A
+72394702	Methanosarcina_barkeri_str_Fusaro
+20986624	Methanosarcina_mazei_str_Go1

@@ -206,3 +206,37 @@ Shutdown this notebook server (y/[n])? y
 2014-06-22 07:22:43.264 [NotebookApp] Kernel shutdown: b54d04c1-629c-4994-accd-f3e8ed15fb25
 2014-06-22 07:22:44.279 [NotebookApp] Kernel shutdown: ffcc7bb9-7fef-4bef-a409-70d935b97a06
 2014-06-22 07:22:44.881 [NotebookApp] Kernel shutdown: 51ddf720-8470-4fc9-b441-97063b75277c
+2014-11-16 08:41:32.530 [NotebookApp] Using existing profile dir: u'/home/nyoungb2/.ipython/profile_default'
+2014-11-16 08:41:32.557 [NotebookApp] Using MathJax from CDN: http://cdn.mathjax.org/mathjax/latest/MathJax.js
+2014-11-16 08:41:32.638 [NotebookApp] Serving notebooks from local directory: /home/nyoungb2/perl/projects/CLdb/examples
+2014-11-16 08:41:32.639 [NotebookApp] 0 active kernels 
+2014-11-16 08:41:32.639 [NotebookApp] The IPython Notebook is running at: http://localhost:9091/
+2014-11-16 08:41:32.639 [NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+2014-11-16 08:41:37.644 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/CLdb'
+WARNING:tornado.access:404 GET /api/notebooks/CLdb?_=1416148711113 (::1) 2.01ms referer=http://127.0.0.1:9091/tree/CLdb
+INFO:tornado.access:302 GET / (::1) 1.52ms
+INFO:tornado.access:302 GET / (::1) 1.23ms
+2014-11-16 08:41:40.380 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/CLdb'
+WARNING:tornado.access:404 GET /api/notebooks/CLdb?_=1416148711116 (::1) 1.82ms referer=http://127.0.0.1:9091/tree/CLdb
+2014-11-16 08:43:43.175 [NotebookApp] Kernel started: 59087d07-3b03-44ef-b9e3-b850737c0349
+2014-11-16 08:44:31.876 [NotebookApp] Saving notebook at /ipynb/Ecoli/Setup.ipynb
+2014-11-16 08:45:13.307 [NotebookApp] WARNING | directory does not exist: u'/home/nyoungb2/perl/projects/CLdb/examples/ipynb/Ecoli'
+WARNING:tornado.access:404 GET /api/notebooks/ipynb/Ecoli?_=1416149018335 (::1) 1.92ms referer=http://127.0.0.1:9091/tree/ipynb/Ecoli
+WARNING:tornado.access:404 GET /tree/ipynb (::1) 1.55ms referer=http://127.0.0.1:9091/tree/ipynb/Ecoli
+WARNING:tornado.access:404 GET /favicon.ico (::1) 1.34ms referer=None
+WARNING:tornado.access:404 GET /tree/ipynb (::1) 1.43ms referer=None
+INFO:tornado.access:302 GET / (::1) 1.41ms
+INFO:tornado.access:302 GET / (::1) 1.32ms
+2014-11-16 08:45:42.094 [NotebookApp] Kernel started: c26bf30b-86b9-4b34-b396-40b583fa36cc
+2014-11-16 08:57:06.717 [NotebookApp] Kernel started: a801cad4-752e-437d-a466-a7f061f5dd11
+2014-11-16 08:59:06.887 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:01:06.898 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:03:06.882 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:05:06.889 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:07:06.884 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:09:06.879 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:11:06.844 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:37:06.911 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:41:06.980 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:43:06.906 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb
+2014-11-16 09:59:06.963 [NotebookApp] Saving notebook at /Methanosarcina/ipynb/Setup.ipynb

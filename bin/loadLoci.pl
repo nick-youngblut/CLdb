@@ -180,7 +180,8 @@ unix_line_breaks($loci_r, $db_path, $forks) unless $^O =~ /win/i;   # line break
 
 # checks
 check_locus_id($loci_r);
-make_external_file_dirs($loci_r, $header_r, $db_path);	 # copying array files & genbanks if not in ./genbank & ./array #
+make_external_file_dirs($loci_r, $header_r, $db_path);	
+#copy_external_files($loci_r, $header_r, $db_path);
 
 # connect 2 db 
 my $dbh = connect2db($database_file);

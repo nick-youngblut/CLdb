@@ -81,8 +81,6 @@ sub call_blastn_short{
   can_run('blastn') or die "ERROR: 'blastn' executable not found!\n";
 
   # blast output format
-  #my $outfmt = join(" ", qw/7 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-  #                         evalue bitscore qlen slen btop/);
   my $outfmt = '5';
 
   # sanity check #
@@ -127,6 +125,7 @@ sub call_blastn_short{
   }
   $pm->wait_all_children;
 }
+
 
 =head2 make_blast_db
 
@@ -220,6 +219,7 @@ sub write_blast_file{
   }
 }
 
+
 =head2 read_blast_file
 
 Reading blast file (format: '-outfmt 7') from STDIN
@@ -273,6 +273,7 @@ sub read_blast_file{
   #print Dumper %lines; exit;	
   return \%lines;
 }
+
 
 =head2 parse_blast_hits
 

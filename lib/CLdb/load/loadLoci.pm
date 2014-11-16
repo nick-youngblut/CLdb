@@ -149,59 +149,112 @@ sub just_table_columns{
 
 =head2 make_external_file_dirs
 
-Moving files to directory in CLdb_home
+Moving files to directory in $CLdb_home
 
 =cut
 
 push @EXPORT_OK, 'make_external_file_dirs';
 
 sub make_external_file_dirs{
+  my ($loci_r, $header_r, $dir, $quiet) = @_;
 
-  my ($loci_r, $header_r, $dir) = @_;
+  print STDERR "### Checking/copying external files specfied in loci table ###\n";
+
+  my %fileTypes = (genbank_file => 'genbank',
+		   fasta_file => 'fasta',
+		   array_file => 'array');
+
 
   foreach my $locus_id (keys %$loci_r){
-    $loci_r->{$locus_id}{"genbank_file"} =
-      make_CLdb_dir($dir, 'genbank', $loci_r->{$locus_id}{"genbank_file"})
-        if exists $loci_r->{$locus_id}{"genbank_file"};
-    $loci_r->{$locus_id}{"array_file"} =
-      make_CLdb_dir($dir, 'array', $loci_r->{$locus_id}{"array_file"})
-        if exists $loci_r->{$locus_id}{"array_file"};
-    $loci_r->{$locus_id}{"fasta_file"} =
-      make_CLdb_dir($dir, 'fasta', $loci_r->{$locus_id}{"fasta_file"})
-        if exists $loci_r->{$locus_id}{"fasta_file"};
+    while (my ($fileType, $ext_dir) = each %fileTypes){
+      # next unless file exists in loci table
+      my $fileName = exists $loci_r->{$locus_id}{$fileType} ?
+	$loci_r->{$locus_id}{$fileType} : next;
+      
+      # making directory to store files unless exists
+      $ext_dir = make_CLdb_dir($dir, $ext_dir);
+      
+      # copying external files to ext_dir if not in ext_dir
+      $loci_r->{$locus_id}{$fileType} = copy_external_files($fileName, $ext_dir);
+    }
   }
-
-  #print Dumper %$loci_r; exit;
-  return $dir;
 }
+
 
 =head2 make_CLdb_dir
 
 making directory in $CLdb_home
 
+Args:
+dir -- name of CLdb_home dir
+name -- file of directory to store external files
+
 =cut
 
 sub make_CLdb_dir{
-  my ($dir, $name, $infile) = @_;
-  my @parts = File::Spec->splitpath( $infile );
+  my ($dir, $name) = @_;
 
-  # making dir; copying files #
-  if(File::Spec->rel2abs($parts[1]) ne "$dir/$name"){
-    my $newdir = File::Spec->catdir($dir, $name);
-    mkdir $newdir unless -d $newdir;
+  my $newdir = File::Spec->catdir($dir, $name);
+  mkdir $newdir unless -d $newdir;
+  
+  return $newdir;
+}
 
-    my $focal_file = File::Spec->catfile($newdir, $parts[2]);
-    unless(-e $focal_file){          # can't find file in needed directory, is it in specified directory?
-      croak " ERROR: cannot find $infile.\n Checked:\n\t'$focal_file'\n\t'$infile'\n\n"
-        unless -e $infile;                      # specified file can't be found anywhere
 
-      print STDERR "'$infile' not in $name of \$CLdb_home. Moving to \n";
-      copy($infile, $focal_file) or die $!;
-      print STDERR "\tCopied '$infile' to '$focal_file'\n";
-    }
+=head2 copy_ext_files
+
+identifying location of files (if found) and copying if needed
+
+Args:
+fileName -- name of file as specified in locus table
+ext_dir -- name of exteranl file directory
+
+=cut
+
+sub copy_external_files{
+  my $fileName = shift or confess $!;
+  my $ext_dir = shift or confess $!;
+
+  # file basenamne
+  my $baseName = (File::Spec->splitpath($fileName))[2];
+  my $fileInExt = File::Spec->catfile($ext_dir, $baseName);
+
+
+  # check for file in external directory  
+  print STDERR "Checking: '$fileInExt'\n";
+  if (-e $fileInExt){
+    print STDERR "\tFile found: '$fileInExt'\n";
+    return $fileInExt;
+  }
+  else{
+    print STDERR "\tFile NOT found: '$fileInExt'\n";
+  }
+  
+  # check $fileInExt
+  print STDERR "Checking: '$fileName'\n";
+  if( -e $fileName){   # checking for file in loci_table-specified location
+    print STDERR "\t'$baseName' not in $ext_dir of \$CLdb_home. Copying file from '$fileName'.\n";
+    copy($fileName, $fileInExt) or die $!;    
+    return $fileInExt;
+  }
+  else{
+    print STDERR "\tFile NOT found: '$fileName'\n";
   }
 
-  return $parts[2];
+  # checking basename location
+  print STDERR "Checking: '$baseName'\n";
+  if( -e $baseName){
+    print STDERR "\t'$baseName' not in $ext_dir of \$CLdb_home. Copying file from '$baseName'.\n";
+    copy($baseName, $fileInExt) or die $!;    
+    return $fileInExt;
+  }
+  else{
+    print STDERR "\tFile NOT found: '$baseName'\n";    
+  }
+
+  # file cannot be found
+  print STDERR  "\tWARNING: Cannot find '$baseName' in any location. Skipping.\n";
+  return undef;  
 }
 
 
