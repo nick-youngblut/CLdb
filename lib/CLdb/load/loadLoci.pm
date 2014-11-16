@@ -166,6 +166,7 @@ sub make_external_file_dirs{
 
 
   foreach my $locus_id (keys %$loci_r){
+    print STDERR "Processing locus '$locus_id'...\n";
     while (my ($fileType, $ext_dir) = each %fileTypes){
       # next unless file exists in loci table
       my $fileName = exists $loci_r->{$locus_id}{$fileType} ?
@@ -175,7 +176,7 @@ sub make_external_file_dirs{
       $ext_dir = make_CLdb_dir($dir, $ext_dir);
       
       # copying external files to ext_dir if not in ext_dir
-      $loci_r->{$locus_id}{$fileType} = copy_external_files($fileName, $ext_dir);
+      $loci_r->{$locus_id}{$fileType} = copy_external_files($fileName, $ext_dir, $fileType);
     }
   }
 }
@@ -208,12 +209,17 @@ identifying location of files (if found) and copying if needed
 Args:
 fileName -- name of file as specified in locus table
 ext_dir -- name of exteranl file directory
+fileType -- file type checking on
+
+Return:
+str -- basename of existing file || undef
 
 =cut
 
 sub copy_external_files{
   my $fileName = shift or confess $!;
   my $ext_dir = shift or confess $!;
+  my $fileType = shift or confess $!;
 
   # file basenamne
   my $baseName = (File::Spec->splitpath($fileName))[2];
@@ -221,39 +227,44 @@ sub copy_external_files{
 
 
   # check for file in external directory  
-  print STDERR "Checking: '$fileInExt'\n";
+  print STDERR "  Checking: '$fileInExt'\n";
   if (-e $fileInExt){
     print STDERR "\tFile found: '$fileInExt'\n";
-    return $fileInExt;
+    return $baseName; #$fileInExt;
   }
   else{
     print STDERR "\tFile NOT found: '$fileInExt'\n";
   }
   
   # check $fileInExt
-  print STDERR "Checking: '$fileName'\n";
+  print STDERR "  Checking: '$fileName'\n";
   if( -e $fileName){   # checking for file in loci_table-specified location
     print STDERR "\t'$baseName' not in $ext_dir of \$CLdb_home. Copying file from '$fileName'.\n";
     copy($fileName, $fileInExt) or die $!;    
-    return $fileInExt;
+    return $baseName; #$fileInExt;
   }
   else{
     print STDERR "\tFile NOT found: '$fileName'\n";
   }
 
   # checking basename location
-  print STDERR "Checking: '$baseName'\n";
+  print STDERR "  Checking: '$baseName'\n";
   if( -e $baseName){
     print STDERR "\t'$baseName' not in $ext_dir of \$CLdb_home. Copying file from '$baseName'.\n";
     copy($baseName, $fileInExt) or die $!;    
-    return $fileInExt;
+    return $baseName; #$fileInExt;
   }
   else{
     print STDERR "\tFile NOT found: '$baseName'\n";    
   }
 
-  # file cannot be found
-  print STDERR  "\tWARNING: Cannot find '$baseName' in any location. Skipping.\n";
+  # file cannot be found; return undef
+  if($fileType eq 'genbank_file'){  # genbank required
+    die "ERROR: cannot find required genbank file: '$baseName'\n";
+  }
+  else{
+    print STDERR  "\tWARNING: Cannot find '$baseName' in any location. Skipping.\n";
+  }
   return undef;  
 }
 

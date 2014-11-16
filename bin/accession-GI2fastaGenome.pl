@@ -208,7 +208,7 @@ sub load_accessions{
     
     # name associated with GI|accession
     my $name = defined $line[1] ? $line[1] : $line[0];
-    $name =~ s/[ :*+%$#@!()[\]._]+/_/g;
+    $name =~ s/[ .*&:!@_()#+[\]]+/_/g;
     $name =~ s/_$//;
     $acc{$line[0]} = $name;
   }

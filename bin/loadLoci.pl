@@ -181,7 +181,7 @@ unix_line_breaks($loci_r, $db_path, $forks) unless $^O =~ /win/i;   # line break
 # checks
 check_locus_id($loci_r);
 make_external_file_dirs($loci_r, $header_r, $db_path);	
-#copy_external_files($loci_r, $header_r, $db_path);
+
 
 # connect 2 db 
 my $dbh = connect2db($database_file);
@@ -195,6 +195,7 @@ table_exists($dbh, "loci");
 genbank2fasta($loci_r, $db_path, $header_r); 	
 ## getting scaffold name 
 get_scaffold_name($loci_r, $db_path, $header_r);
+
 
 # updating / loading_db 
 ## loci

@@ -62,28 +62,34 @@ sub genbank2fasta{
 
   print STDERR "### Checking for existence of genome fasta ###\n";
 
+
   foreach my $locus_id (keys %$loci_r){
     print STDERR "### Processing locus: \"$locus_id\" ###\n";
 
-    if(! exists $loci_r->{$locus_id}{'fasta_file'} || $loci_r->{$locus_id}{'fasta_file'} =~ /^\s*$/ ){
-      print STDERR "  No genome fasta for locus_id: \"$locus_id\"! Trying to extract sequence from genbank...\n";
-      $loci_r->{$locus_id}{'fasta_file'} =
-        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, 
-			      $db_path, "$db_path/fasta/", $locus_id);
-    }
-    elsif( ! -e "$db_path/fasta/$loci_r->{$locus_id}{'fasta_file'}"){
-      my $fasta_name = $loci_r->{$locus_id}{'fasta_file'};
-      print STDERR "  WARNING: Cannot find $fasta_name! Trying to extract sequence from genbank...\n";
-      $loci_r->{$locus_id}{'fasta_file'} =
-        genbank2fasta_extract($loci_r->{$locus_id}{'genbank_file'}, 
-			      $db_path, "$db_path/fasta/", $locus_id);
+    # unpack
+    my $fasta_file = $loci_r->{$locus_id}{fasta_file};
+    my $genbank_file = $loci_r->{$locus_id}{genbank_file};
+    my $fasta_dir = File::Spec->join($db_path, 'fasta');
+
+    # checking for file
+    if(! $fasta_file || $fasta_file =~ /^\s*$/){
+      print STDERR "  No genome fasta found. ".
+	"Trying to extract sequence from genbank...\n";
+
+      $fasta_file = 
+        genbank2fasta_extract($genbank_file, $db_path, 
+			      $fasta_dir, $locus_id);
     }
     else{ 
-      printf STDERR " The fasta_file field %s was provided for locus %s\n",
+      printf STDERR "  The fasta_file field %s was provided for locus %s\n",
 	    $loci_r->{$locus_id}{'fasta_file'}, $locus_id; 
     }
+
+    # reassignment with extracted file
+    $loci_r->{$locus_id}{fasta_file} = $fasta_file;
   }
 
+  # edit header
   $header_r->{'fasta_file'} = max(values %$header_r) + 1
     unless exists $header_r->{'fasta_file'};
 }
@@ -103,15 +109,15 @@ $genbank_file :  genbank file name
 =cut
 
 sub genbank2fasta_extract{
-  my ($genbank_file, $db_path, $fasta_dir, $locus_id) = @_;
+  my $genbank_file = shift or confess $!;
+  my $db_path = shift or confess $!;
+  my $fasta_dir = shift or confess $!;
+  my $locus_id = shift or confess $!;
 
-  # genbank file must exist in order to extract fasta from it
-  unless( defined $genbank_file ){
-    print STDERR " WARNING: no genbank file name provided for locus '$locus_id'.";
-    print STDERR " Cannot extract the genome sequence to make a fasta. Skipping\n";
-    return undef;
-  }            # cannot do w/out genbank
 
+  # assertion of genbank file existence
+  confess " ERROR: for locus '$locus_id', cannot find $genbank_file!\n"
+    unless -e "$db_path/genbank/$genbank_file";
 
   # making fasta dir if not present #
   mkdir $fasta_dir unless -d $fasta_dir;
@@ -119,33 +125,30 @@ sub genbank2fasta_extract{
   # checking for existence of fasta #
   my @parts = File::Spec->splitpath($genbank_file);
   $parts[2] =~ s/\.[^.]+$|$/.fasta/;
-  my $fasta_out = "$fasta_dir/$parts[2]";
+  my $fasta_out = File::Spec->join($fasta_dir, $parts[2]);
   if(-e $fasta_out){
     print STDERR "  Success! Found fasta in '$fasta_out'\n";
     print STDERR "  Adding fasta to loci table\n";
     return $parts[2];
   }
   
-  # sanity check #
-  croak " ERROR: cannot find $genbank_file!\n"
-    unless -e "$db_path/genbank/$genbank_file";
   
-  # I/O #
+  # I/O 
   my $seqio = Bio::SeqIO->new(-file => "$db_path/genbank/$genbank_file", -format => "genbank");
   open OUT, ">$fasta_out" or die $!;
   
-  # writing fasta #
+  # writing fasta 
   my $seq_cnt = 0;
   while(my $seqo = $seqio->next_seq){
     $seq_cnt++;
     
-    # seqID #
+    # seqID 
     my $scafID = $seqo->display_id;
     print OUT join("\n", ">$scafID", $seqo->seq), "\n";
   }
   close OUT;
   
-  # if genome seq found and fasta written, return fasta #
+  # if genome seq found and fasta written, return fasta
   if($seq_cnt == 0){
     print STDERR "\tWARNING: no genome sequnece found in Genbank file: $genbank_file!\nSkipping BLAST!\n";
     unlink $fasta_out;
