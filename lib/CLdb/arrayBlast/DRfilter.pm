@@ -137,6 +137,59 @@ sub make_DR_itree{
 }
 
 
+=head2 make_CRISPR_itrees
+
+Making iterval trees of all CRISPRs
+
+=head3 IN
+
+hashref -- {fasta_file : scaffold : locus_id : featID : featVal}
+
+=head3 OUT
+
+hashref -- {fasta_file : scaffold : itree}
+
+=cut
+
+push @EXPORT_OK, 'make_CRISPR_itrees';
+
+sub make_CRISPR_itrees{
+  my $CRISPR_se_r = shift or confess "Provide CRISPR start-end hashref\n";
+
+  # status;
+  my %itrees;
+
+  foreach my $fasta_file (keys %$CRISPR_se_r){
+    foreach my $scaf_ID (keys %{$CRISPR_se_r->{$fasta_file}}){
+      # initilize itree
+      $itrees{$fasta_file}{$scaf_ID} = Set::IntervalTree->new()
+	unless exists $itrees{$fasta_file}{$scaf_ID};
+    
+      # iterating by locusID
+      while (my ($locus_ID,$feats_r) = each %{$CRISPR_se_r->{$fasta_file}{$scaf_ID}}){
+
+	# assertions
+	my $start = exists $feats_r->{Array_Start} ?
+	  $feats_r->{Array_Start} :
+	    confess "KeyError: Array_Start\n";
+	my $end = exists $feats_r->{Array_End} ?
+	  $feats_r->{Array_End} : 
+	    confess "KeyError: Array_End\n";
+
+	# making sure start-end is for + strand
+	($start,$end) = ($end,$start) if $start > $end;
+		
+	# setting itree ranges
+	$itrees{$fasta_file}{$scaf_ID}->insert($locus_ID, $start, $end);	          
+      }
+    }
+  }
+
+  #print Dumper %itrees; exit;
+  return \%itrees;
+}
+
+
 =head2 DR_filter_blast
 
 filtering spacer hits based on adjacent DR hits 
@@ -155,18 +208,23 @@ just editing spacer_r
 push @EXPORT_OK, 'DR_filter_blast';
 
 sub DR_filter_blast{
-  my $spacer_r = shift or croak $!;
-  my $itrees_r = shift or croak $!;
+  my $spacer_r = shift or confess $!;
+  my $itrees_r = shift or confess $!;
   my %h = @_;
 
+  # assertions & optional args
   my $DR_cnt = exists $h{DR_cnt} ?
     $h{DR_cnt} : croak "Provide DR count cutoff\n";
   my $keep = exists $h{keep} ?
     $h{keep} : croak "Provide keep\n";
-  
+  my $CRISPR_itrees = (exists $h{CRISPR} and defined $h{CRISPR}) ?
+    $h{CRISPR} : undef;
 
   # status
-  my %filter;
+  my %filter = (CRISPR => 0,
+		proto => 0,
+		array => 0);
+
 
   # iterating through each hit
   foreach my $run (keys %$spacer_r){
@@ -201,6 +259,18 @@ sub DR_filter_blast{
 	  ($sstart, $send) = ($send, $sstart) if 
 	    $sstart > $send; # start must be <= end
 
+	  # filtering any hits to known CRISPR arrays (ID by CLdb)
+	  ## $db must == genome fasta file name for array
+	  ## using start-stop for array
+	  if( defined $CRISPR_itrees and exists $CRISPR_itrees->{$db}{$sseqid}){
+	    my $ret_r = $CRISPR_itrees->{$db}{$sseqid}->fetch($sstart, $send);
+	    if( @$ret_r ){
+	      $filter{CRISPR}++;
+	      $hsp->{'CLdb_array-hit'} = 1;
+	      delete $hsp_ref->{$hspUID};
+	    }
+	  }
+
 	  # filtering by adjacencies to DR hits (DR itree)
 	  if( exists $itrees_r->{$subj}{$strand} ){ # hits to same subject for spacer & DR
 	    # number of adjacent DRs
@@ -213,7 +283,7 @@ sub DR_filter_blast{
 	    $DR_adj += scalar @$down_adj > 0 ? 1 : 0;
 	   
 	    if( $DR_adj >= $DR_cnt){ # hits CRISPR array
-	      $filter{'array'}++;  # number filtered
+	      $filter{array}++;  # number filtered
 	      if($keep){        #keeping hit, just marking as hit to array
 		$hsp->{'CLdb_array-hit'} = 1;
 	      }
@@ -222,15 +292,15 @@ sub DR_filter_blast{
 	      }
 	    }
 	    else{    # not hitting an 'array'; keeping
-	      $filter{'proto'}++;
+	      $filter{proto}++;
 	      $hsp->{'CLdb_array-hit'} = 0;
 	    }
 	    
 	  }
 	  else{    # no hits; keeping 
-	    $filter{'proto'}++;
+	    $filter{proto}++;
 	    $hsp->{'CLdb_array-hit'} = 0;
-	  }	  
+	  }
 	}
       }
     }
@@ -239,11 +309,13 @@ sub DR_filter_blast{
   # status
   map{ $filter{$_} = 0 unless exists $filter{$_}} qw/total array proto/;
   print STDERR "### DR filtering of spacer blast hits ###\n";
-  print STDERR "Total spacer blast hits: $filter{'total'}\n";
-  print STDERR "Spacer blast hits hitting an array (filtered out): $filter{'array'}\n";
-  $keep ? print STDERR "\tKeeping the blast hits to arrays and writing to the srl file\n" :
-    print STDERR "\tDeleting the blast hits to arrays\n";
-  print STDERR "Spacer blast hits hitting a protospacer: $filter{'proto'}\n";
+  printf STDERR "Total spacer blast hits: %i\n", $filter{total};
+  printf STDERR "Spacer blast hits hitting an array (filtered out): %i\n", $filter{array};
+  printf STDERR "Spacer blast hits hitting CLdb-defined array: %i\n",
+    $filter{CRISPR} if $CRISPR_itrees;
+  $keep ? print STDERR " NOTE: Keeping the blast hits to arrays and writing to the srl file\n" :
+    print STDERR " NOTE: Deleting the blast hits to arrays\n";
+  printf STDERR "Spacer blast hits hitting a protospacer: %i\n", $filter{proto};
 
 }
 

@@ -696,6 +696,46 @@ sub get_leader_pos{
 }
 
 
+=head2 get_CRISPR_startEnd
+
+Simple query to get all start-ends of CRISPRs
+
+=head3 IN
+
+dbh --  dbh object
+
+=head3 OUT
+
+@% -- { fasta_file : scaffold: locus_id : featID : featVal }
+
+=cut
+
+push @EXPORT_OK, 'get_CRISPR_startEnd';
+
+sub get_CRISPR_startEnd{
+  my $dbh = shift or confess "ERROR: provide a dbh object\n";
+
+
+  my $sql = <<HERE;
+SELECT locus_id, scaffold, fasta_file, array_start, array_end
+FROM loci
+WHERE locus_id IS NOT NULL
+AND array_start IS NOT NULL
+AND array_end IS NOT NULL
+HERE
+  
+  my $sth = $dbh->prepare($sql);
+  my $rv = $sth->execute() or croak $dbh->err;
+  my $ret = $sth->fetchall_hashref(['Fasta_File', 'Scaffold', 'Locus_ID']);
+
+  die "ERROR: no matching entries for query:\n'$sql'\n"
+    unless scalar keys %$ret;
+
+
+ # print Dumper $ret; exit;
+  return $ret;
+}
+
 
 =head1 AUTHOR
 

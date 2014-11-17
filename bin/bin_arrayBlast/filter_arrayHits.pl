@@ -34,6 +34,15 @@ DR blast hits must be < 'evalue'. [10]
 
 Keep hits to CRISPR arrays, but just mark as hits to arrays? [FALSE]
 
+=item -CRISPR  <bool>
+
+Filter by known CRISPR array locations (defined in CLdb)?
+If TRUE, '-database' must be provided. [FALSE]
+
+=item -database  <char>
+
+CLdb database. Needed if filtering by known CRISPR array locations.
+
 =item -verbose  <bool>
 
 Verbose output. [TRUE]
@@ -84,33 +93,43 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use FindBin;
+use DBI;
 use lib "$FindBin::RealBin/../../lib";
 use Sereal qw/ encode_sereal /;
 
 ### CLdb
+use CLdb::utilities qw/
+			file_exists
+			connect2db
+		      /;
+use CLdb::query qw/get_CRISPR_startEnd/;
 use CLdb::arrayBlast::sereal qw/ decode_file /;
 use CLdb::arrayBlast::DRfilter qw/
 				   make_DR_itree
+				   make_CRISPR_itrees
 				   DR_filter_blast
 				 /;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $keep);
+my ($verbose, $keep, $CRISPR_filt, $database_file);
 my $evalue_cut = 10;
 my $len_cut = 0.66;
 my $DR_cnt = 1;
 my $range = 30;
 GetOptions(
 	   "range=i" => \$range,
-	   "length=f" => \$len_cut,			# length cutoff of DR hits
-	   "evalue=f" => \$evalue_cut,			# evalue cutoff of DR hits
-	   "DR=i" => \$DR_cnt, 					# number of adjacent DR hits needed to call 'array'
+	   "length=f" => \$len_cut,	   # length cutoff of DR hits
+	   "evalue=f" => \$evalue_cut,	   # evalue cutoff of DR hits
+	   "DR=i" => \$DR_cnt, 		   # number of adjacent DR hits needed to call 'array'
 	   "keep" => \$keep,
+	   "CRISPR" => \$CRISPR_filt,
+	   "database=s" => \$database_file,
 	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
+	   "help|?" => \&pod2usage         # Help
 	   );
+
 
 ### I/O error & defaults
 die "ERROR: provide a spacer blast file\n"
@@ -119,7 +138,14 @@ die "ERROR: provide a DR blast file\n"
   unless defined $ARGV[1];
 map{ die "ERROR: cannot find '$_'\n" unless -e $_ } @ARGV[0..1];
 
+
 ### MAIN
+my $dbh;
+if($CRISPR_filt and $database_file){
+  file_exists($database_file, "database");
+  $dbh = connect2db($database_file) if $database_file;
+}
+
 # decoding spacer and DR srl
 my $spacer_r = decode_file( file => $ARGV[0]);
 my $DR_r = decode_file( file => $ARGV[1]);
@@ -131,15 +157,26 @@ my $itrees_r = make_DR_itree( $DR_r,
 			       evalue_cut => $evalue_cut
 			      });
 
+# making itrees of all CRISPR array locations
+my $CRISPR_itrees;
+if ($dbh){
+  my $CRISPR_se_r = get_CRISPR_startEnd($dbh);
+  $CRISPR_itrees = make_CRISPR_itrees($CRISPR_se_r);
+}
+
+
 # adding 'array_hit' to spacer hash
 DR_filter_blast( $spacer_r, $itrees_r, 
 		 DR_cnt => $DR_cnt,
-		 keep => $keep
+		 keep => $keep,
+		 CRISPR => $CRISPR_itrees
 	       );
+
+
+# disconnecting from CLdb
+$dbh->disconnect if $dbh;
+
 
 # encoding
 print encode_sereal( $spacer_r );
 
-
-
-#--- Subroutines ---#
