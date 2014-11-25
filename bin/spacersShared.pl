@@ -8,7 +8,7 @@ spacersShared.pl -- write a table of spacers shared among taxa, subtypes, and/or
 
 =head1 SYNOPSIS
 
-spacersShared.pl [flags] -- ['extra sql'] > shared.txt
+spacersShared.pl [flags] > shared.txt
 
 =head2 Required flags
 
@@ -42,7 +42,15 @@ Group count data by locus_id? [FALSE]
 
 =item -cutoff  <float>
 
-Which Spacer/DR clustering cutoffs to summarize (>= 1 argument)? [1]
+Which Spacer/DR clustering cutoffs to summarize? [1]
+
+=item -long  <bool>
+
+Write long form of table instead of wide format.
+
+=item -sep  <char>
+
+The separator for delimiting group IDs (e.g., subtype or taxon_name)
 
 =item -verbose  <bool>
 
@@ -62,9 +70,10 @@ CLdb_perldoc spacersShared.pl
 
 How similar are CRISPRs in spacer content?
 
-Get a table showing the number of a particular
-spacer (by default, exact same sequence, change with
-'-cutoff') among subtypes, taxa, or both.
+The output table describes the abundance of each
+particular spacers (by default, all unique sequences;
+relax with '-cutoff') among subtypes, taxa, loci, or any combination.
+Each row in the output table is a spacer cluster.
 
 By default, total counts of each spacer cluster are written
 (no parsing by group).
@@ -113,9 +122,10 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $database_file, $spacer_bool, $by_group, $leader_bool);
+my ($verbose, $database_file, $spacer_bool, $by_group, $leader_bool, $long_form);
 my ($subtype, $taxon_id, $taxon_name, $locus_id);
 my $extra_query = "";
+my $sep = "__";
 my $cutoff = 1;				# cd-hit cutoff of 1
 GetOptions(
 	   "database=s" => \$database_file,
@@ -124,6 +134,8 @@ GetOptions(
 	   "name" => \$taxon_name,
 	   "locus" => \$locus_id,				# by locus_id
 	   "cutoff=f" => \$cutoff,
+	   "long" => \$long_form,
+	   "sep=s" => \$sep,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
@@ -131,7 +143,6 @@ GetOptions(
 
 #--- I/O error & defaults ---#
 file_exists($database_file, "database");
-
 
 
 #--- MAIN ---#
@@ -150,10 +161,15 @@ die "ERROR: no spacer_clusters entries to use for clustering spacers!\n" unless
 my $group_by_r = make_group_by_sql($subtype, $taxon_id, $taxon_name, $locus_id);
 
 # getting arrays of interest from database #
-my ($arrays_r, $groups_r) = get_arrays_join_clust($dbh, $extra_query, $group_by_r);
+my ($arrays_r, $groups_r) = get_arrays_join_clust($dbh, $extra_query, $group_by_r, $sep);
 
 # write shared matrix (cluster ~ group)#
-write_shared_matrix($arrays_r, $groups_r);
+if($long_form){
+  write_shared_long_tbl($arrays_r, $groups_r);
+}
+else{
+  write_shared_matrix($arrays_r, $groups_r);
+}
 
 # disconnect #
 $dbh->disconnect();
@@ -161,6 +177,20 @@ exit;
 
 
 #-- Subroutines --#
+sub write_shared_long_tbl{
+# writing long format of table (instead of wide)
+  my ($arrays_r, $groups_r) = @_;		# cluster_ID => grouping_ID => count
+
+  print join("\t", qw/Spacer_cluster group_ID count/), "\n";
+
+  foreach my $cluster_ID (sort keys %$arrays_r){
+    foreach my $group_ID (sort keys %{$arrays_r->{$cluster_ID}}){
+      print join("\t", $cluster_ID, $group_ID, $arrays_r->{$cluster_ID}{$group_ID}), "\n";
+    }
+  }
+}
+
+
 sub write_shared_matrix{
 # writing matrix of shared spacers (based on spacer groups/clusters) #
   my ($arrays_r, $groups_r) = @_;		# cluster_ID => grouping_ID => count
@@ -187,7 +217,10 @@ sub write_shared_matrix{
 
 
 sub get_arrays_join_clust{
-  my ($dbh, $extra_query, $group_by_r) = @_;
+  my $dbh = shift or die $!;
+  my $extra_query = shift;
+  my $group_by_r = shift;
+  my $sep = shift;
   
   my $sel = join(",", qw/spacer_clusters.cluster_ID count(spacer_clusters.cluster_ID)/, @$group_by_r);
   my $group_by = join(",", @$group_by_r, "spacer_clusters.Cluster_ID");
@@ -224,7 +257,7 @@ GROUP BY $group_by";
       $id = "NULL";
     }
     else{
-      $id = join("__", @$row[2..$#$row]);			
+      $id = join($sep, @$row[2..$#$row]);			
     }
     $arrays{$$row[0]}{$id} = $$row[1];
     $groups{$id} = 1;
@@ -266,13 +299,3 @@ sub list_tables{
   return [keys %$all];
 }
 
-
-sub join_query_opts_OLD{
-  # joining query options for selecting loci #
-  my ($vals_r, $cat) = @_;
-  
-  return "" unless @$vals_r;	
-  
-  map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-  return join("", " AND loci.$cat IN (", join(", ", @$vals_r), ")");
-}
