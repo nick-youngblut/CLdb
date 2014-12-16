@@ -10,7 +10,7 @@ CLdb -- CRISPR locus database
 
 =head1 SYNOPSIS
 
-CLdb [options] subcommand -- [subcommand_options]
+CLdb [options] -- subcommand [subcommand_options]
 
 =head2 Options
 
@@ -54,8 +54,12 @@ Subcommands will be listed after ' -- '.
 For example: `CLdb -- <tab><tab>`
 will list all primary subcommands for CLdb.
 
-Some secondary subcommands exists.
+Some sub-subcommands exist.
 For example: `CLdb -- arrayBlast -- run`
+
+Make sure command completion is enabled
+by editing, then sourcing the files in 
+the CLdb/extras/ folder
 
 =head1 AUTHOR
 
