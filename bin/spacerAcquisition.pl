@@ -73,13 +73,17 @@ Identify instances of potential recent spacer acquisition.
 
 For all CRISPR arrays selected by query, each will be
 compared pairwise with all other selected loci.
+
 The arrays will be aligned based on the cluster_ID of
 each spacer. 
+
 CRISPR arrays are oriented by the leader (and thus must
 have an identified leader region). 
+
 Mismatches and gaps in the start of the alignment
 prior to any matches are considered potential newly acquired spacers
 since the two loci diverged from a common ancestor.
+
 The rest of the alignment is used to calculate
 'precent identity' [aln_len - (mismatches + gaps)) / alignment_len],
 matches, mismatches, gaps, etc.
@@ -259,6 +263,25 @@ exit;
 
 #--- subroutines ---#
 
+=head2 filter_percentID
+
+filtering out all CRISPR comparisons < percent ID
+
+=cut
+
+sub filter_percentID{
+  my $array_cmp_r = shift or die "Provide array_cmp struct\n";
+
+  foreach my $locus_id_i (keys %$array_cmp_r){
+    foreach my $locus_id_j (keys %{$array_cmp_r->{$locus_id_i}}){
+      my $percentID = exists $array_cmp_r->{$locus_id_i}{$locus_id_j}{percent_id}
+	or die "KeyError: percent_id\n";
+      
+    }
+  }
+  
+}
+
 =head2 write_summary
 
 Writing summary table of CRISPR array comparisons.
@@ -338,8 +361,8 @@ sub write_position_scores{
   
 
   # headers
-  print OUTW join("\t", qw/locus_i locus_j scores/), "\n";
-  print OUTL join("\t", qw/locus_i locus_j abs_aln_pos
+  print OUTW join("\t", qw/locus_i locus_j aln_percent_ID scores/), "\n";
+  print OUTL join("\t", qw/locus_i locus_j aln_percent_ID abs_aln_pos
 			   rel_aln_pos score_char score_val/), "\n";
 
   # making 2d-array for sorting
@@ -355,17 +378,21 @@ sub write_position_scores{
   
   # writing after sorting by percent id
   foreach my $row (sort{$b->[2] <=> $a->[2]} @arr){
-    # position scores (string)
+    # position scores 
     my $pos_scores = exists $array_cmp_r->{$row->[0]}{$row->[1]}{position_score} ?
       $array_cmp_r->{$row->[0]}{$row->[1]}{position_score} :
 	die "KeyError: position_score\n";
+    # percent ID
+    my $percentID = $array_cmp_r->{$row->[0]}{$row->[1]}{percent_id};
+
 
     # 'wide' table
     print OUTW join("\t", 
-		   $row->[0], 
-		   $row->[1], 
-		   join("", @$pos_scores)
-		  ), "\n";
+		    $row->[0], 
+		    $row->[1], 
+		    $percentID,
+		    join("", @$pos_scores)
+		   ), "\n";
 
     # 'long' table
     my $pos_scores_num = _scores2numeric($pos_scores);
@@ -375,6 +402,7 @@ sub write_position_scores{
       print OUTL join("\t", 
 		      $row->[0], 
 		      $row->[1], 
+		      $percentID,
 		      $i,
 		      $i / $score_len,
 		      $pos_scores->[$i-1],
