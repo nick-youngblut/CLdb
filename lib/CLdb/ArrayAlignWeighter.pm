@@ -4,8 +4,12 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+use File::Basename;
+use lib dirname (__FILE__);
 
-use base 'Array::Align';
+use base 'ArrayAlign';
+
+#use Array::Align;
 
 
 =head2 weighter

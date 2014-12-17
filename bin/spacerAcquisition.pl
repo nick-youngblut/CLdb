@@ -46,6 +46,13 @@ All loci ending within  '-truncation' bp away from scaffold end
 will be considered truncated, and only compare up to end of truncation. 
 Negative values to turn option off. [500]
 
+=item -all  <bool>
+
+Compare all CRISPRs regardless of whether they have differing
+spacer content at the leader end of the array.
+(useful for make spacer content score tables of all pairwise
+comparisons of CRISPRs).
+
 =item -out  <char>
 
 Prefix for output files. [psblNewSpacers]
@@ -323,12 +330,17 @@ sub write_position_scores{
   my $array_cmp_r = shift or die "Provide array_cmp struct\n";
   my $out_prefix = shift or die "Provide output file prefix\n";
  
-  # output file
-  my $outFile = $out_prefix . "_scores.txt";
-  open OUT, ">$outFile" or die $!;
+  # output files
+  my $outFileW = $out_prefix . "_scoresW.txt";
+  open OUTW, ">$outFileW" or die $!;
+  my $outFileL = $out_prefix . "_scoresL.txt";
+  open OUTL, ">$outFileL" or die $!;
   
-  # header
-  print OUT join("\t", qw/locus_i locus_j scores/), "\n";
+
+  # headers
+  print OUTW join("\t", qw/locus_i locus_j scores/), "\n";
+  print OUTL join("\t", qw/locus_i locus_j abs_aln_pos
+			   rel_aln_pos score_char score_val/), "\n";
 
   # making 2d-array for sorting
   my @arr;
@@ -343,20 +355,63 @@ sub write_position_scores{
   
   # writing after sorting by percent id
   foreach my $row (sort{$b->[2] <=> $a->[2]} @arr){
-    exists $array_cmp_r->{$row->[0]}{$row->[1]}{position_score}
-      or die "KeyError: position_score\n";
-    print OUT join("\t", 
+    # position scores (string)
+    my $pos_scores = exists $array_cmp_r->{$row->[0]}{$row->[1]}{position_score} ?
+      $array_cmp_r->{$row->[0]}{$row->[1]}{position_score} :
+	die "KeyError: position_score\n";
+
+    # 'wide' table
+    print OUTW join("\t", 
 		   $row->[0], 
 		   $row->[1], 
-		   join("", @{$array_cmp_r->{$row->[0]}{$row->[1]}{position_score}})
+		   join("", @$pos_scores)
 		  ), "\n";
+
+    # 'long' table
+    my $pos_scores_num = _scores2numeric($pos_scores);
+    my $score_len = @$pos_scores;
+    
+    for my $i (1..$score_len){
+      print OUTL join("\t", 
+		      $row->[0], 
+		      $row->[1], 
+		      $i,
+		      $i / $score_len,
+		      $pos_scores->[$i-1],
+		      $pos_scores_num->[$i-1]
+		     ), "\n";      
+    }
+    
   }
 
-  close OUT or die $!;
+  close OUTW or die $!;
+  close OUTL or die $!;
 
   # status
-  print STDERR "File written: $outFile\n";
+  map{ print STDERR "File written: $_\n" } ($outFileW, $outFileL);
 }
+
+
+sub _scores2numeric{
+  # scoring from character to numeric
+  my $scores_r = shift or die $!;;
+
+  # index: character => numeric
+  my %index = ( 'm' => 1,
+		'x' => 0,
+		'g' => 'NA' );
+
+  # iterating over alignment scores
+  # converting
+  my @num_scores =  map{  
+    exists $index{$_} ? 
+      $index{$_} :
+	die "ERROR: illegal character in alignment scores -> '$_' \n";      
+  } @$scores_r;
+
+  return \@num_scores;
+}
+
 
 
 =head2 find_new_spacers
