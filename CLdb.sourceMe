@@ -1,0 +1,113 @@
+#!/bin/bash
+# General bash setup for command-subcommand autocomplete.
+# This will also add the main command to your $PATH.
+# Source this file from your .profile or .bashrc to make permanent.
+## e.g., `source ~/path/to/THISFILE.completion`
+
+
+CLDBBINDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+export PATH="$PATH:$CLDBBINDIR"
+CLDBBINDIR=$CLDBBINDIR'/bin/'
+
+
+subcmds=`find $CLDBBINDIR -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+arrayBlastDir=$CLDBBINDIR'/bin_arrayBlast/'
+arrayBlastSubcmds=`find $arrayBlastDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+plotLociDir=$CLDBBINDIR'/bin_plotLoci/'
+plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+
+_CLdb()
+{
+    local fileNames dirNames cur prev prev2
+
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+    prev2=${COMP_WORDS[COMP_CWORD-2]}
+
+    fileNames=''
+    dirNames=''
+
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb ]]; then
+	COMPREPLY=($(compgen -W "$subcmds" ${cur}))
+    
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+	COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
+
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
+	COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
+
+    elif [[ ${cur} == *  ]]; then
+     	fileNames=$( compgen -f -X '.*' -- "$cur" )
+       dirNames=$( compgen -d -X '.*' -- "$cur" )
+
+     	COMPREPLY=(
+     		$( compgen -W "$fileNames $dirNames" -- $cur )
+     	)
+    else
+	# no hidden files/directories
+	fileNames=$( compgen -f -X '.*' -- "$cur" )
+        dirNames=$( compgen -d -X '.*' -- "$cur" )
+	
+	COMPREPLY=(
+	    $( compgen -W "$fileNames $dirNames" -- $cur )
+	)
+    fi	
+
+}
+
+
+complete -o default -F _CLdb CLdb
+
+
+# Edit path to where CLdb bin directory is:
+#CLDBBINDIR='/home/nyoungb2/perl/projects/CLdb/bin/'
+
+#subcmds=`find $CLDBBINDIR -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+#arrayBlastDir=$CLDBBINDIR'/bin_arrayBlast/'
+#arrayBlastSubcmds=`find $arrayBlastDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+#plotLociDir=$CLDBBINDIR'/bin_plotLoci/'
+#plotLociSubcmds=`find $plotLociDir -maxdepth 1 -regex '.+\.\(pl\|r\)' | perl -pe 's/.+\///; s/\.[^.]+$/ /g'`
+
+
+
+_CLdb_perldoc()
+{
+    local fileNames dirNames cur prev prev2
+
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+    prev2=${COMP_WORDS[COMP_CWORD-2]}
+
+    fileNames=''
+    dirNames=''
+
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb_perldoc ]]; then
+	COMPREPLY=($(compgen -W "$subcmds" ${cur}))
+    
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+	COMPREPLY=($(compgen -W "$arrayBlastSubcmds" ${cur}))
+    
+    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
+	COMPREPLY=($(compgen -W "$plotLociSubcmds" ${cur}))
+       
+    else
+	# no hidden files/directories
+	fileNames=$( compgen -f -X '.*' -- "$cur" )
+        dirNames=$( compgen -d -X '.*' -- "$cur" )
+	
+	COMPREPLY=(
+	    $( compgen -W "$fileNames $dirNames" -- $cur )
+	)
+    fi       
+}
+
+
+complete -o default -F _CLdb_perldoc CLdb_perldoc

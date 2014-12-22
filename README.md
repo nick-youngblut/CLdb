@@ -14,9 +14,8 @@ notebook unless the webtool has a good API.
  * Lack of tranparency and reproducibility are a major issue in bioinformatics.
 
 
-I'm developing this toolset in an attempt to remedy some of these issues.
-This project is currently under heavy development and may change
-dramatically in the future.
+__WARNING: This project is currently under heavy development and may change
+dramatically in the future.__
 
 
 ## Major Features
@@ -43,7 +42,6 @@ dramatically in the future.
   * Use for making weblogos or trees
 
 
-
 ## Minor Features
 
 * Organize and query subsets of your CRISPR dataset
@@ -58,20 +56,17 @@ Currently, only unix/linux supported.
 
 ~~~
 git clone https://github.com/nyoungb2/CLdb.git
-
 cd CLdb
-
-echo 'export PATH=$PATH:'`pwd` >> ~/.profile
-
+echo 'source '`pwd`'/CLdb.sourceMe' >> ~/.profile
 source ~/.profile
 ~~~
 
 'CLdb' and 'CLdb_perldoc' should now be in your $PATH.
 See [this link](http://kb.iu.edu/data/acar.html) for more info
 on the $PATH variable.
+Also, bash command line completion should now be set up (see below).
 
-
-### Setting command-subcommand tab-completion
+### Command-subcommand tab-completion
 
 CLdb is set up as a command-subcommand app, much like git. 
 
@@ -79,19 +74,9 @@ Like git, tab completion can be used to view subcommands of
 the main command.
 
 Bash tab-completion will allow you to list the subcommands
-or sub-subcommands of CLdb.
-
-__To set up bash completion:__
-
-Assuming that you are in the CLdb home directory...
-
-* Temporarily:
-  * `source ./extras/*.completion`
-* Permanently:
-  * edit the 'BINDIR' variable in the *completion files to point 
-  at the CLdb home directory
-  * add the *completion files to /etc/bash_completion.d/
-
+or sub-subcommands of CLdb. Subcommands will be listed
+upon double-tabbing after '--' For example `CLdb -- <tab><tab>`
+will bring up all of the CLdb subcommands.
 
 
 ## Documentation
