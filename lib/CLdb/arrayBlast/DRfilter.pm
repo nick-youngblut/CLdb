@@ -72,13 +72,14 @@ sub make_DR_itree{
     
    # print Dumper $DR_r->{$run} unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};
 
-    next unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'};  # next unless 'Iteration'
+    next unless exists $DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'}; 
     foreach my $iter ( @{$DR_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
       next unless exists $iter->{'Iteration_hits'} &&
 	$iter->{'Iteration_hits'} !~ /^\s*$/;  # next unless hits to subject
            
       # iterating through hits
-      my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
+      ## hits in iteration (array_ref or ref to hash)
+      my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; 
       foreach my $hit ( @$hits_ref){
 	# subjectID
 	my $sseqid = $hit->{Hit_id};
@@ -175,9 +176,18 @@ sub make_CRISPR_itrees{
 	my $end = exists $feats_r->{Array_End} ?
 	  $feats_r->{Array_End} : 
 	    confess "KeyError: Array_End\n";
+        next if $start !~ /^\d+$/ or $end !~ /^\d+$/;
 
-	# making sure start-end is for + strand
-	($start,$end) = ($end,$start) if $start > $end;
+	# making sure start-end is for + strand and start != end
+	if ($start > $end){
+	  ($start,$end) = ($end,$start);
+	}
+	elsif ($start == $end){
+	  next;
+	}
+	elsif ($start > $end){ 
+	  continue;
+	}
 		
 	# setting itree ranges
 	$itrees{$fasta_file}{$scaf_ID}->insert($locus_ID, $start, $end);	          
@@ -192,16 +202,18 @@ sub make_CRISPR_itrees{
 
 =head2 DR_filter_blast
 
-filtering spacer hits based on adjacent DR hits 
+filtering spacer hits based on adjacent DR hits (and CRISPR array locations)
 
 =head3 IN
 
-spacer_r = blast xml hash ref
-itees_r = itrees of DR hits
+spacer_r -- blast xml hash ref
+itees_r -- itrees of DR hits
+keep -- bool; 
+CRISPR -- intervalTree object on CLdb CRISPR array locations
 
 =head3 OUT
 
-just editing spacer_r 
+edited spacer_r object
 
 =cut 
 
@@ -236,8 +248,9 @@ sub DR_filter_blast{
       next unless exists $iter->{'Iteration_hits'} and 
 	ref $iter->{'Iteration_hits'} eq 'HASH';
            
-      # iterating through hits
-      my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; # hits in iteration (array_ref or ref to hash)
+      # iterating through spacer hits
+      # hits in iteration (array_ref or ref to hash)
+      my $hits_ref = $iter->{'Iteration_hits'}{'Hit'}; 
       foreach my $hit ( @$hits_ref){
 	# subjectID
 	my $sseqid = $hit->{Hit_id};
@@ -248,7 +261,7 @@ sub DR_filter_blast{
 	while( my ($hspUID, $hsp) = each %$hsp_ref ){
 	  $filter{'total'}++;
 
-	  # hsp values
+	  # hsp values of spacer hits
 	  my $sstart = $hsp->{'Hsp_hit-from'};  # hit location on subject
 	  my $send = $hsp->{'Hsp_hit-to'};
 	  my $evalue = $hsp->{'Hsp_evalue'};
@@ -268,6 +281,7 @@ sub DR_filter_blast{
 	      $filter{CRISPR}++;
 	      $hsp->{'CLdb_array-hit'} = 1;
 	      delete $hsp_ref->{$hspUID};
+	      next;
 	    }
 	  }
 
@@ -275,20 +289,28 @@ sub DR_filter_blast{
 	  if( exists $itrees_r->{$subj}{$strand} ){ # hits to same subject for spacer & DR
 	    # number of adjacent DRs
 	    ## upstream hits
-	    my $up_adj = $itrees_r->{$subj}{$strand}->fetch( $sstart, $sstart + ($send - $sstart)); 
+#	    my $up_adj = $itrees_r->{$subj}{$strand}->fetch( $sstart - ,
+#							     $sstart + ($send - $sstart)); 
 	    ## downstream hits
-	    my $down_adj = $itrees_r->{$subj}{$strand}->fetch($sstart + ($send - $sstart) +1, $send);
-	    my $DR_adj = 0;
-	    $DR_adj += scalar @$up_adj > 0 ? 1 : 0;
-	    $DR_adj += scalar @$down_adj > 0 ? 1 : 0;
+#	    my $down_adj = $itrees_r->{$subj}{$strand}->fetch($sstart + ($send - $sstart) +1, 
+#							      $send);
+	    #my $DR_adj = 0;
+	    #$DR_adj += scalar @$up_adj > 0 ? 1 : 0;
+	    #$DR_adj += scalar @$down_adj > 0 ? 1 : 0;
+
+
+	    # hits that overlap with DR-hits (DR-hits extened by '-length')
+	    my $DR_adj = $itrees_r->{$subj}{$strand}->fetch($sstart,$send);
+	    $DR_adj = scalar @$DR_adj;
 	   
-	    if( $DR_adj >= $DR_cnt){ # hits CRISPR array
+	    if( $DR_adj >= $DR_cnt){   # hits CRISPR array
 	      $filter{array}++;  # number filtered
 	      if($keep){        #keeping hit, just marking as hit to array
 		$hsp->{'CLdb_array-hit'} = 1;
 	      }
 	      else{  # deleting hsp
 		delete $hsp_ref->{$hspUID};
+		next;
 	      }
 	    }
 	    else{    # not hitting an 'array'; keeping
@@ -310,13 +332,13 @@ sub DR_filter_blast{
   map{ $filter{$_} = 0 unless exists $filter{$_}} qw/total array proto/;
   print STDERR "### DR filtering of spacer blast hits ###\n";
   printf STDERR "Total spacer blast hits: %i\n", $filter{total};
-  printf STDERR "Spacer blast hits hitting an array (filtered out): %i\n", $filter{array};
   printf STDERR "Spacer blast hits hitting CLdb-defined array: %i\n",
     $filter{CRISPR} if $CRISPR_itrees;
+  printf STDERR "Spacer blast hits hitting an array defined just by DR-blast hits: %i\n",
+    $filter{array};
   $keep ? print STDERR " NOTE: Keeping the blast hits to arrays and writing to the srl file\n" :
     print STDERR " NOTE: Deleting the blast hits to arrays\n";
   printf STDERR "Spacer blast hits hitting a protospacer: %i\n", $filter{proto};
-
 }
 
 

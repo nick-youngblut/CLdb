@@ -20,19 +20,19 @@ Range allowable between spacer & DR blast hit (bp). [30]
 
 =item -DR  <int>
 
-A spacer blast is considered in an array if number of adjacent DR blasts is >= '-DR'. [1]
+A spacer blast is considered a CRISPR array hit if number of adjacent DR blasts is >= '-DR'. [1]
 
 =item -length  <float>
 
-DR blast hits must be >= fraction of total DR sequence. [0.66]
+DR blast hits must be >= fraction of total DR sequence to be used for filtering. [0.66]
 
 =item -evalue  <float>
 
-DR blast hits must be < 'evalue'. [10] 
+DR blast hits must be < 'evalue' to be used for filtering. [10] 
 
 =item -keep  <bool> 
 
-Keep hits to CRISPR arrays, but just mark as hits to arrays? [FALSE]
+Keep hits to CRISPR arrays, but mark as hits to arrays? [FALSE]
 
 =item -CRISPR  <bool>
 
@@ -61,13 +61,9 @@ CLdb_perldoc filter_arrayHits
 
 Filter out spacer blast hits to CRISPR arrays by
 removing all spacer blast hits that hit adjacent
-to >= '-DR' direct repeat blast hits.
+to >= '-DR' direct repeat blast hits or 
+hit CRIPSRs as defined in CLdb (if '-CRISPR' used).
 
-=head1 EXAMPLES
-
-=head2 Basic Usage:
-
-filter_arrayHits.pl spacer_blast.srl repeat_blast.srl > spacer_blast_filter.srl
 
 =head1 AUTHOR
 
