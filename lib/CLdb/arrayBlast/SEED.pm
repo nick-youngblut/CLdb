@@ -337,7 +337,7 @@ sub makeMismatch_itree{
       $mismatch = ($seqs[0][$i] eq $seqs[1][$i]) ? 0 : 1;  # match : mismatch
     }
     
-    $itree->insert($mismatch, $i, $i);
+    $itree->insert($mismatch, $i-1, $i+1);  # giving interval positive length
   }
   
   return $itree, $seq_len;

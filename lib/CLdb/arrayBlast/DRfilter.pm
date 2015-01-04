@@ -334,6 +334,8 @@ sub DR_filter_blast{
   printf STDERR "Total spacer blast hits: %i\n", $filter{total};
   printf STDERR "Spacer blast hits hitting CLdb-defined array: %i\n",
     $filter{CRISPR} if $CRISPR_itrees;
+  $keep ? print STDERR " NOTE: Keeping the blast hits to arrays and writing to the srl file\n" :
+    print STDERR " NOTE: Deleting the blast hits to arrays\n";
   printf STDERR "Spacer blast hits hitting an array defined just by DR-blast hits: %i\n",
     $filter{array};
   $keep ? print STDERR " NOTE: Keeping the blast hits to arrays and writing to the srl file\n" :
