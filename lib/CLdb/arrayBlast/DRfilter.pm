@@ -340,7 +340,7 @@ sub DR_filter_blast{
     $filter{array};
   $keep ? print STDERR " NOTE: Keeping the blast hits to arrays and writing to the srl file\n" :
     print STDERR " NOTE: Deleting the blast hits to arrays\n";
-  printf STDERR "Spacer blast hits hitting a protospacer: %i\n", $filter{proto};
+  printf STDERR "Spacer blast hits hitting a mobile genetic element: %i\n", $filter{proto};
 }
 
 

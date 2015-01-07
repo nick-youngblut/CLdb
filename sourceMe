@@ -26,20 +26,21 @@ _CLdb()
     local fileNames dirNames cur prev prev2
 
     cur=${COMP_WORDS[COMP_CWORD]}
+    first=${COMP_WORDS[0]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
     prev2=${COMP_WORDS[COMP_CWORD-2]}
 
     fileNames=''
     dirNames=''
 
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb ]]; then
-	COMPREPLY=($(compgen -W "$CLdbSubcmds" ${cur}))
-    
-    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
 	COMPREPLY=($(compgen -W "$CLdbArrayBlastSubcmds" ${cur}))
 
     elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
 	COMPREPLY=($(compgen -W "$CLdbPlotLociSubcmds" ${cur}))
+
+    elif [[ ${cur} == * && ${prev} == --* && ${first} == *CLdb ]]; then
+	COMPREPLY=($(compgen -W "$CLdbSubcmds" ${cur}))
 
     elif [[ ${cur} == *  ]]; then
      	fileNames=$( compgen -f -X '.*' -- "$cur" )
@@ -83,20 +84,22 @@ _CLdb_perldoc()
     local fileNames dirNames cur prev prev2
 
     cur=${COMP_WORDS[COMP_CWORD]}
+    first=${COMP_WORDS[0]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
     prev2=${COMP_WORDS[COMP_CWORD-2]}
 
     fileNames=''
     dirNames=''
 
-    if [[ ${cur} == * && ${prev} == --* && ${prev2} == *CLdb_perldoc ]]; then
-	COMPREPLY=($(compgen -W "$CLdbSubcmds" ${cur}))
     
-    elif [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
+    if [[ ${cur} == * && ${prev} == --* && ${prev2} == arrayBlast ]]; then
 	COMPREPLY=($(compgen -W "$CLdbArrayBlastSubcmds" ${cur}))
     
     elif [[ ${cur} == * && ${prev} == --* && ${prev2} == plotLoci ]]; then
 	COMPREPLY=($(compgen -W "$CLdbPlotLociSubcmds" ${cur}))
+
+    elif [[ ${cur} == * && ${prev} == --* && ${first} == *CLdb_perldoc ]]; then
+	COMPREPLY=($(compgen -W "$CLdbSubcmds" ${cur}))
        
     else
 	# no hidden files/directories

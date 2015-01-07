@@ -115,7 +115,10 @@ if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
 if ($sql){
   $sql =~ s/^\s*(and )*/AND /i;
   $sql =~ s/ *$/ /;
+  $sql =~ s/(?<=[^\\])("|')/\\$1/g;
 }
+
+#print  $sql, "\n"; exit;
 
 
 #--- MAIN ---#

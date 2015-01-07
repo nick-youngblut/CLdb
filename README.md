@@ -52,7 +52,7 @@ dramatically in the future.__
 
 ## INSTALLATION 
 
-Currently, only unix/linux supported.
+__NOTE:__ Currently, only *nix systems are supported.
 
 ~~~
 git clone https://github.com/nyoungb2/CLdb.git

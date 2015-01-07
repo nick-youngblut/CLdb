@@ -330,7 +330,6 @@ $refine_sql";
   }
     
   # query db #
-#  my $ret = $dbh->selectall_arrayref($query);
   my $sth = $dbh->prepare($query);
   $sth->execute() or confess $dbh->err;
   my $ret = $sth->fetchall_arrayref();
