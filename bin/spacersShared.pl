@@ -234,6 +234,7 @@ AND spacer_clusters.cutoff = $cutoff
 $extra_query
 GROUP BY $group_by";
   $q =~ s/\n/ /g;
+  $q =~ s/\\('|")/$1/g;   # dealing with escaped quotes
   
   # status #
   print STDERR "$q\n" if $verbose;
