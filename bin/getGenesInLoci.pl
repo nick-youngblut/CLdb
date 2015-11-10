@@ -51,6 +51,11 @@ Not compatible with '-c' [FALSE]
 Just write out genes that are conflicting
 (new and old versions). Not compatible with '-a' [FALSE]
 
+=item -fork  <int>
+
+Number of genomes to process in parallel.
+0 = turn off parallel processing. 
+
 =item -quiet  <bool>
 
 Turn off all warnings. [FALSE]
@@ -133,18 +138,17 @@ use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
 use DBI;
+use Parallel::ForkManager;
 
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::utilities qw/
-			file_exists 
-			connect2db
-			lineBreaks2unix
-			get_file_path/;
-use CLdb::query qw/
-		    table_exists
-		    join_query_opts/;
+use CLdb::utilities qw/file_exists 
+		       connect2db
+		       lineBreaks2unix
+		       get_file_path/;
+use CLdb::query qw/table_exists
+		   join_query_opts/;
 use CLdb::genbank::genbank_get_region qw/genbank_get_region/;
 
 ### args/flags
@@ -154,15 +158,17 @@ my ($verbose, $database_file, $quiet);
 my ($all_genes, $existing, $conflicting);
 my (@subtype, @taxon_id, @taxon_name);
 my $query = "";
+my $fork = 0;
 GetOptions(
 	   "database=s" => \$database_file,
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$query,
-	   "all" => \$all_genes,   # get all genes (including existing?; overwriting conflicts w/ existing entry). [FALSE]
-	   "existing" => \$existing, 	# check for existing, if yes, do not write (unless '-a'). [TRUE]
-	   "conflicting" => \$conflicting,     # write out both entries for conflicts? [FALSE]
+	   "all" => \$all_genes,   
+	   "existing" => \$existing, 
+	   "conflicting" => \$conflicting,
+	   "fork=i" => \$fork,
 	   "verbose" => \$verbose,	       # TRUE
 	   "quiet" => \$quiet, 		       # turn off warnings
 	   "help|?" => \&pod2usage # Help
@@ -193,7 +199,8 @@ $join_sql .= join_query_opts(\@taxon_name, "taxon_name");
 my $loci_se_r = get_loci_start_end($dbh, $query, $join_sql);
 
 # getting CDS info for CDS features in loci regions #
-my $loci_tbl_r = call_genbank_get_region($loci_se_r, $genbank_path);
+my $loci_tbl_r = fork_genbank_get_region($loci_se_r, $genbank_path, $fork);
+#my $loci_tbl_r = call_genbank_get_region($loci_se_r, $genbank_path);
 
 # determine if CDS are already in gene table #
 ## if exists & '-a', existing entry written ## 
@@ -315,7 +322,8 @@ sub write_loci_tbl{
       }
       
       # writing line #
-      map{ $_ = "" unless exists $loci_tbl_r->{$loci}{$feature}{$_} }
+      map{ $loci_tbl_r->{$loci}{$feature}{$_} = "" 
+	     unless exists $loci_tbl_r->{$loci}{$feature}{$_} }
 	qw/start end In_CAS product translation db_xref/;
       
       print join("\t", $loci,
@@ -402,6 +410,101 @@ sub set_to_pos_strand{
   else{ return $start, $end; }
 }
 
+
+sub fork_genbank_get_region{
+# calling genbank_get_region to get CDS info from genbank files #
+  my ($loci_se_r, $genbank_path, $fork) = @_;
+  
+  my %loci_tbl;
+  my $pm = new Parallel::ForkManager($fork);
+
+  $pm->run_on_finish(
+    sub{ my ($locus, $ret_r) = @{$_[5]}; 
+
+	 #load_loci_tbl(\%loci_tbl, $locus, $ret_r);
+	 my @col_sel = qw/start end db_xref product translation/;
+    
+	 ## loading loci table -- {locusID : featureID : feat_tag_ID : tag_value}
+	 foreach my $feat (keys %$ret_r){
+	   foreach my $colOfInt (@col_sel){
+	     if(exists $ret_r->{$feat}{$colOfInt}){
+	       $loci_tbl{$locus}{$feat}{$colOfInt} = $ret_r->{$feat}{$colOfInt};
+	     }
+	     else{
+	       print STDERR " WARNING: '$colOfInt' tag not found in ".
+		 "feature: $feat for locus ID '$locus'! Skipping feature\n";  
+	     }
+	   }
+	 }	 
+       }
+   );
+
+
+  foreach my $locus (keys %$loci_se_r){
+    my $genbank_file = join("/", $genbank_path, ${$loci_se_r->{$locus}}[2]);
+    die " ERROR: $genbank_file not found!\n"
+      unless -e $genbank_file;
+
+    $pm->start and next;
+    
+    my $start = ${$loci_se_r->{$locus}}[0];
+    my $end = ${$loci_se_r->{$locus}}[1];
+		my $scaffold = ${$loci_se_r->{$locus}}[7];
+    my $CAS_status = ${$loci_se_r->{$locus}}[8];
+    my $array_status = ${$loci_se_r->{$locus}}[9];
+    print STDERR join("\n ",
+		      "...Getting features in:",
+		      "file:\t\t\t$genbank_file",
+		      "scaffold:\t\t$scaffold",
+		      "region:\t\t$start-$end",
+		      "CAS_status:\t\t$CAS_status",
+		      "Array_status:\t\t$array_status"), "\n";
+
+    # return: {featID : feat_tag_ID : tag_value}
+    my $ret_r;
+    if($start <= $end){
+      $ret_r = genbank_get_region($scaffold, $start, $end, $genbank_file);
+    }
+    else{
+      $ret_r = genbank_get_region($scaffold, $end, $start, $genbank_file);
+    }
+
+    $pm->finish(0, [$locus, $ret_r]);
+  }
+  $pm->wait_all_children;
+
+		
+  # sanity check #
+  unless (%loci_tbl){
+    $dbh->disconnect();
+    die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
+  }
+		
+  #print Dumper %loci_tbl; exit;
+  return \%loci_tbl;
+}
+
+
+sub load_loci_table{
+  my ($loci_tbl, $locus, $ret_r) = @_;
+  
+  my @col_sel = qw/start end db_xref product translation/;
+    
+  ## loading loci table -- {locusID : featureID : feat_tag_ID : tag_value}
+  foreach my $feat (keys %$ret_r){
+    foreach my $colOfInt (@col_sel){
+      if(exists $ret_r->{$feat}{$colOfInt}){
+	$$loci_tbl{$locus}{$feat}{$colOfInt} = $ret_r->{$feat}{$colOfInt};
+      }
+      else{
+	print STDERR " WARNING: '$colOfInt' tag not found in ".
+	  "feature: $feat for locus ID '$locus'! Skipping feature\n";	    
+      }
+    }
+  }
+}
+
+
 sub call_genbank_get_region{
 # calling genbank_get_region to get CDS info from genbank files #
   my ($loci_se_r, $genbank_path) = @_;
@@ -446,12 +549,13 @@ sub call_genbank_get_region{
 	}
 	else{
 	  print STDERR " WARNING: '$colOfInt' tag not found in ".
-	    "feature: $feat for locus ID '$locus'! Skipping feature\n";			    
+	    "feature: $feat for locus ID '$locus'! Skipping feature\n";	    
 	}
       }
     }
 
-    printf STDERR " Number of features found: %i\n", scalar keys %{$loci_tbl{$locus}};
+    printf STDERR " Number of features found: %i\n", 
+      scalar keys %{$loci_tbl{$locus}};
   }
 		
   # sanity check #
@@ -465,29 +569,29 @@ sub call_genbank_get_region{
 }
 
 sub get_loci_start_end{
-# getting locus start and locus end from loci table in db #
-	my ($dbh, $query, $join_sql) = @_;
-	
-	my %loci_se;
-	my $cmd = "SELECT Locus_id, Locus_start, Locus_end, 
+  # getting locus start and locus end from loci table in db #
+  my ($dbh, $query, $join_sql) = @_;
+  
+  my %loci_se;
+  my $cmd = "SELECT Locus_id, Locus_start, Locus_end, 
 			Genbank_File, CAS_start, CAS_end,
 			Array_Start, Array_End, scaffold,
 			CAS_Status, Array_Status
 			from loci 
 			where (CAS_start is not null or CAS_end is not null) 
 			$join_sql $query";
-	$cmd =~ s/[\t\n]+/ /g;
-
-	my $loci_se_r = $dbh->selectall_arrayref($cmd);	
-	die "ERROR: no locus start-end values found!\n" unless $loci_se_r;	
-
-	foreach my $row (@$loci_se_r){
-		$loci_se{$$row[0]} = [@$row[1..$#$row]];
-		}
-		
-		#print Dumper %loci_se; exit;
-	return \%loci_se;
-	}
+  $cmd =~ s/[\t\n]+/ /g;
+  
+  my $loci_se_r = $dbh->selectall_arrayref($cmd);	
+  die "ERROR: no locus start-end values found!\n" unless $loci_se_r;	
+  
+  foreach my $row (@$loci_se_r){
+    $loci_se{$$row[0]} = [@$row[1..$#$row]];
+  }
+  
+  #print Dumper %loci_se; exit;
+  return \%loci_se;
+}
 
 
 
