@@ -129,29 +129,21 @@ use List::Util qw/max/;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::query qw/
-		    table_exists
-		    list_columns/;
-use CLdb::load qw/
-		   load_db_table/;
-use CLdb::load::loadLoci qw/
-			     unix_line_breaks
-			     just_table_columns
-			     make_external_file_dirs
-			     get_leader_seq
-			     get_pam_seq
-			   /;
-use CLdb::seq qw/
-		  read_fasta
-		  seq_from_genome_fasta/;
-use CLdb::utilities qw/
-			file_exists 
-			connect2db
-			lineBreaks2unix
-			get_file_path/;
-use CLdb::genbank::genbank2fasta qw/
-				     genbank2fasta
-				   /;
+use CLdb::query qw/table_exists
+		   list_columns/;
+use CLdb::load qw/load_db_table/;
+use CLdb::load::loadLoci qw/unix_line_breaks
+			    just_table_columns
+			    make_external_file_dirs
+			    get_leader_seq
+			    get_pam_seq/;
+use CLdb::seq qw/read_fasta
+		 seq_from_genome_fasta/;
+use CLdb::utilities qw/file_exists 
+		       connect2db
+		       lineBreaks2unix
+		       get_file_path/;
+use CLdb::genbank::genbank2fasta qw/genbank2fasta/;
 
 
 ### args/flags
@@ -181,7 +173,6 @@ unix_line_breaks($loci_r, $db_path, $forks) unless $^O =~ /win/i;   # line break
 # checks
 check_locus_id($loci_r);
 make_external_file_dirs($loci_r, $header_r, $db_path);	
-
 
 # connect 2 db 
 my $dbh = connect2db($database_file);
@@ -247,10 +238,12 @@ sub get_scaffold_name{
   # getting all fasta files needed #
   my %fasta_need;
   foreach my $locus_id (keys %$loci_r){
-    next unless exists $loci_r->{$locus_id}{'fasta_file'};		# cannot do w/out genome fasta
+    # cannot do w/out genome fasta
+    next unless exists $loci_r->{$locus_id}{'fasta_file'}; 
     $fasta_need{$loci_r->{$locus_id}{'fasta_file'}} = 1
-      unless $loci_r->{$locus_id}{'scaffold'};				# scaffold already exists
-		}
+      # scaffold already exists
+      unless $loci_r->{$locus_id}{'scaffold'};				
+  }
   
   # if needed fastas, add 'scaffold' to header #
   $header_r->{'scaffold'} = 'X';			# fake column index
@@ -278,16 +271,16 @@ sub get_scaffold_name{
   
   # adding scaffold values #
   foreach my $locus_id (keys %$loci_r){
-    $loci_r->{$locus_id}{'scaffold'} = $fasta_scaf{$loci_r->{$locus_id}{'fasta_file'}}
-			unless exists $loci_r->{$locus_id}{'scaffold'};
+    $loci_r->{$locus_id}{'scaffold'} = 
+      $fasta_scaf{$loci_r->{$locus_id}{'fasta_file'}}
+	unless exists $loci_r->{$locus_id}{'scaffold'};
     die " ERROR: could not add a scaffold to locus: $locus_id! Add it yourself!\n"
       unless exists $loci_r->{$locus_id}{'scaffold'};
-		}
+  }
   
   #print Dumper %$loci_r; exit;
   #print Dumper @fasta_need; exit;
 }
-
 
 
 sub get_loci_table{
@@ -305,13 +298,13 @@ sub get_loci_table{
     $line_cnt++;
     next if /^\s*$/;
     
-    if($line_cnt == 1){ 					# loading header
-      tr/A-Z/a-z/; 						# all to lower case (caps don't matter)
+    if($line_cnt == 1){ 	  # loading header
+      tr/A-Z/a-z/; 		  # all to lower case (caps don't matter)
       tr/ /_/;
       my @line = split /\t/;
       for my $i (0..$#line){
-	#next unless grep(/^$line[$i]$/, @column_list);		# only including columns in loci DB table
-	next if exists $header{$line[$i]}; 					# only using 1st column found with a particular name
+	# only using 1st column found with a particular name
+	next if exists $header{$line[$i]};  
 	$header{$line[$i]} = $i;		# column_name => index
 	$header_rev{$i} = $line[$i];		# column_name => index
       }
@@ -336,8 +329,6 @@ sub get_loci_table{
   }
   # sanity check #
   die " ERROR: entries found in loci table!\n" unless %loci;	
-  #print Dumper %loci; exit; 
-  #print Dumper %header; exit;	
   return (\%loci, \%header);
 }
 

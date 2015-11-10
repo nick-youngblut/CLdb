@@ -171,6 +171,7 @@ sub make_external_file_dirs{
       # next unless file exists in loci table
       my $fileName = exists $loci_r->{$locus_id}{$fileType} ?
 	$loci_r->{$locus_id}{$fileType} : next;
+      next if $fileName eq ''; 
       
       # making directory to store files unless exists
       $ext_dir = make_CLdb_dir($dir, $ext_dir);
