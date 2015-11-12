@@ -140,23 +140,16 @@ use List::Util qw/max/;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::query qw/
-		    table_exists
+use CLdb::query qw/table_exists
 		    n_entries
-		    get_array_seq_preCluster
-		  /;
-use CLdb::utilities qw/
-			file_exists 
-			connect2db/;
-use CLdb::seq qw/
-		  revcomp
-		  write_fasta
-		/;
-use CLdb::cluster qw/
-		      cluster_cutoffs
-		      insert_cluster
-		      clear_cluster_table
-		    /;
+		    get_array_seq_preCluster/;
+use CLdb::utilities qw/file_exists 
+		       connect2db/;
+use CLdb::seq qw/revcomp
+		 write_fasta/;
+use CLdb::cluster qw/cluster_cutoffs
+		     insert_cluster
+		     clear_cluster_table/;
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
@@ -280,6 +273,8 @@ insert_cluster(dbh => $dbh,
 
 # finally, making indices of cluster IDs
 print STDERR "\nCreating indices for cluster ids...\n";
+$dbh->do('DROP INDEX IF EXISTS spacerClusterID_idx') or $dbh->err;
+$dbh->do('DROP INDEX IF EXISTS DRClusterID_idx') or $dbh->err;
 $dbh->do('CREATE INDEX spacerClusterID_idx on spacer_clusters(cluster_id)') or $dbh->err;
 $dbh->do('CREATE INDEX DRClusterID_idx on DR_clusters(cluster_id)') or $dbh->err;
 $dbh->commit;
