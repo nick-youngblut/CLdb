@@ -201,8 +201,8 @@ my %opts = (
 ## querying CLdb ##
 my $arrays_r;
 my $cluster_tbl = $spacer_DR_b ? "DR_clusters" : "spacer_clusters";
-if( table_exists($dbh, $cluster_tbl) ){
-  $arrays_r =  get_array_seq($dbh,\%opts);
+if(table_exists($dbh, $cluster_tbl)){
+  $arrays_r =  get_array_seq($dbh, \%opts);
 }
 else{
   $arrays_r = get_array_seq_preCluster($dbh, \%opts);

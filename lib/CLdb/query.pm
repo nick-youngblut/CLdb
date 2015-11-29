@@ -283,11 +283,13 @@ sub get_array_seq{
   my $cutoff = exists $opts_r->{cutoff} ? $opts_r->{cutoff} : 1;
   my $refine_sql = exists $opts_r->{refine_sql} ? 
     $opts_r->{refine_sql} : '';
-  exists $opts_r->{spacer_DR_b} or confess "ERROR: provide 'spacer_DR_b' as an arg";
+  exists $opts_r->{spacer_DR_b} or 
+    confess "ERROR: provide 'spacer_DR_b' as an arg";
 
   # getting table info #
   my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+  ## DR instead of spacer
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};  
   
   # columns:
   #	locus_ID

@@ -27,8 +27,12 @@ Get perldoc of subcommand.
 =item --sql
 
 SQL passed to subcommand for limiting queries.
-(e.g., --sql "loci.subtype == 'I-B' or loci.subtype == 'I-C'").
-Use single quotes if quotes are needed.
+(eg., --sql 'loci.subtype == "I-B" or loci.subtype == "I-C"').
+NOTE: The sql statement must go in SINGLE quotes!
+
+=item --config
+
+Config file (if not ~/.CLdb)
 
 =item -v        Verbose output
 
@@ -61,6 +65,14 @@ Make sure command completion is enabled
 by editing, then sourcing the files in 
 the CLdb/extras/ folder
 
+=head2 Config file
+
+For most subcommands, the CLdb database location
+must be provided (via the '-database' flag).
+You can skip this by making a CLdb config file 
+with the CLdb database location assigned to the
+`DATABASE` variable (Example: DATABASE = '/home/nick/CLdb.sqlite/').
+
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
@@ -90,12 +102,12 @@ use File::Spec;
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $listSubcmds, $getPerlDoc);
-my $sql = '';
+my ($verbose, $listSubcmds, $getPerlDoc, $sql, $config);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
 	    "--sql=s" => \$sql,
+	    "--config=s" => \$config,
 	    "--verbose" => \$verbose,
 	    "-help|?" => \&pod2usage
 	   );
@@ -106,31 +118,29 @@ my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin');
 
 # check that script exists 
 my $scripts_r = list_scripts($bindir, $listSubcmds);
+pod2usage("ERROR: No subcommand given.") unless $ARGV[0];
 (my $subcmd = $ARGV[0]) =~ s/\.pl$//i;
 if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
   die "ERROR: '" . $ARGV[0] . "' is not a a valid subcommand\n";
 }
 
 # sql
-if ($sql){
-  $sql =~ s/^\s*(and )*/AND /i;
-  $sql =~ s/ *$/ /;
-  $sql =~ s/(?<=[^\\])("|')/\\$1/g;
-}
+$sql = check_sql($sql);
 
-#print  $sql, "\n"; exit;
-
+# config 
+my $database = CLdb_path($config);
 
 #--- MAIN ---#
-call_subcommand($bindir, \@ARGV, $getPerlDoc, $sql);
+call_subcommand($bindir, \@ARGV, $getPerlDoc, $sql, $database);
 
 
 #--- subroutines ---#
 sub call_subcommand{
-  my $bindir = shift or die $!;
-  my $argv_r = shift or die $!;
-  my $getPerlDoc = shift;
-  my $sql = shift;
+  my $bindir = shift or die $!;  # CLdb bin directory
+  my $argv_r = shift or die $!;  # subcommand args
+  my $getPerlDoc = shift;        # calling perldoc for subcommand
+  my $sql = shift;               # sql for subcommand (-q)
+  my $database = shift;          # database for subcommand (-database)
   
   # check exists
   (my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
@@ -140,14 +150,15 @@ sub call_subcommand{
     die "ERROR: '$subcmd' is not executable.\n"
   }
 
-
-  # calling subcommand
+  # perldoc
   if ($getPerlDoc){
     print `perldoc -T $subcmd`;
   }
+  # calling subcommand
   else{
     $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
     $subcmd = join(" ", $subcmd, "-q \"$sql\"") if $sql;
+    $subcmd = join(" ", $subcmd, "-database $database") if $database;
     print `$subcmd`;
   }
 }
@@ -170,4 +181,53 @@ sub list_scripts{
   else{
     return \@scripts;
   }
+}
+
+
+sub check_sql{
+  $sql = shift;
+  return '' unless $sql; 
+
+  if ($sql =~ /\'/){
+    die "ERROR: the --sql statement must be wrapped in SINGLE quotes" 
+  }   
+  $sql =~ s/^\s*(and )*/AND /i;
+  $sql =~ s/ *$/ /;
+  $sql =~ s/(?<=[^\\])("|')/\\$1/g;
+  return $sql;
+}
+
+
+sub CLdb_path{
+  my $config = shift; 
+  my $default_config = glob("~/.CLdb");
+
+  # checking config if provided
+  if ($config){
+    return _parse_config($config);
+  }
+  # checking default config location
+  elsif (-e $default_config){
+    return _parse_config($default_config);
+  } 
+
+  return undef;
+}
+
+
+sub _parse_config{
+  my $config = shift;
+  open FH, $config 
+    or die "Cannot open config file: $config\n";
+  my $file_path = undef;
+  while(<FH>){
+    if(/^\s*DATABASE\s*[=:]/){
+       (my $t, $file_path) = split /\s*[=:]\s*/, $_, 2;
+    }
+  }
+
+  my $msg = "WARNING: could not find 'DATABASE' variable in CLdb config\n";
+  print STDERR $msg unless $file_path;
+
+  return $file_path;
 }

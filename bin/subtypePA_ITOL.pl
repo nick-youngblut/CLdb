@@ -146,8 +146,8 @@ GetOptions(
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
 	   "query=s" => \$extra_query,
-	   "colors=s{,}" => \@colors,				# colors for plotting 
-	   "abundance" => \$binary_output, 			# binary output? [TRUE]
+	   "colors=s{,}" => \@colors,		      # colors for plotting 
+	   "abundance" => \$binary_output, 	      # binary output? [TRUE]
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );
@@ -182,118 +182,119 @@ exit;
 ### Subroutines
 sub write_ITOL_metadata{
 # writing metadata table for ITOL #
-	my ($taxa_r, $subtypes_r) = @_;
-	
-	# conserving order #
-	my @subtypes = sort keys %$subtypes_r;
-	
-	# header #
-	## labels ##
-	print join("\t", "LABELS", @subtypes), "\n";
-	## colors ##
-	my @colors;
-	map{push @colors, $subtypes_r->{$_}} @subtypes;
-	print join("\t", "COLORS", @colors), "\n";
-	
-	# body #
-	foreach my $taxon (keys %$taxa_r){
-		my @line;
-		foreach my $subtype (@subtypes){
-			if(exists $taxa_r->{$taxon}{$subtype}){
-				if(! $binary_output){ push @line, 1;}				# by default: binary
-				else{ push @line, $taxa_r->{$taxon}{$subtype}; }
-				}
-			else{
-				push @line, 0;
-				}
-			}
-		print join("\t", $taxon, @line), "\n";
-		}
-	
-	}
+  my ($taxa_r, $subtypes_r) = @_;
+  
+  # conserving order #
+  my @subtypes = sort keys %$subtypes_r;
+  
+  # header #
+  ## labels ##
+  print join("\t", "LABELS", @subtypes), "\n";
+  ## colors ##
+  my @colors;
+  map{push @colors, $subtypes_r->{$_}} @subtypes;
+  print join("\t", "COLORS", @colors), "\n";
+  
+  # body #
+  foreach my $taxon (keys %$taxa_r){
+    my @line;
+    foreach my $subtype (@subtypes){
+      if(exists $taxa_r->{$taxon}{$subtype}){
+	if(! $binary_output){ push @line, 1;}				# by default: binary
+	else{ push @line, $taxa_r->{$taxon}{$subtype}; }
+      }
+      else{
+	push @line, 0;
+      }
+    }
+    print join("\t", $taxon, @line), "\n";
+  }
+  
+}
 
 sub get_subtype_colors{
-	my ($subtypes_r, $colors_r, $subtype_r) = @_;
-
-	# getting rainbow #
-	unless(@$colors_r){		# if the user did not provide colors
-		@$colors_r = qw/FF0000 FF6600 FFFF00 33CC00 00CCFF 0033FF 9900FF FF00FF 660000 CC3300 336600 006666 000066/;
-		map{$_ =~ s/^/#/} @$colors_r;
-		}
-
-	# subtype order alpha-numeric or user-defined #
-	my @subtype_order;
-	if(@$subtype_r){
-		 map{$_ =~ s/"//g} @$subtype_r; 
-		 @subtype_order = @$subtype_r;  
-		 }
-	else{ 
-		@subtype_order = sort keys %$subtypes_r; 
-		}
-
-	# connecting colors to subtypes #
-	my $cnt = 0;
-	foreach my $subtype (@subtype_order){
-		unless($$colors_r[$cnt]){
-			die " ERROR: not enough colors for all subtypes\n Number of subtypes: ", scalar keys %$subtypes_r, "\n";
-			#die;
-			}
-		if($subtype eq "NA"){
-			$subtypes_r->{$subtype} = "#000000";			# NA = black
-			}
-		else{
-			$subtypes_r->{$subtype} = $$colors_r[$cnt];
-			}
-		$cnt++;
-		}
-
-		#print Dumper %$subtypes_r; exit;
-	}
+  my ($subtypes_r, $colors_r, $subtype_r) = @_;
+  
+  # getting rainbow #
+  unless(@$colors_r){		# if the user did not provide colors
+    @$colors_r = qw/FF0000 FF6600 FFFF00 33CC00 00CCFF 0033FF 9900FF 
+		    FF00FF 660000 CC3300 336600 006666 000066/;
+    map{$_ =~ s/^/#/} @$colors_r;
+  }
+  
+  # subtype order alpha-numeric or user-defined #
+  my @subtype_order;
+  if(@$subtype_r){
+    map{$_ =~ s/"//g} @$subtype_r; 
+    @subtype_order = @$subtype_r;  
+  }
+  else{ 
+    @subtype_order = sort keys %$subtypes_r; 
+  }
+  
+  # connecting colors to subtypes #
+  my $cnt = 0;
+  foreach my $subtype (@subtype_order){
+    unless($$colors_r[$cnt]){
+      die " ERROR: not enough colors for all subtypes\n Number of subtypes: ", scalar keys %$subtypes_r, "\n";
+      #die;
+    }
+    if($subtype eq "NA"){
+      $subtypes_r->{$subtype} = "#000000";			# NA = black
+    }
+    else{
+      $subtypes_r->{$subtype} = $$colors_r[$cnt];
+    }
+    $cnt++;
+  }
+  
+  #print Dumper %$subtypes_r; exit;
+}
 
 sub count_subtypes{
-	my ($dbh, $extra_query, $join_sql) = @_;
-	
-	# make query #
-	my $query = "SELECT taxon_name, subtype, count(subtype) FROM loci";
-	
-	if($join_sql || $extra_query){
-		$query = join(" ", $query, "WHERE locus_id = locus_id");
-		}
-	$query = join(" ", $query, $join_sql) if $join_sql;
-	$query = join(" ", $query, $extra_query) if $extra_query;
-	$query = join(" ", $query, "group by taxon_name, subtype");
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
+  my ($dbh, $extra_query, $join_sql) = @_;
+  
+  # make query #
+  my $query = "SELECT taxon_name, subtype, count(subtype) FROM loci";
+  
+  if($join_sql || $extra_query){
+    $query = join(" ", $query, "WHERE locus_id = locus_id");
+  }
+  $query = join(" ", $query, $join_sql) if $join_sql;
+  $query = join(" ", $query, $extra_query) if $extra_query;
+  $query = join(" ", $query, "group by taxon_name, subtype");
+  
+  # status #
+  print STDERR "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die "ERROR: no matching entries!\nQuery: '$query'\n"
+    unless $$ret[0];
+  
+  # hash by taxon=>subtype #
+  my %taxa;
+  my %subtypes;
+  foreach my $row (@$ret){
+    $$row[1] = "NA" unless $$row[1];
+    $taxa{$$row[0]}{$$row[1]} = $$row[2];	# taxon_name=>subtype=>count
+    $subtypes{$$row[1]} = 1;				# unique subtypes
+  }
+  
+  #print Dumper %taxa; exit;
+  #print Dumper %subtypes; exit;
+  return \%taxa, \%subtypes;
+}
 
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries!\n"
-		unless $$ret[0];
-	
-	# hash by taxon=>subtype #
-	my %taxa;
-	my %subtypes;
-	foreach my $row (@$ret){
-		$$row[1] = "NA" unless $$row[1];
-		$taxa{$$row[0]}{$$row[1]} = $$row[2];	# taxon_name=>subtype=>count
-		$subtypes{$$row[1]} = 1;				# unique subtypes
-		}
-		
-		#print Dumper %taxa; exit;
-		#print Dumper %subtypes; exit;
-	return \%taxa, \%subtypes;
-	}
-	
 sub join_query_opts_OLD{
-# joining query options for selecting loci #
-	my ($vals_r, $cat) = @_;
-
-	return "" unless @$vals_r;	
-	
-	map{ s/"*(.+)"*/"$1"/ } @$vals_r;
-	return join("", " AND $cat IN (", join(", ", @$vals_r), ")");
-	}
+  # joining query options for selecting loci #
+  my ($vals_r, $cat) = @_;
+  
+  return "" unless @$vals_r;	
+  
+  map{ s/"*(.+)"*/"$1"/ } @$vals_r;
+  return join("", " AND $cat IN (", join(", ", @$vals_r), ")");
+}
 
 
 
