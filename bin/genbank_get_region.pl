@@ -100,13 +100,15 @@ use CLdb::genbank::genbank_get_region qw/genbank_get_regions
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, @regions, $tRNA, $strand_b, $genbank_file, $region_file);
+my ($verbose, @regions, $tRNA, $strand_b, 
+    $genbank_file, $region_file, $database);
 GetOptions(
 	   "genbank=s" => \$genbank_file,
 	   "region=s" => \$region_file,
 	   "list_regions=s{3,}" => \@regions,
 	   "tRNA" => \$tRNA,
 	   "strand" => \$strand_b,			# all + strand? [false]
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

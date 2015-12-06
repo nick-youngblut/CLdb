@@ -149,7 +149,7 @@ use CLdb::arrayBlast::SEED qw/ read_proto_aln
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $no_gap);
+my ($verbose, $no_gap, $database);
 my @SEED;
 my ($fasta_in, $table_in); 
 my $prefix = "";
@@ -159,6 +159,7 @@ GetOptions(
 	   "fasta=s" => \$fasta_in,
 	   "table=s" => \$table_in,
 	   "gap" => \$no_gap,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

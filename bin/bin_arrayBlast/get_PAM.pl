@@ -118,7 +118,7 @@ use CLdb::seq qw/read_fasta/;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $revcomp_b);
+my ($verbose, $revcomp_b, $database);
 my @PAM;
 my ($fasta_in, $table_in); 
 GetOptions(
@@ -126,6 +126,7 @@ GetOptions(
 	   "fasta=s" => \$fasta_in,
 	   "table=s" => \$table_in,
 	   "revcomp" => \$revcomp_b,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

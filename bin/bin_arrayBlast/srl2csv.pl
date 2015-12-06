@@ -231,11 +231,12 @@ use CLdb::arrayBlast::sereal qw/
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $keep_path);
+my ($verbose, $keep_path, $database);
 my $outfmt = join(',', qw/6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore/); 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "path" => \$keep_path,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

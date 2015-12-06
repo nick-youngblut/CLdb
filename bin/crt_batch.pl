@@ -95,7 +95,7 @@ use Parallel::ForkManager;
 #--- args/flags ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $coords);
+my ($verbose, $coords, $database);
 my $crt_x = 'CRT1.2-CLI';
 my $opts = "";
 my $forks = 0;
@@ -104,6 +104,7 @@ GetOptions(
 	   "coords" => \$coords,
 	   "opts=s" => \$opts,
 	   "forks=i" => \$forks,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	  );

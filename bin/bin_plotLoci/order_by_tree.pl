@@ -133,12 +133,13 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $tree_in, $format, $tree_name, $xlims_bool);
+my ($verbose, $tree_in, $format, $tree_name, $xlims_bool, $databse);
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
 	   "name=s" => \$tree_name,	
-	   "xlims" => \$xlims_bool,  			# xlims input? 
+	   "xlims" => \$xlims_bool, # xlims input? 
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

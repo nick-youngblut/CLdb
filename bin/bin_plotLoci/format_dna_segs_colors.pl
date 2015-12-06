@@ -160,20 +160,23 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $tree_in, $format, $write_brlen_stats, $compare_in);
+my ($verbose, $tree_in, $format, $write_brlen_stats, $compare_in, $database);
 my $gene_color_opt = 0;
 my $spacer_color_opt = 3;
 my $brlen_cutoff = 0;
-my @default_colors = ("#666666", "#CCCCCC", "#000000");		# gene, spacer, DR
+my @default_colors = ("#666666", "#CCCCCC", "#000000");	 # gene, spacer, DR
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
-	  # "compare=s" => \$compare_in,
-	   "spacer=i" => \$spacer_color_opt, 		# 0 = none, 1 = tree, 2 = adjacency, 3 = both
-	   "gene=i" => \$gene_color_opt,			# 0 = none, 1 = tree, 2 = adjacency, 3 = both
-	   "branch=f" => \$brlen_cutoff,			# branch-length cutoff (>= max branch length)	   
+	   # spacer: 0 = none, 1 = tree, 2 = adjacency, 3 = both
+	   "spacer=i" => \$spacer_color_opt, 		
+	   # 0 = none, 1 = tree, 2 = adjacency, 3 = both
+	   "gene=i" => \$gene_color_opt,			
+	   # branch-length cutoff (>= max branch length)	   
+	   "branch=f" => \$brlen_cutoff,			
 	   "stats" => \$write_brlen_stats,
 	   "default=s{3}" => \@default_colors,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

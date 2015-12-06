@@ -87,7 +87,7 @@ use FindBin;
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $group_file);
+my ($verbose, $group_file, $database);
 my $percent = 50;
 GetOptions(	   
 	   "group=s" => \$group_file,

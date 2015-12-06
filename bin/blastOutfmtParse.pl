@@ -89,12 +89,13 @@ use threads::shared;
 #--- parsing args ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
+my ($verbose, $database);
 my $cmd;
 my $hash_size = 1000000;
 GetOptions(
 	   "command=s" => \$cmd,
 	   "size=i" => \$hash_size,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

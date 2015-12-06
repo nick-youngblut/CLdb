@@ -133,10 +133,11 @@ use CLdb::utilities qw/
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose_b, $array_dir, $gbk_list_in);
+my ($verbose_b, $array_dir, $gbk_list_in, $database);
 GetOptions(
 	   "array=s" => \$array_dir,
 	   "genbank=s" => \$gbk_list_in,
+	   "database=s" => \$database, # unused
 	   "verbose_b" => \$verbose_b,
 	   "help|?" => \&pod2usage # Help
 	   );

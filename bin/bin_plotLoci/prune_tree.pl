@@ -125,12 +125,13 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose,$format);
+my ($verbose, $format, $database);
 my ($dna_segs_in, $xlims_in);
 GetOptions(
 	   "format=s" => \$format,
 	   "dna_segs=s" => \$dna_segs_in,
-	   "xlims=s" => \$xlims_in,  			# xlims input? 
+	   "xlims=s" => \$xlims_in,    # xlims input? 
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

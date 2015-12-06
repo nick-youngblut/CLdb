@@ -66,10 +66,11 @@ use File::Spec;
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $listSubcmds, $getPerlDoc);
+my ($verbose, $listSubcmds, $getPerlDoc, $database);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
+	    "-database=s" => \$database, 
 	    "--verbose" => \$verbose,
 	    "-help|?" => \&pod2usage
 	   );
@@ -90,7 +91,7 @@ if (! @scriptHits){
 
 
 #--- MAIN ---#
-call_subcommand($bindir, $scriptHits[0], \@ARGV, $getPerlDoc);
+call_subcommand($bindir, $scriptHits[0], \@ARGV, $database, $getPerlDoc);
 
 
 #--- subroutines ---#
@@ -98,17 +99,16 @@ sub call_subcommand{
   my $bindir = shift or die $!;
   my $subcmd = shift or die $!;
   my $argv_r = shift or die $!;
+  my $database = shift;
   my $getPerlDoc = shift;
 
   
   # check exists
-  #(my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
   $subcmd = File::Spec->join($bindir, $subcmd);  
 
   unless (can_run($subcmd)){
     die "ERROR: '$subcmd' is not executable.\n"
   }
-
 
   # calling subcommand
   ## perl
@@ -117,6 +117,7 @@ sub call_subcommand{
       print `perldoc -T $subcmd`;
     }    
     else{
+      $subcmd = join(" ", $subcmd, "-database $database") if $database;
       $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
       print `$subcmd`;
     }
@@ -127,6 +128,7 @@ sub call_subcommand{
       print `Rscript $subcmd -h`;
     }    
     else{
+      # AS OF NOW: no -database for R scripts
       $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
       print `Rscript $subcmd`;
     }

@@ -118,11 +118,13 @@ my $trial_limit = 10;
 my $format = 'fasta';
 my $prefix;
 my $cpus = 0;
+my $database;
 GetOptions(
 	   "trial=i" => \$trial_limit,
 	   "format=s" => \$format,
 	   "prefix=s" => \$prefix,
 	   "forks=i" => \$cpus,
+	   "database=s" => \$database, # unused
 	   "help|?" => \&pod2usage # Help
 	  );
 

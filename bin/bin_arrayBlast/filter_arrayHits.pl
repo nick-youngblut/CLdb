@@ -116,9 +116,12 @@ my $DR_cnt = 1;
 my $range = 30;
 GetOptions(
 	   "range=i" => \$range,
-	   "length=f" => \$len_cut,	   # length cutoff of DR hits
-	   "evalue=f" => \$evalue_cut,	   # evalue cutoff of DR hits
-	   "DR=i" => \$DR_cnt, 		   # number of adjacent DR hits needed to call 'array'
+	   # length cutoff of DR hits
+	   "length=f" => \$len_cut,	   
+	   # evalue cutoff of DR hits
+	   "evalue=f" => \$evalue_cut,	   
+	   # number of adjacent DR hits needed to call 'array'
+	   "DR=i" => \$DR_cnt, 		   
 	   "keep" => \$keep,
 	   "CRISPR" => \$CRISPR_filt,
 	   "database=s" => \$database_file,

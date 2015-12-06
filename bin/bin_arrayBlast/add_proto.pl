@@ -104,12 +104,13 @@ use CLdb::arrayBlast::Proto qw/ queryBlastDBs /;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
+my ($verbose, $database);
 my $ext = 10;
 my $workers = 1;
 GetOptions(
 	   "extension=i" => \$ext,
 	   "workers=i" => \$workers,
+	   "database=s" => \$database,  # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

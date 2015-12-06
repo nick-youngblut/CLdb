@@ -66,11 +66,12 @@ use File::Spec;
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $listSubcmds, $getPerlDoc);
+my ($verbose, $listSubcmds, $getPerlDoc, $database);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
 	    "--verbose" => \$verbose,
+	    "database=s" => \$database,  # 
 	    "-help|?" => \&pod2usage
 	   );
 
@@ -89,13 +90,14 @@ if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
 
 
 #--- MAIN ---#
-call_subcommand($bindir, \@ARGV, $getPerlDoc);
+call_subcommand($bindir, \@ARGV, $database, $getPerlDoc);
 
 
 #--- subroutines ---#
 sub call_subcommand{
   my $bindir = shift or die $!;
   my $argv_r = shift or die $!;
+  my $database = shift;
   my $getPerlDoc = shift;
 
   
@@ -113,6 +115,7 @@ sub call_subcommand{
     print `perldoc -T $subcmd`;
   }
   else{
+    $subcmd .= " -database $database" if $database;
     $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
     print `$subcmd`;
   }

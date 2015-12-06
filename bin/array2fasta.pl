@@ -151,11 +151,11 @@ my $extra_query = "";
 my $cluster_cutoff = 1;
 GetOptions(
 	   "database=s" => \$database_file,
-	   "repeat" => \$spacer_DR_b,			 # spacers or repeats? [spacers]
+	   "repeat" => \$spacer_DR_b,	    # spacers or repeats? [spacers]
 	   "subtype=s{,}" => \@subtype,
 	   "taxon_id=s{,}" => \@taxon_id,
 	   "taxon_name=s{,}" => \@taxon_name,
-	   "cutoff=f" => \$cluster_cutoff, 		# clustering cutoff [1.00]
+	   "cutoff=f" => \$cluster_cutoff,   # clustering cutoff [1.00]
 	   "cluster" => \$by_cluster,
 	   "query=s" => \$extra_query, 
 	   "verbose" => \$verbose,

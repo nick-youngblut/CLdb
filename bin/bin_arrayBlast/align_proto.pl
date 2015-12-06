@@ -92,8 +92,9 @@ use CLdb::arrayBlast::Align qw/ alignProto /;
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
+my ($verbose, $database);
 GetOptions(
+	   "database=s" => \$databse, #unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

@@ -87,14 +87,15 @@ use File::Spec;
 #--- args/flags ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose_b, $coords_b);
+my ($verbose_b, $coords_b, $database);
 my $prefix = "array";
 GetOptions(
-	"prefix=s" => \$prefix, 
-	"coords" => \$coords_b,
-	"verbose" => \$verbose_b,
-	"help|?" => \&pod2usage # Help
-	);
+	   "prefix=s" => \$prefix, 
+	   "coords" => \$coords_b,
+	   "database=s" => \$database, # unused
+	   "verbose" => \$verbose_b,
+	   "help|?" => \&pod2usage # Help
+	  );
 
 #--- I/O error ---#
 
@@ -109,7 +110,8 @@ sub write_array_files{
   
   foreach my $array (keys %$res_r){
     my $outname = join("_", $prefix, $array, $res_r->{$array}{'organism'});
-    $outname = join("_", $outname, $res_r->{$array}{'start'}, $res_r->{$array}{'end'})
+    $outname = join("_", $outname, $res_r->{$array}{'start'}, 
+		    $res_r->{$array}{'end'})
       if $coords_b;
     
     open OUT, ">$outname.txt" or die $!;

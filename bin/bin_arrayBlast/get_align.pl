@@ -193,7 +193,7 @@ use CLdb::utilities qw/ file_exists
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose);
+my ($verbose, $database);
 my $database_file;
 my $outfmt;
 my ($array, $crDNA_ori);
@@ -210,6 +210,7 @@ GetOptions(
            "taxon_name=s{,}" => \@taxon_name,	   
 	   "query=s" => \$query,
 	   "evalue=f" => \$evalue_cut,
+	   "database=s" => \$database, #unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

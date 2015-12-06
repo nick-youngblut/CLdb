@@ -87,12 +87,13 @@ use File::Spec;
 ### args/flags
 #pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $replace, $drop_all);
+my ($verbose, $replace, $drop_all, $database);
 my @tables = ("leaders", "genes");
 GetOptions(
 	   "replace" => \$replace,
 	   "tables=s{,}" => \@tables,
 	   "drop" => \$drop_all,
+	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

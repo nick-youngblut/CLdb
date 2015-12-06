@@ -142,7 +142,7 @@ sub call_subcommand{
   my $sql = shift;               # sql for subcommand (-q)
   my $database = shift;          # database for subcommand (-database)
   
-  # check exists
+  # check that subcommand exists
   (my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
   $subcmd = File::Spec->join($bindir, $subcmd);  
 
@@ -158,7 +158,7 @@ sub call_subcommand{
   else{
     $subcmd = join(" ", $subcmd, "-database $database") if $database;
     $subcmd = join(" ", $subcmd, "-q \"$sql\"") if $sql;
-    $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);
+    $subcmd = join(" ", $subcmd, @$argv_r[1..$#$argv_r]);    
     print `$subcmd`;
   }
 }
