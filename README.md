@@ -90,7 +90,7 @@ Example command-subcommand: `CLdb -- makeDB -h`
 
 ### Doc
 
-* See the Jupyter notebooks in [./doc/](./doc/examples/Setup.ipynb)
+* See the Jupyter notebooks in [./doc/](./doc/Setup.ipynb)
 
 
 ### Wiki
