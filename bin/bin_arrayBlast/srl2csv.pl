@@ -232,7 +232,9 @@ use CLdb::arrayBlast::sereal qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $keep_path, $database);
-my $outfmt = join(',', qw/6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore/); 
+my $outfmt = join(',', qw/6 qseqid sseqid pident length 
+			  mismatch gapopen qstart qend 
+			  sstart send evalue bitscore/); 
 GetOptions(
 	   "outfmt=s" => \$outfmt,
 	   "path" => \$keep_path,
@@ -245,8 +247,11 @@ GetOptions(
 #--- I/O error & defaults ---#
 die "ERROR: provide '-outfmt'\n"
   unless defined $outfmt;
+print STDERR "WARNING: no commas found in -outfmt!\n"
+  unless $outfmt =~ /,/;
 my $fields_r = parse_outfmt($outfmt); 
 classify_fields($fields_r); 
+
 
 #--- MAIN ---#
 # loading serealized blast output

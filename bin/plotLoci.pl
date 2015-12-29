@@ -110,6 +110,9 @@ sub call_subcommand{
     die "ERROR: '$subcmd' is not executable.\n"
   }
 
+  # adding quotes to any args w/ spaces
+  @$argv_r = map{/ / ? join('', '"', $_, '"') : $_} @$argv_r;
+
   # calling subcommand
   ## perl
   if(grep(/\.pl$/i, $subcmd)){

@@ -34,6 +34,10 @@ NOTE: The sql statement must go in SINGLE quotes!
 
 Config file (if not ~/.CLdb)
 
+=item --config-params
+
+List params set by config
+
 =item -v        Verbose output
 
 =item -h        This help message
@@ -102,12 +106,14 @@ use File::Spec;
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
-my ($verbose, $listSubcmds, $getPerlDoc, $sql, $config);
+my ($verbose, $listSubcmds, $getPerlDoc, 
+    $sql, $config, $config_params);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
 	    "--sql=s" => \$sql,
 	    "--config=s" => \$config,
+	    "--config-params" => \$config_params,
 	    "--verbose" => \$verbose,
 	    "-help|?" => \&pod2usage
 	   );
@@ -115,6 +121,10 @@ GetOptions (
 
 #-- intial assertions/defaults --#
 my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin');
+
+# config 
+my $database = CLdb_path($config);
+list_config_params({DATABASE => $database}) if $config_params;
 
 # check that script exists 
 my $scripts_r = list_scripts($bindir, $listSubcmds);
@@ -127,11 +137,10 @@ if (! grep(/^$subcmd(\.pl)*$/, @$scripts_r)){
 # sql
 $sql = check_sql($sql);
 
-# config 
-my $database = CLdb_path($config);
 
 #--- MAIN ---#
 call_subcommand($bindir, \@ARGV, $getPerlDoc, $sql, $database);
+
 
 
 #--- subroutines ---#
@@ -149,6 +158,9 @@ sub call_subcommand{
   unless (can_run($subcmd)){
     die "ERROR: '$subcmd' is not executable.\n"
   }
+
+  # adding quotes to any args w/ spaces
+  @$argv_r = map{/ / ? join('', '"', $_, '"') : $_} @$argv_r;
 
   # perldoc
   if ($getPerlDoc){
@@ -230,4 +242,16 @@ sub _parse_config{
   print STDERR $msg unless $file_path;
 
   return $file_path;
+}
+
+
+sub list_config_params{
+  my $params_r = shift;
+ 
+  print STDERR "#-- Config params --#\n";
+  while (my ($k,$v) = each %$params_r){
+    print STDERR "$k = $v\n";
+  }
+ 
+  exit;
 }

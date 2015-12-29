@@ -99,7 +99,6 @@ sub call_subcommand{
   my $argv_r = shift or die $!;
   my $database = shift;
   my $getPerlDoc = shift;
-
   
   # check exists
   (my $subcmd = $argv_r->[0]) =~ s/(\.pl)*$/.pl/i;
@@ -108,6 +107,9 @@ sub call_subcommand{
   unless (can_run($subcmd)){
     die "ERROR: '$subcmd' is not executable.\n"
   }
+
+  # adding quotes to any args w/ spaces
+  @$argv_r = map{/ / ? join('', '"', $_, '"') : $_} @$argv_r;
 
 
   # calling subcommand
