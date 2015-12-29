@@ -3,9 +3,10 @@ CLdb (CRISPR Loci Database)
 
 CLdb is toolset for organizing and analyzing large amounts of CRISPR data.
 
-Existing webtools are easy but suffer from some limitatios:
+Existing webtools are fairly easy to use but suffer from some limitatios:
 
-* They can require A LOT of tedious clicking for large datasets.
+* They can require A LOT of tedious clicking/typing for large datasets.
+  * ie., they don't SCALE well.
 * They are not very flexible.
  * Adding the tools to existing analysis workflows can be challenging.
  * For instance, it is usually hard to incorporate such tools into an IPython
@@ -14,11 +15,7 @@ notebook unless the webtool has a good API.
  * Lack of tranparency and reproducibility are a major issue in bioinformatics.
 
 
-__WARNING: This project is currently under heavy development and may change
-dramatically in the future.__
-
-
-## Major Features
+## Major Features of CLdb
 
 * Easy spacer Blasting
  * Filter out spacer blast hits to other CRISPR arrays
@@ -54,15 +51,23 @@ dramatically in the future.__
 
 __NOTE:__ Currently, only *nix systems are supported.
 
+
+### Clone the repo
+
 ~~~
 git clone https://github.com/nyoungb2/CLdb.git
 cd CLdb
+~~~
+
+### Add CLdb to your PATH 
+
+~~~
 echo 'source '`pwd`'/CLdb.sourceMe' >> ~/.profile
 source ~/.profile
 ~~~
 
 'CLdb' and 'CLdb_perldoc' should now be in your $PATH.
-See [this link](http://kb.iu.edu/data/acar.html) for more info
+See [this](http://kb.iu.edu/data/acar.html) for more info
 on the $PATH variable.
 Also, bash command line completion should now be set up (see below).
 
@@ -78,25 +83,21 @@ or sub-subcommands of CLdb. Subcommands will be listed
 upon double-tabbing after '--' For example `CLdb -- <tab><tab>`
 will bring up all of the CLdb subcommands.
 
+Example command-subcommand: `CLdb -- makeDB -h`
+
 
 ## Documentation
 
-__WARNING: the documentation is currently very sparce and needes updating.__
+### Doc
+
+* See the Jupyter notebooks in [./doc/](./doc/examples/Setup.ipynb)
 
 
 ### Wiki
 
-See the [wiki](https://github.com/nyoungb2/CLdb/wiki).
+**WARNING: this is very out-of-date**
 
-
-### Examples
-
-I've started compiling examples as IPython Notebooks
-in the ./examples/ directory. 
-
-Example notebooks on nbviewer:
-
-* [E. coli](http://nbviewer.ipython.org/github/nyoungb2/CLdb/tree/master/examples/ecoli_ipynb/) 
+* See the [wiki](https://github.com/nyoungb2/CLdb/wiki).
 
 
 ## ISSUES/CONTACT
@@ -108,7 +109,7 @@ Please provide it via [Issues](https://github.com/nyoungb2/CLdb/issues) on GitHu
 
 ## LICENSE AND COPYRIGHT
 
-Copyright (C) 2013 Nick Youngblut
+Copyright (C) 2015 Nick Youngblut
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
