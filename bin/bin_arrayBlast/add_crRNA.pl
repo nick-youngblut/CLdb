@@ -145,7 +145,8 @@ my $spacerIDs_r = get_query_IDs($spacer_r);
 $spacerIDs_r = detectClusteredSpacers($spacerIDs_r);
 
 # querying CLdb for info on spacer start-end & genome_file
-print STDERR "Getting info from CLdb on each blast query spacer...\n" unless $verbose;
+print STDERR "Getting info from CLdb on each blast query spacer...\n" 
+  unless $verbose;
 my %info;
 ## single spacers
 if( $spacerIDs_r->{single} ){
@@ -167,13 +168,13 @@ print STDERR "Getting spacer regions from each genome...\n";
 my $byQuery_r = getSpacerRegion(
 		CLdb => \%info, 
 		CLdb_HOME => $CLdb_HOME, 
-		extension => $ext );
+		extension => $ext);
 
 # adding crRNA info to *srl data structure
 addcrDNAtoBlast($spacer_r, $byQuery_r);
 
 # encoding
-print encode_sereal( $spacer_r );
+print encode_sereal($spacer_r);
 
 # disconnecting from CLdb
 $dbh->disconnect;

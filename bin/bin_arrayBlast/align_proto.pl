@@ -94,7 +94,7 @@ pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 my ($verbose, $database);
 GetOptions(
-	   "database=s" => \$databse, #unused
+	   "database=s" => \$database, #unused
 	   "verbose" => \$verbose,
 	   "help|?" => \&pod2usage # Help
 	   );

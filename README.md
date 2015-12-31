@@ -85,13 +85,34 @@ will bring up all of the CLdb subcommands.
 
 Example command-subcommand: `CLdb -- makeDB -h`
 
+Some subcommands (eg., `arrayBlast`) have their own subcommands 
+(sub-subcommands). Tab completion should work similarily.
+
+Example command-sub-subcommand: `CLdb -- arrayBlast -- run -h`
+
+* Remember: tab completion for (sub)subcommands will only work after
+the "--". So, with sub-subcommands: `CLdb -- arrayBlast -- <tab><tab>`
+
 
 ## Documentation
+
+### Command docs
+
+* Help for CLdb command:
+  * `CLdb -h`
+* Help for CLdb subcommands:
+  * `CLdb -- subcommand -h` **OR** `CLdb --perldoc -- subcommand`
+  * Example: 
+    * `CLdb --perldoc -- array2fasta`
+* Help for CLdb subsubcommands:
+  * `CLdb -- subcommand -- subsubcommand -h` **OR** `CLdb -- subcommand --perldoc -- subsubcommand`
+    * NOTE: `--perldoc` flag used after the `subcommand`
+  * Example: 
+    * `CLdb -- arrayBlast --perldoc -- run`
 
 ### Doc
 
 * See the Jupyter notebooks in [./doc/](./doc/Setup.ipynb)
-
 
 ### Wiki
 

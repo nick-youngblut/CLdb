@@ -81,8 +81,7 @@ sub get_query_IDs{
 	confess "Could not find 'BlastOutput_db' for run $run\n";
 
     # each iteration
-    foreach my $iter ( @{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}} ){
-
+    foreach my $iter (@{$spacer_r->{$run}{'BlastOutput_iterations'}{'Iteration'}}){
       next unless exists $iter->{'Iteration_hits'} and 
 	$iter->{'Iteration_hits'} !~ /^\s*$/;
       # query
@@ -130,11 +129,11 @@ sub detectClusteredSpacers{
   my $spacerIDs_r = shift || croak "Provide an array_ref of spacer IDs";
 
   my %tmp;
-  foreach my $spacerID ( @{$spacerIDs_r} ){
-    if( $spacerID =~ /^[^|]+\|spacer\|\d+\|NA\|[0-9-]+$/ ){  # single
+  foreach my $spacerID (@{$spacerIDs_r}){
+    if ($spacerID =~ /^[^|]+\|spacer\|\d+\|NA\|(NA|[0-9-]+)$/){  # single
       push @{$tmp{single}}, $spacerID;
     }
-    elsif( $spacerID =~ /^NA\|spacer\|NA\|\d+\|[0-9-]+$/){  # cluster
+    elsif ($spacerID =~ /^NA\|spacer\|NA\|\d+\|[0-9-]+$/){  # cluster
       push @{$tmp{cluster}}, $spacerID;
     }
     else{
