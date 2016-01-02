@@ -64,7 +64,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc make_dna_segs
+CLdb -- plotLoci --perldoc -- make_dna_segs
 
 =head1 DESCRIPTION
 

@@ -52,7 +52,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc getRegionSequence.pl
+CLdb --perldoc -- getRegionSequence.pl
 
 =head1 DESCRIPTION
 

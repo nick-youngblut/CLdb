@@ -45,7 +45,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc genbank_get_region.pl
+CLdb --perldoc -- genbank_get_region.pl
 
 =head1 DESCRIPTION
 

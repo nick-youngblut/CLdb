@@ -68,7 +68,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc loci2GFF.pl
+CLdb --perldoc -- loci2GFF.pl
 
 =head1 DESCRIPTION
 

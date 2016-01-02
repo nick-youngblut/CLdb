@@ -62,7 +62,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc run.pl
+CLdb -- arrayBlast --perldoc -- run.pl
 
 =head1 DESCRIPTION
 

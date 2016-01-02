@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-CLdb_perldoc xml2srl
+CLdb -- arrayBlast --perldoc -- xml2srl
 
 =head1 DESCRIPTION
 

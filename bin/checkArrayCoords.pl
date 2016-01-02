@@ -40,7 +40,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc checkArrayCoords.pl
+CLdb --perldoc -- checkArrayCoords.pl
 
 =head1 DESCRIPTION
 

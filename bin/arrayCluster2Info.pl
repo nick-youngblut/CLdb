@@ -52,7 +52,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc arrayCluster2Info.pl
+CLdb --perldoc -- arrayCluster2Info.pl
 
 =head1 DESCRIPTION
 

@@ -53,7 +53,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc DRconsensus2fasta.pl
+CLdb --perldoc -- DRconsensus2fasta.pl
 
 =head1 DESCRIPTION
 

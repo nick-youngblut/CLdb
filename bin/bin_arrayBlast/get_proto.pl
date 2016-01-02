@@ -32,7 +32,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc get_proto
+CLdb -- arrayBlast --perldoc -- get_proto
 
 =head1 DESCRIPTION
 

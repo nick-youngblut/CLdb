@@ -66,7 +66,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc get_align
+CLdb -- arrayBlast --perldoc -- get_align
 
 =head1 DESCRIPTION
 

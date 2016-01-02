@@ -41,7 +41,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc spacersSharedByGroup.pl
+CLdb --perldoc -- spacersSharedByGroup.pl
 
 =head1 DESCRIPTION
 

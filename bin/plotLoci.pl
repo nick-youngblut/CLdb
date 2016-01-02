@@ -32,7 +32,7 @@ Get perldoc of subcommand.
 
 =head2 For more information:
 
-CLdb_perldoc plotLoci
+CLdb --perldoc -- plotLoci
 
 =head1 DESCRIPTION
 

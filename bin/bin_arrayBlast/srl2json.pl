@@ -26,7 +26,7 @@ NONE
 
 =head2 For more information:
 
-CLdb_perldoc srl2json
+CLdb -- arrayBlast --perldoc -- srl2json
 
 =head1 DESCRIPTION
 

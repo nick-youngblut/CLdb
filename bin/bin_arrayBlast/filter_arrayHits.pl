@@ -55,7 +55,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc filter_arrayHits
+CLdb -- arrayBlast --perldoc -- filter_arrayHits
 
 =head1 DESCRIPTION
 

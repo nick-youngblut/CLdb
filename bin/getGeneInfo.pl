@@ -44,7 +44,7 @@ ITEP cluster runID (for selecting cluster IDs).
 
 =head2 For more information:
 
-CLdb_perldoc getGeneInfo.pl
+CLdb --perldoc -- getGeneInfo.pl
 
 =head1 DESCRIPTION
 

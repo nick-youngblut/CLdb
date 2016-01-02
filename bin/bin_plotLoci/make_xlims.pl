@@ -56,7 +56,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc make_xlims
+CLdb -- plotLoci --perldoc -- make_xlims
 
 =head1 DESCRIPTION
 

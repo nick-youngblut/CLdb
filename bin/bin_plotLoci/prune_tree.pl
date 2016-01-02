@@ -50,7 +50,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc prune_tree
+CLdb -- plotLoci --perldoc -- prune_tree
 
 =head1 DESCRIPTION
 

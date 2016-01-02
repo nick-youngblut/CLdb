@@ -32,7 +32,7 @@ Get perldoc of subcommand.
 
 =head2 For more information:
 
-CLdb_perldoc arrayBlast
+CLdb --perldoc -- arrayBlast
 
 =head1 DESCRIPTION
 

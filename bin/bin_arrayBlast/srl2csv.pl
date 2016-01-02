@@ -42,7 +42,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc srl2csv
+CLdb -- arrayBlast --perldoc -- srl2csv
 
 =head1 DESCRIPTION
 

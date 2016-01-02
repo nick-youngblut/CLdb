@@ -56,7 +56,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc getSpacerPairwiseBlast.pl
+CLdb --perldoc -- getSpacerPairwiseBlast.pl
 
 =head1 DESCRIPTION
 

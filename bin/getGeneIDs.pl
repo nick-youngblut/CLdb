@@ -48,7 +48,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc getGeneIDs.pl
+CLdb --perldoc -- getGeneIDs.pl
 
 =head1 DESCRIPTION
 

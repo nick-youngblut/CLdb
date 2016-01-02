@@ -56,7 +56,7 @@ Get array elements at the specified sequence identity cutoff. [1]
 
 =head2 For more information:
 
-CLdb_perldoc array2fasta.pl
+CLdb --perldoc -- array2fasta
 
 =head1 DESCRIPTION
 

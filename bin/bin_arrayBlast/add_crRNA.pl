@@ -40,7 +40,7 @@ This help message.
 
 =head2 For more information:
 
-CLdb_perldoc add_crRNA
+CLdb -- arrayBlast --perldoc -- add_crRNA
 
 =head1 DESCRIPTION
 

@@ -54,7 +54,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc make_comparison
+CLdb -- plotLoci --perldoc -- make_comparison
 
 =head1 DESCRIPTION
 

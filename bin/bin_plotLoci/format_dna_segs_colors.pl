@@ -54,7 +54,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc format_dna_segs_colors
+CLdb -- plotLoci --perldoc -- format_dna_segs_colors
 
 =head1 DESCRIPTION
 

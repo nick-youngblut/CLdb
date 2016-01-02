@@ -78,7 +78,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc getLeaderRegions.pl
+CLdb --perldoc -- getLeaderRegions.pl
 
 =head1 DESCRIPTION
 

@@ -48,7 +48,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc leader2fasta.pl
+CLdb --perldoc -- leader2fasta.pl
 
 =head1 DESCRIPTION
 

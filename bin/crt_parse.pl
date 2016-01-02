@@ -40,7 +40,7 @@ Verbose output
 
 =head2 For more information:
 
-CLdb_perldoc crt_parse.pl
+CLdb --perldoc -- crt_parse.pl
 
 =head1 DESCRIPTION
 

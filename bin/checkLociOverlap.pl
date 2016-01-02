@@ -36,7 +36,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc checkLociOverlap.pl
+CLdb --perldoc -- checkLociOverlap.pl
 
 =head1 DESCRIPTION
 
