@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-Cldb_loadGenes.pl -- adding/updating gene table in CRISPR database
+loadGenes.pl -- adding/updating gene table in CRISPR database
 
 =head1 SYNOPSIS
 
-Cldb_loadGenes.pl [flags] < gene_table.txt
+loadGenes.pl [flags] < gene_table.txt
 
 =head2 Required flags
 
@@ -36,7 +36,7 @@ This help message
 
 =head2 For more information:
 
-CLdb_perldoc Cldb_loadGenes.pl
+CLdb_perldoc loadGenes.pl
 
 =head1 DESCRIPTION
 

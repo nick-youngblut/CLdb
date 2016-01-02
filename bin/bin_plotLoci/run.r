@@ -209,14 +209,20 @@ p.dim <- set.plot.size(xlims, dna_segs, height.scale=opt$height, width.scale=opt
 # plotting #
 ## comment out any portions that were not provided (e.g. 'tree' or 'compare')
 #quartz(width=p.dim[["width"]], height=p.dim[["height"]])		# plot size
+if( ! is.na(opt$outname) ){
+    outname = opt$outname
+} else {
+    outname = ext.edit(opt$dna_segs, "")
+}
+
 if( opt$format == 'pdf' ){
-  outfile <- ext.edit(opt$dna_segs, '.pdf')
+  outfile <- paste0(outname, '.pdf')
   pdf(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
 } else if( opt$format == 'png' ){
-  outfile <- ext.edit(opt$dna_segs, '.png')
+  outfile <- paste0(outname, '.png')
   png(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]], res=opt$dpi, units='in')
 } else if( opt$format == 'svg' ){
-  outfile <- ext.edit(opt$dna_segs, '.svg')
+  outfile <- paste0(outname, '.svg')
   svg(file=outfile, width=p.dim[["width"]], height=p.dim[["height"]])
 } else {
   stop("--format argument not recognized")
@@ -235,4 +241,4 @@ dev.off()
 		
 		
 # status
-message("loci plot written")
+message('Loci plot written: "', outname, '"')

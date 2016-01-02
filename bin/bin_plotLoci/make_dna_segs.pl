@@ -167,7 +167,8 @@ if(@ITEP_sqlite){
     unless -e $ITEP_sqlite[0];
 }
 else{
-  print STDERR "WARNING: no ITEP db provided! All genes will have col value of '1'!\n";
+  print STDERR "WARNING: no ITEP db provided!" .
+    " All genes will have col value of '1'!\n";
 }
 
 
@@ -176,8 +177,9 @@ else{
 my $dbh = connect2db($sqlite);
 
 # if cluster cutoff < 1; check for spacer_hclust entries #
-die "ERROR: no entries in spacer_cluster table! Cannnot use a spacer clustering cutoff < 1!\n"
-	unless n_entries($dbh, "spacer_clusters");
+die "ERROR: no entries in spacer_cluster table!",
+  " Cannnot use a spacer clustering cutoff < 1!\n"
+  unless n_entries($dbh, "spacer_clusters");
 
 # connect to ITEP #
 my $dbh_ITEP;
@@ -200,22 +202,37 @@ my $subtypes_r = get_subtypes($dbh, $join_sql, $extra_query);
 # getting spacer, DR, leader, gene from CLdb #
 my %dna_segs; 
 if( grep /^spacers*$/i, @feats ){
-  my $spacer_clusters_r = get_spacer_info($dbh, \%dna_segs,$join_sql, $extra_query, $spacer_cutoff);
+  my $spacer_clusters_r = get_spacer_info($dbh, 
+					  \%dna_segs,
+					  $join_sql, 
+					  $extra_query, 
+					  $spacer_cutoff);
 }
 if( grep /^(DRs*|direct.+repeats*)/i, @feats ){
-  get_DR_info($dbh, \%dna_segs, $join_sql, $extra_query);
+  get_DR_info($dbh, 
+	      \%dna_segs, 
+	      $join_sql, 
+	      $extra_query);
 }
 if( grep /^genes*$/, @feats ){
-  get_gene_info($dbh, \%dna_segs, $join_sql, $extra_query);
+  get_gene_info($dbh, 
+		\%dna_segs, 
+		$join_sql, 
+		$extra_query);
 }
 if( grep /^leaders*$/i, @feats){
-  get_leader_info($dbh, \%dna_segs, $join_sql, $extra_query);
+  get_leader_info($dbh, 
+		  \%dna_segs, 
+		  $join_sql, 
+		  $extra_query);
 }
 
 # getting gene cluster info if ITEP provided #
 if (@ITEP_sqlite){
-  my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, $ITEP_sqlite[0], 
-					     $ITEP_sqlite[1], \%dna_segs);
+  my $gene_cluster_r = get_gene_cluster_info($dbh_ITEP, 
+					     $ITEP_sqlite[0], 
+					     $ITEP_sqlite[1], 
+					     \%dna_segs);
 }
 else{	# ITEP note provided: gene cluster = 1 for all
   gene_cluster_same(\%dna_segs);
@@ -226,7 +243,10 @@ else{	# ITEP note provided: gene cluster = 1 for all
 my ($multi_loci, $multi_subtype)  = check_multi(\%dna_segs, $subtypes_r);
 
 ## adding loci & subtypes to DNA_segs names ##
-my $dna_segs_r = edit_dna_segs_taxon_name(\%dna_segs, $subtypes_r, $multi_loci, $multi_subtype);
+my $dna_segs_r = edit_dna_segs_taxon_name(\%dna_segs, 
+					  $subtypes_r, 
+					  $multi_loci, 
+					  $multi_subtype);
 
 # writing table #
 write_dna_segs(\%dna_segs, $subtypes_r);
@@ -245,13 +265,15 @@ sub flip_genes_on_neg_strand{
   
   foreach my $taxon (keys %$dna_segs_r){
     foreach my $locus_id (keys %{$dna_segs_r->{$taxon}}){
-      next unless exists $dna_segs_r->{$taxon}{$locus_id}{'gene'};	# only genes 
+      # only genes
+      next unless exists $dna_segs_r->{$taxon}{$locus_id}{'gene'};	 
       next unless exists $strand_r->{$locus_id} && $strand_r->{$locus_id} == -1;
       
       # flipping s-e for all genes on neg CAS strand #
       foreach my $peg (keys %{$dna_segs_r->{$taxon}{$locus_id}{'gene'}}){
+	# flipping all gene features
 	my $x_r = $dna_segs_r->{$taxon}{$locus_id}{'gene'}{$peg};
-	($$x_r[0], $$x_r[1]) = ($$x_r[1], $$x_r[0]); 		# flipping all gene features
+	($$x_r[0], $$x_r[1]) = ($$x_r[1], $$x_r[0]); 		
 	#print Dumper "flipped: $taxon, $locus_id, $peg";
       }	
     }
@@ -274,15 +296,15 @@ sub get_cas_strand{
   my %strand;
   foreach my $locus_id (@loci){
     $sth->bind_param(1, $locus_id);
-    $sth->execute;
+    $sth->execute() or confess $dbh->err;
     my $ret =$sth->fetchrow_arrayref();	
     die " ERROR: no CAS_start, CAS_end for locus: '$locus_id'!\n"
       unless $$ret[0];
     
-    if($$ret[0] <= $$ret[1]){		# start < end; + strand
+    if($$ret[0] <= $$ret[1]){	# start < end; + strand
       $strand{$locus_id} = 1;
     }
-    else{	# end > start; - strand
+    else{	                # end > start; - strand
       $strand{$locus_id} = -1;
     }
   }
@@ -335,7 +357,7 @@ sub write_dna_segs{
 		   $id,
 		   $start,
 		   $end,
-		   1,				# strand
+		   1,			# strand
 		   $col,
 		   1, 0.5, 8, 1,	# plot formatting
 		   "blocks", 		# end of required columns
@@ -360,8 +382,8 @@ sub write_dna_segs{
 		   $id,
 		   $start,
 		   $end,
-		   1, 				# strand 
-		   1,				# col
+		   1, 		        # strand 
+		   1,			# col
 		   1, 0.1, 8, 1,	# plot formatting
 		   "blocks", 		# end of required columns
 		   $taxon_name,
@@ -385,8 +407,8 @@ sub write_dna_segs{
 		   $id,			
 		   $start,
 		   $end,
-		   1, 				# strand 
-		   1,				# col
+		   1, 		        # strand 
+		   1,			# col
 		   1, 0.1, 8, 1,	# plot formatting
 		   "blocks", 		# end of required columns
 		   $taxon_name,
@@ -445,71 +467,74 @@ sub flip_se{
 }
 
 sub edit_dna_segs_taxon_name{
-    my ($dna_segs_r, $header_r, $multi_loci, $multi_subtype) = @_;
-   
-	foreach my $taxon_name (keys %$dna_segs_r){
-    	foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
-        	# editing taxon_name in row #
-        	my $dna_segs_id = $taxon_name;
-        	$dna_segs_id = join("__", $taxon_name, $locus_id)
-            	            if $multi_loci;
-            $dna_segs_id = join("__", $dna_segs_id, $dna_segs_r->{$taxon_name}{$locus_id}{"subtype"})
-                           if $multi_subtype;
-        	
-        	foreach my $cat (keys %{$dna_segs_r->{$taxon_name}{$locus_id}}){  
-                next if $cat eq 'subtype';
-                foreach my $id (keys %{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}}){  				
-					push(@{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}{$id}}, $dna_segs_id);
-					}                               
-				}
-        	}
-        }
-       
-       	#print Dumper $dna_segs_r; exit;
-	}
+  my ($dna_segs_r, $header_r, $multi_loci, $multi_subtype) = @_;
+  
+  foreach my $taxon_name (keys %$dna_segs_r){
+    foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}}){
+      # editing taxon_name in row #
+      my $dna_segs_id = $taxon_name;
+      $dna_segs_id = join("__", $taxon_name, 
+			  $locus_id)
+	if $multi_loci;
+      $dna_segs_id = join("__", $dna_segs_id, 
+			  $dna_segs_r->{$taxon_name}{$locus_id}{"subtype"})
+	if $multi_subtype;
+      
+      foreach my $cat (keys %{$dna_segs_r->{$taxon_name}{$locus_id}}){  
+	next if $cat eq 'subtype';
+	foreach my $id (keys %{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}}){
+	  push(@{$dna_segs_r->{$taxon_name}{$locus_id}{$cat}{$id}}, $dna_segs_id);
+	}                               
+      }
+    }
+  }
+  
+  #print Dumper $dna_segs_r; exit;
+}
 
 sub check_multi{
-# checking for multiple entries per taxon #
-	my ($dna_segs_r, $subtypes_r) = @_;
-	
-	#print Dumper $subtypes_r; exit;
-	
-	my $multi_loci = 0;				# mutliple loci per taxon_name
-	my $multi_subtype = 0;			# multiple subtypes total 
-	my %subtype_sum; 
-	foreach my $taxon_name (keys %$dna_segs_r){
-		$multi_loci = 1 if scalar keys %{$dna_segs_r->{$taxon_name}} > 1;
-			
-		foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}} ){
-			# sanity check #
-			die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
-				unless exists $subtypes_r->{$taxon_name}{$locus_id};
-			
-			$subtype_sum{$subtypes_r->{$taxon_name}{$locus_id}}++;
-			
-			$dna_segs_r->{$taxon_name}{$locus_id}{'subtype'} = $subtypes_r->{$taxon_name}{$locus_id};
-			}
-		}
-	$multi_subtype = 1 if scalar keys %subtype_sum > 1;
+  # checking for multiple entries per taxon #
+  my ($dna_segs_r, $subtypes_r) = @_;  
 
-	# status #
-	print STDERR "...Found multiple loci for 1 or more taxa. Adding loci_ids to names in dna_segs table!\n"
-		if $multi_loci;
-	print STDERR "...Found multiple subtypes. Adding subtype to names in dna_segs table!\n"
-		if $multi_subtype;
-		
-	return $multi_loci, $multi_subtype;
-	}
+  my $multi_loci = 0;				# mutliple loci per taxon_name
+  my $multi_subtype = 0;			# multiple subtypes total 
+  my %subtype_sum; 
+  foreach my $taxon_name (keys %$dna_segs_r){
+    $multi_loci = 1 if scalar keys %{$dna_segs_r->{$taxon_name}} > 1;
+    
+    foreach my $locus_id (keys %{$dna_segs_r->{$taxon_name}} ){
+      # sanity check #
+      die " ERROR: cannot find subtype for $taxon_name -> $locus_id!\n"
+	unless exists $subtypes_r->{$taxon_name}{$locus_id};
+      
+      $subtype_sum{$subtypes_r->{$taxon_name}{$locus_id}}++;
+      
+      $dna_segs_r->{$taxon_name}{$locus_id}{'subtype'} = 
+	$subtypes_r->{$taxon_name}{$locus_id};
+    }
+  }
+  $multi_subtype = 1 if scalar keys %subtype_sum > 1;
+  
+  # status #
+  print STDERR "...Found multiple loci for 1 or more taxa.",
+    " Adding loci_ids to names in dna_segs table!\n"
+    if $multi_loci;
+  print STDERR "...Found multiple subtypes.",  
+    "Adding subtype to names in dna_segs table!\n"
+      if $multi_subtype;
+  
+  return $multi_loci, $multi_subtype;
+}
 
 sub get_strand{
-# start > end? #
+  # start > end? #
   my ($start, $end) = @_;
   if($start <= $end){ return 1; }		# + strand
   else{ return -1; }					# - strand
 }
 
 sub gene_cluster_same{
-# gene cluster = 1 for all if ITEP not provided #
+  # gene cluster = 1 for all if ITEP not provided #
   my ($dna_segs_r) = @_;
   
   foreach my $taxon_id (keys %$dna_segs_r){
@@ -522,7 +547,7 @@ sub gene_cluster_same{
 }
 
 sub get_gene_cluster_info{
-# getting gene cluster info from ITEP #
+  # getting gene cluster info from ITEP #
   my ($dbh_ITEP, $ITEP_file, $runID, $dna_segs_r) = @_;
   
   my $query = "
@@ -532,7 +557,7 @@ WHERE runid = ?
 AND geneid = ?
 ";
   $query =~ s/\n|\r/ /g;
-	
+  
   my $sth = $dbh_ITEP->prepare($query);
   
   my %gene_clusters;
@@ -541,10 +566,11 @@ AND geneid = ?
       foreach my $gene_id (keys %{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}}){
 	$sth->bind_param(1, $runID);
 	$sth->bind_param(2, $gene_id);
-	$sth->execute;
+	$sth->execute() or confess $dbh->err;
 	my $ret =$sth->fetchrow_arrayref();	
-	die " ERROR: no matching entries for ITEP query!\n"
-	  unless $$ret[0];
+	die " ERROR: no matching entries for ITEP query!\n",
+	  "  Query: '$query'\n"
+	    unless $$ret[0];
 	
 	push @{$dna_segs_r->{$taxon_id}{$locus_id}{"gene"}{$gene_id}}, $$ret[0];
 	
@@ -582,8 +608,8 @@ $extra_query
   
   # query db #
   my $ret = $dbh->selectall_arrayref($query);
-  die " ERROR: no matching entries for CAS gene query!\n"
-    unless $$ret[0];
+  die " ERROR: no matching entries for CAS gene query!\n",
+    "Query: '$query'" unless $$ret[0];
   
   # loading hash #
   foreach my $row (@$ret){
@@ -597,9 +623,9 @@ $extra_query
 sub get_leader_info{
 # getting leader info from CLdb (optional) #
 ## just using locus-ID for leader_ID
-	my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
-
-	my $query = "
+  my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
+  
+  my $query = "
 SELECT 
 loci.taxon_name,
 loci.locus_id, 
@@ -611,31 +637,31 @@ WHERE Loci.locus_id = leaders.locus_id
 $join_sql
 $extra_query
 ";
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-		
-	if($$ret[0]){
-		foreach my $row (@$ret){
-			$dna_segs_r->{$$row[0]}{$$row[1]}{"leader"}{$$row[2]} = [@$row[3..$#$row]];
-			}	
-		}
-	else{
-		warn "WARNING: no matching entries in leaders table! Leaders not added to dna_segs table!\n";
-		}
-
-	#print Dumper %$dna_segs_r; exit;
-	}
+  $query =~ s/\n|\r/ /g;
+  
+  # status #
+  print STDERR "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  
+  if($$ret[0]){
+    foreach my $row (@$ret){
+      $dna_segs_r->{$$row[0]}{$$row[1]}{"leader"}{$$row[2]} = [@$row[3..$#$row]];
+    }	
+  }
+  else{
+    print STDERR "WARNING: no matching entries in leaders table!",
+      " Leaders not added to dna_segs table!\n";
+  }  
+  #print Dumper %$dna_segs_r; exit;
+}
 
 sub get_DR_info{
-# getting direct repeat info from CLdb #
-	my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
-
-	my $query = "
+  # getting direct repeat info from CLdb #
+  my ($dbh, $dna_segs_r, $join_sql, $extra_query) = @_;
+  
+  my $query = "
 SELECT 
 loci.taxon_name,
 loci.locus_id, 
@@ -647,36 +673,36 @@ WHERE Loci.locus_id = DRs.locus_id
 $join_sql
 $extra_query
 ";
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries for DR query!\n"
-		unless $$ret[0];
-	
-	foreach my $row (@$ret){
-		$dna_segs_r->{$$row[0]}{$$row[1]}{"DR"}{$$row[2]} = [@$row[3..$#$row]];
-		}
-	
-	#print Dumper %$dna_segs_r; exit;
-	}	
+  $query =~ s/\n|\r/ /g;
+  
+  # status #
+  print STDERR "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries for DR query!\n"
+    unless $$ret[0];
+  
+  foreach my $row (@$ret){
+    $dna_segs_r->{$$row[0]}{$$row[1]}{"DR"}{$$row[2]} = [@$row[3..$#$row]];
+  }
+  
+  #print Dumper %$dna_segs_r; exit;
+}	
 
 sub get_spacer_info{
 # getting spacer info from CLdb #
-	my ($dbh, $dna_segs_r, $join_sql, $extra_query, $spacer_cutoff) = @_;
-	
-	# checking for spacer_clusters #
-	my $q = "SELECT count(*) FROM spacer_clusters";
-	my $chk = $dbh->selectall_arrayref($q);
-	die " ERROR! no entries in spacer_cluster table!  Run clusterArrayElements.pl prior to this script!\n"
-		unless @$chk;
-	
-	# query of spacers #
-	## strand-agnostic clusters ##
-	my $query = "
+  my ($dbh, $dna_segs_r, $join_sql, $extra_query, $spacer_cutoff) = @_;
+  
+  # checking for spacer_clusters #
+  my $q = "SELECT count(*) FROM spacer_clusters";
+  my $chk = $dbh->selectall_arrayref($q);
+  die " ERROR! no entries in spacer_cluster table!  Run clusterArrayElements.pl prior to this script!\n"
+    unless @$chk;
+  
+  # query of spacers #
+  ## strand-agnostic clusters ##
+  my $query = "
 SELECT 
 loci.taxon_name,
 loci.locus_id, 
@@ -693,41 +719,41 @@ $join_sql
 $extra_query
 ";
 
-	$query =~ s/\n|\r/ /g;
-	
-	# status #
-	warn "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries for spacer query!\n"
-		unless $$ret[0];
-	
-	my %spacer_clusters; 
-	foreach my $row (@$ret){
-		# sanity check #
-		## should only have 1 taxon_name->locus_id->spacer_id ##
-		die " ERROR: multiple entries for taxon_name->$$row[0], locus_id->$$row[1], spacer_id->$$row[2]!\n"
-			if exists $dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]};
-		
-		# converting clusterID to just cluster number #
-		$$row[5] =~ s/.+_//;
-		
-		# loading dna_segs_r #
-		$dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]} = [@$row[3..$#$row]];
-		$spacer_clusters{$$row[5]}++;			# unique clusters 
-		}
-	
-		#print Dumper %$dna_segs_r; exit;
-		#print Dumper \%spacer_clusters; exit;
-		#exit;
-	return \%spacer_clusters;
-	}
+  $query =~ s/\n|\r/ /g;
+  
+  # status #
+  warn "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries for spacer query!\n"
+    unless $$ret[0];
+  
+  my %spacer_clusters; 
+  foreach my $row (@$ret){
+    # sanity check #
+    ## should only have 1 taxon_name->locus_id->spacer_id ##
+    die " ERROR: multiple entries for taxon_name->$$row[0], locus_id->$$row[1], spacer_id->$$row[2]!\n"
+      if exists $dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]};
+    
+    # converting clusterID to just cluster number #
+    $$row[5] =~ s/.+_//;
+    
+    # loading dna_segs_r #
+    $dna_segs_r->{$$row[0]}{$$row[1]}{"spacer"}{$$row[2]} = [@$row[3..$#$row]];
+    $spacer_clusters{$$row[5]}++;			# unique clusters 
+  }
+  
+  #print Dumper %$dna_segs_r; exit;
+  #print Dumper \%spacer_clusters; exit;
+  #exit;
+  return \%spacer_clusters;
+}
 
 sub get_subtypes{
-	my ($dbh, $join_sql, $extra_query ) = @_;
-	
-	my $query = "
+  my ($dbh, $join_sql, $extra_query ) = @_;
+  
+  my $query = "
 SELECT 
 loci.taxon_name,
 loci.locus_id,
@@ -738,25 +764,26 @@ $join_sql
 $extra_query
 GROUP BY loci.locus_id
 ";
-	$query =~ s/\n|\r/ /g;
-
-	
-	# status #
-	print STDERR "$query\n" if $verbose;
-
-	# query db #
-	my $ret = $dbh->selectall_arrayref($query);
-	die " ERROR: no matching entries for subtype query!\n"
-		unless $$ret[0];
-	
-	my %subtypes; 
-	foreach my $row (@$ret){
-		$subtypes{$$row[0]}{$$row[1]} = $$row[2]; 		# taxon_name => locus_id => subtype
-		}
-	
-		#print Dumper %subtypes; exit;
-	return \%subtypes;
-	}
+  $query =~ s/\n|\r/ /g;
+  
+  
+  # status #
+  print STDERR "$query\n" if $verbose;
+  
+  # query db #
+  my $ret = $dbh->selectall_arrayref($query);
+  die " ERROR: no matching entries for subtype query!\n"
+    unless $$ret[0];
+  
+  my %subtypes; 
+  # taxon_name => locus_id => subtype
+  foreach my $row (@$ret){
+    $subtypes{$$row[0]}{$$row[1]} = $$row[2]; 		
+  }
+  
+  #print Dumper %subtypes; exit;
+  return \%subtypes;
+}
 
 
 

@@ -204,7 +204,8 @@ my $loci_tbl_r = fork_genbank_get_region($loci_se_r, $genbank_path, $fork);
 
 # determine if CDS are already in gene table #
 ## if exists & '-a', existing entry written ## 
-check_exists_in_gene_table($dbh, $loci_tbl_r, $all_genes, $conflicting) unless $existing; 
+check_exists_in_gene_table($dbh, $loci_tbl_r, $all_genes, $conflicting) 
+  unless $existing; 
 
 # determine if CDS are in operons #
 check_in_CAS($loci_se_r, $loci_tbl_r);
@@ -224,7 +225,8 @@ sub check_exists_in_gene_table{
   my ($dbh, $loci_tbl_r, $all_genes, $conflicting) = @_;
   
   # query gene table #
-  my $query = "SELECT Locus_ID,Gene_Start,Gene_End,Gene_ID,Gene_Alias,Gene_Length__AA,In_CAS from Genes";
+  my $query = "SELECT Locus_ID,Gene_Start,Gene_End,Gene_ID" .
+    ",Gene_Alias,Gene_Length__AA,In_CAS from Genes";
   my $genes_r = $dbh->selectall_arrayref($query);	
   
   # loading hash w/ entries: locus=>gene_id #
@@ -247,7 +249,7 @@ sub check_exists_in_gene_table{
       }
       
       # existing gene ID?
-      if(exists $exists{$locus}{$gene_id} ){		# existing entry for gene
+      if(exists $exists{$locus}{$gene_id} ){  # existing entry for gene
 	$status{'existing'}++;
 	
 	# writing just conflicting entries 
@@ -263,7 +265,7 @@ sub check_exists_in_gene_table{
 	    $loci_tbl_r->{$locus}{$feat} = $exists{$locus}{$gene_id};
 	    $status{'replacing'}++;
 	  }
-	  else{ $status{'keeping'}++; }		# keeping existing entries 
+	  else{ $status{'keeping'}++; }	     # keeping existing entries 
 	}
       }
       else{			# entry does not exists 
@@ -277,15 +279,21 @@ sub check_exists_in_gene_table{
   
   # status #
   print STDERR "\n### gene entry new/existing/conflicting report ###\n";
-  print STDERR "Number of already existing entries in CLdb: ", $status{'existing'}, "\n"
+  print STDERR "Number of already existing entries in CLdb: ", 
+    $status{'existing'}, "\n"
     if exists $status{'existing'};
-  print STDERR "Number of entries to be replaced (existing in CLdb but written to output table): ", $status{'replacing'}, "\n"
-    if exists $status{'replacing'};
-  print STDERR "Number of entries to keep as they were (existing in CLdb & NOT written to output table): ", $status{'keeping'}, "\n"
-    if exists $status{'keeping'};
-  print STDERR "Number of new entries (no in CLdb & written to output table): ", $status{'adding'}, "\n"
-    if exists $status{'adding'};
-  print STDERR "###------------------------------------------###\n\n";
+  print STDERR "Number of entries to be replaced",
+    " (existing in CLdb but written to output table): ", 
+      $status{'replacing'}, "\n"
+	if exists $status{'replacing'};
+  print STDERR "Number of entries to keep as they were",
+    " (existing in CLdb & NOT written to output table): ", 
+      $status{'keeping'}, "\n"
+	if exists $status{'keeping'};
+  print STDERR "Number of new entries (no in CLdb",
+    " & written to output table): ", $status{'adding'}, "\n"
+      if exists $status{'adding'};
+  print STDERR "###------------------------------------###\n\n";
   #print Dumper %$loci_tbl_r; exit;
 }
 
@@ -295,7 +303,8 @@ sub write_loci_tbl{
   my ($loci_tbl_r) = @_;
   
   # header
-  print join("\t", qw/Locus_ID Gene_Id Gene_start Gene_end Gene_length__AA In_CAS Gene_Alias Sequence/), "\n";
+  print join("\t", qw/Locus_ID Gene_Id Gene_start Gene_end 
+		      Gene_length__AA In_CAS Gene_Alias Sequence/), "\n";
 
   # tag_ID ordering
   #my @tags = qw/df_xref start end In_CAS product translation/;
@@ -305,13 +314,15 @@ sub write_loci_tbl{
     foreach my $feature (keys %{$loci_tbl_r->{$loci}}){
       # checking db_xref for 'fig|peg'
       unless ($loci_tbl_r->{$loci}{$feature}{db_xref} =~ /fig\|.+peg/){		
-	print STDERR " WARNING: Locus$loci -> $feature does not have a FIG-PEG ID in a db_xref tag!\n"
-	  unless $quiet; 
+	print STDERR " WARNING: Locus$loci -> $feature does",
+	  " not have a FIG-PEG ID in a db_xref tag!\n"
+	    unless $quiet; 
       }
       
       # length already found? #
       my ($len_AA, $seq);
-      if($loci_tbl_r->{$loci}{$feature}{translation} =~ /^\d+$/){   # existing entry; no sequence
+      ## existing entry; no sequence
+      if($loci_tbl_r->{$loci}{$feature}{translation} =~ /^\d+$/){   
 	$len_AA = $loci_tbl_r->{$loci}{$feature}{translation};
 	if($conflicting){ $seq = "existing_entry"; }
 	else{ $seq = ""; }
@@ -368,7 +379,8 @@ sub check_in_CAS{
       # making all on the + strand #
       ($f_start, $f_end) = set_to_pos_strand($f_start, $f_end);
       ($o_start, $o_end) = set_to_pos_strand($o_start, $o_end);
-      ($c_start, $c_end) = set_to_pos_strand($c_start, $c_end) if $c_start && $c_end;		
+      ($c_start, $c_end) = set_to_pos_strand($c_start, $c_end) 
+	if $c_start && $c_end;
       
       # determining location #
       ## gene must fall in operon, without falling into crispr array ##
@@ -387,7 +399,8 @@ sub check_in_CAS{
 	      $loci_tbl_r->{$locus}{$feature}{In_CAS} = "yes";
 	    }
 	    else{
-	      # in crispr array & array does not span CAS operon, so not defined as in operon
+	      # in crispr array & array does not span CAS operon
+	      ## so not defined as in operon
 	      $loci_tbl_r->{$locus}{$feature}{In_CAS} = "no"; 
 	    }
 	  }	
@@ -477,7 +490,9 @@ sub fork_genbank_get_region{
   # sanity check #
   unless (%loci_tbl){
     $dbh->disconnect();
-    die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
+    die "\nNo CDS found in any of the specified loci regions!",
+      " Nothing to add to CLdb\n",
+	" Did you specify a CAS gene region in your loci table?\n";
   }
 		
   #print Dumper %loci_tbl; exit;
@@ -561,7 +576,8 @@ sub call_genbank_get_region{
   # sanity check #
   unless (%loci_tbl){
     $dbh->disconnect();
-    die "\nNo CDS found in any of the specified loci regions! Nothing to add to CLdb\n";
+    die "\nNo CDS found in any of the specified loci regions!",
+      " Nothing to add to CLdb\n";
   }
 		
   #print Dumper %loci_tbl; exit;
@@ -574,12 +590,12 @@ sub get_loci_start_end{
   
   my %loci_se;
   my $cmd = "SELECT Locus_id, Locus_start, Locus_end, 
-			Genbank_File, CAS_start, CAS_end,
-			Array_Start, Array_End, scaffold,
-			CAS_Status, Array_Status
-			from loci 
-			where (CAS_start is not null or CAS_end is not null) 
-			$join_sql $query";
+		      Genbank_File, CAS_start, CAS_end,
+		      Array_Start, Array_End, scaffold,
+		      CAS_Status, Array_Status
+		      FROM loci 
+		      WHERE (CAS_start is not null OR CAS_end is not null) 
+		      $join_sql $query";
   $cmd =~ s/[\t\n]+/ /g;
   
   my $loci_se_r = $dbh->selectall_arrayref($cmd);	
@@ -589,7 +605,6 @@ sub get_loci_start_end{
     $loci_se{$$row[0]} = [@$row[1..$#$row]];
   }
   
-  #print Dumper %loci_se; exit;
   return \%loci_se;
 }
 

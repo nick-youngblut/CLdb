@@ -116,6 +116,7 @@ sub call_subcommand{
   # adding quotes to any args w/ spaces
   @$argv_r = map{/ / ? join('', '"', $_, '"') : $_} @$argv_r;
 
+
   # calling subcommand
   ## perl
   if(grep(/\.pl$/i, $subcmd)){
@@ -129,7 +130,7 @@ sub call_subcommand{
     }
   }
   ## R
-  if(grep(/\.r$/i, $subcmd)){
+  elsif(grep(/\.r$/i, $subcmd)){
     if ($getPerlDoc){
       print `Rscript $subcmd -h`;
     }    

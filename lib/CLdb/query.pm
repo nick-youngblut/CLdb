@@ -422,8 +422,9 @@ $opts_r->{'refine_sql'}";
   # making fasta #
   my %fasta;
   foreach my $row (@$ret){
-    croak "\nERROR: array_sense_strand not set for all entries! Set with 'CLdb_setSenseStrand.pl'\n\n"
-      unless defined $row->[5];  # array_sense_strand must exist
+    croak "\nERROR: array_sense_strand not set for all entries!",
+      " Set with 'CLdb_setSenseStrand.pl'\n\n"
+	unless defined $row->[5];  # array_sense_strand must exist
 
     # revcomp sequence if array_sense_strand == -1
     croak "ERROR: sense strand must be 1 or -1\n"
@@ -474,9 +475,10 @@ sub get_array_elem_pos{
   my $refine_sql = exists $opts_r->{refine_sql} ? 
     $opts_r->{refine_sql} : '';
 
-  # getting table info #
+  # getting table info 
   my ($tbl_oi, $tbl_prefix) = ("spacers","spacer");	
-  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"};		# DR instead of spacer
+  ## DR instead of spacer
+  ($tbl_oi, $tbl_prefix) = ("DRs","DR") if $opts_r->{"spacer_DR_b"}; 
       
   # query
   my $query = <<HERE;
