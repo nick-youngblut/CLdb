@@ -85,11 +85,11 @@ if the tree is used for plotting!
 
 =head3 Ordering a dna_segs table
 
-CLdb -- order_by_tree -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
+CLdb -- plotLoci -- order_by_tree -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
 =head3 Ordering the complemenary xlims table
 
-CLdb -- order_by_tree -t tree.nwk -x < xlims.txt > xlims_ordered.txt
+CLdb -- plotLoci -- order_by_tree -t tree.nwk -x < xlims.txt > xlims_ordered.txt
 
 =head1 AUTHOR
 

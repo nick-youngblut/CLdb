@@ -111,11 +111,11 @@ use the pruned/edited tree.
 
 =head2 Basic usage:
 
-CLdb -- format_dna_segs_colors < dna_segs_order.txt > dna_segs_order_col.txt
+CLdb -- plotLoci -- format_dna_segs_colors < dna_segs_order.txt > dna_segs_order_col.txt
 
 =head2 Branch length cutoff (<= 0.1):
 
-CLdb -- format_dna_segs_colors -t tree.nwk -b 0.1 < dna_segs_order.txt > dna_segs_order_col.txt
+CLdb -- plotLoci -- format_dna_segs_colors -t tree.nwk -b 0.1 < dna_segs_order.txt > dna_segs_order_col.txt
 
 =head1 AUTHOR
 

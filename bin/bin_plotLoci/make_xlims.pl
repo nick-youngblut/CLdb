@@ -66,11 +66,11 @@ Make a basic xlims table needed for plotting.
 
 =head2 Plotting all loci classified as subtype 'I-A'
 
-CLdb -- make_xlims -d CLdb.sqlite -sub I-A 
+CLdb -- plotLoci -- make_xlims -d CLdb.sqlite -sub I-A 
 
 =head2 No broken loci
 
-CLdb -- make_xlims -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+CLdb --sql -q "AND loci.operon_status != 'broken'" -- plotLoci -- make_xlims -da CLdb.sqlite -sub I-A 
 
 =head1 AUTHOR
 

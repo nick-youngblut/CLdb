@@ -75,11 +75,11 @@ The tree is written to STDOUT in newick format (required for plotting).
 
 =head3 Pruning by a dna_segs table
 
-CLdb -- prune_tree -d dna_segs.txt < tree.nwk > tree_prn.nwkk
+CLdb -- plotLoci -- prune_tree -d dna_segs.txt < tree.nwk > tree_prn.nwkk
 
 =head3 Pruning by an xlims table
 
-CLdb -- prune_tree -x xlims.txt < tree.nwk > tree_prn.nwk
+CLdb -- plotLoci -- prune_tree -x xlims.txt < tree.nwk > tree_prn.nwk
 
 =head1 AUTHOR
 

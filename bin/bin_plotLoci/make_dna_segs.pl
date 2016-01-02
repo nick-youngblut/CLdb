@@ -79,19 +79,19 @@ to add cluster info to the table (used for coloring)
 
 =head2 Plotting all loci classified as subtype 'I-A'
 
-CLdb -- make_dna_segs -d CLdb.sqlite -sub I-A 
+CLdb -- plotLoci -- make_dna_segs -d CLdb.sqlite -sub I-A 
 
 =head2 Gene cluster info from ITEP
 
-CLdb -- make_dna_segs -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
+CLdb -- plotLoci -- make_dna_segs -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
 
 =head2 No broken loci
 
-CLdb -- make_dna_segs -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+CLdb --sql -q "AND loci.operon_status != 'broken'" -- plotLoci -- make_dna_segs -da CLdb.sqlite -sub I-A 
 
 =head2 Just gene features for I-A subtype loci
 
-CLdb -- make_dna_segs -da CLdb.sqlite -sub I-A -f 'gene'
+CLdb -- plotLoci -- make_dna_segs -da CLdb.sqlite -sub I-A -f 'gene'
 
 =head1 AUTHOR
 

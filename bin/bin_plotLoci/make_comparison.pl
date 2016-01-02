@@ -74,15 +74,15 @@ Gene comparisons are obtained from ITEP.
 
 =head2 Just comparisons among spacers (using BLASTn info)
 
-CLdb -- make_comparison -da CLdb.sqlite  < dna_segs.txt > compare.txt
+CLdb -- plotLoci -- make_comparison -da CLdb.sqlite  < dna_segs.txt > compare.txt
 
 =head2 Just comparisons among spacers (using clustering info)
 
-CLdb -- make_comparison -da CLdb.sqlite -s cluster < dna_segs.txt > compare.txt
+CLdb -- plotLoci -- make_comparison -da CLdb.sqlite -s cluster < dna_segs.txt > compare.txt
 
 =head2 Comparisons among spacers and genes
 
-CLdb -- make_comparison -da CLdb.sqlite -I ITEP_database.sqlite < dna_segs.txt > compare.txt
+CLdb -- plotLoci -- make_comparison -da CLdb.sqlite -I ITEP_database.sqlite < dna_segs.txt > compare.txt
 
 =head2 
 
