@@ -87,8 +87,6 @@ Optionally, a file designating sense strand
 for 1 or more locus can be provided.
 Format: tab-delimited, 2 column (locus_id, strand [1|-1])
 
-=head1 EXAMPLES
-
 
 =head1 AUTHOR
 
@@ -96,7 +94,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

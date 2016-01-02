@@ -52,11 +52,11 @@ first.
 
 =head2 Basic usage:
 
-Cldb_loadGenes.pl -d CRISPR.sqlite < genes_table.txt
+Cldb -- loadGenes -d CLdb.sqlite < genes_table.txt
 
 =head2 Piping from getGenesInLoci.pl 
 
-getGenesInLoci.pl -d CRISPR.sqlite | Cldb_loadGenes.pl -d CRISPR.sqlite
+CLdb -- getGenesInLoci -d CLdb.sqlite | Cldb -- loadGenes -d CLdb.sqlite
 
 =head1 AUTHOR
 
@@ -64,7 +64,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

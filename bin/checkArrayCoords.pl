@@ -60,7 +60,7 @@ a new array file is writen.
 
 =head2 Usage:
 
-checkArrayCoords.pl -d CLdb.sqlite 
+CLdb -- checkArrayCoords.pl -d CLdb.sqlite 
 
 =head1 AUTHOR
 
@@ -68,7 +68,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

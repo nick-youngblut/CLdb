@@ -76,15 +76,15 @@ DR consensus must be calculated prior!
 
 =head2 Write all DR consensus sequences:
 
-DRconsensus2fasta.pl -d CLdb.sqlite 
+CLdb -- DRconsensus2fasta.pl -d CLdb.sqlite 
 
 =head2 Write all DR consensus sequences (IUPAC):
 
-DRconsensus2fasta.pl -d CLdb.sqlite -I
+CLdb -- DRconsensus2fasta.pl -d CLdb.sqlite -I
 
 =head2 Refine query to a specific subtype & 2 taxon_id's
 
-DRconsensus2fasta.pl -da CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- DRconsensus2fasta.pl -da CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
@@ -92,7 +92,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

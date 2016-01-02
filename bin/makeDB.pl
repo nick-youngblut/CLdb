@@ -52,13 +52,13 @@ Capitalization of table names doesn't matter.
 
 =head1 EXAMPLES
 
-=head2 Naming database 'test'
+=head2 Naming database 'CLdb.sqlite'
 
-makeDB.pl CLdb_test
+CLdb -- makeDB CLdb.sqlite
 
 =head2 Remaking a database and keeping old "spacers" table
 
-makeDB.pl -r -t "spacers"
+CLdb -- makeDB -r -t "spacers"
 
 =head1 AUTHOR
 
@@ -66,7 +66,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

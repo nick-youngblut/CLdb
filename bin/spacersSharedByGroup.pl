@@ -53,15 +53,13 @@ any other groups.
 The output is a count of spacers specific to
 particular groups.
 
-=head1 EXAMPLES
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

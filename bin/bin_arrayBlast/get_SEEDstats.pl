@@ -106,18 +106,13 @@ Negative values bp from the END of the protospacer.
 So, the default [-8 -1] will select the last 8bp
 of the protospacer.
 
-=head1 EXAMPLES
-
-=head2 Basic Usage:
-
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

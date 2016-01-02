@@ -74,15 +74,15 @@ Gene comparisons are obtained from ITEP.
 
 =head2 Just comparisons among spacers (using BLASTn info)
 
-make_comparison -da CLdb.sqlite  < dna_segs.txt > compare.txt
+CLdb -- make_comparison -da CLdb.sqlite  < dna_segs.txt > compare.txt
 
 =head2 Just comparisons among spacers (using clustering info)
 
-make_comparison -da CLdb.sqlite -s cluster < dna_segs.txt > compare.txt
+CLdb -- make_comparison -da CLdb.sqlite -s cluster < dna_segs.txt > compare.txt
 
 =head2 Comparisons among spacers and genes
 
-make_comparison -da CLdb.sqlite -I ITEP_database.sqlite < dna_segs.txt > compare.txt
+CLdb -- make_comparison -da CLdb.sqlite -I ITEP_database.sqlite < dna_segs.txt > compare.txt
 
 =head2 
 
@@ -92,7 +92,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

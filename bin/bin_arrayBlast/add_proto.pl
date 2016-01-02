@@ -64,18 +64,13 @@ full length protospacer.
 
 blastdbcmd (part of the BLAST+ Toolkit)
 
-=head1 EXAMPLES
-
-=head2 Basic Usage:
-
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

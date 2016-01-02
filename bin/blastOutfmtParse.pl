@@ -54,11 +54,11 @@ are then added back by using the index.
 
 =head2 Just keep entries with hits
 
-blastOutfmtParse.pl -c "cat" < blast.txt > blast_edited.txt
+CLdb -- blastOutfmtParse -c "cat" < blast.txt > blast_edited.txt
 
 =head2 Just hits to scaffold5
 
-blastOutfmtParse.pl -c "grep 'scaffold5'" < blast.txt > blast_scaf5.txt
+CLdb -- blastOutfmtParse -c "grep 'scaffold5'" < blast.txt > blast_scaf5.txt
 
 =head1 AUTHOR
 
@@ -66,7 +66,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

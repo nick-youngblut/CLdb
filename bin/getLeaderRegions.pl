@@ -175,15 +175,15 @@ Load the leader region using loadLeaders.pl
 
 =head2 Leader regions for all loci
 
-getLeaderRegion.pl -d CLdb.sqlite > psbl_leaders.fna
+CLdb -- getLeaderRegion -d CLdb.sqlite > psbl_leaders.fna
 
 =head2 Leader regions for just subtype I-B
 
-getLeaderRegions.pl -d CLdb.sqlite -sub I-B > psbl_leaders_I-B.fna
+CLdb -- getLeaderRegions -d CLdb.sqlite -sub I-B > psbl_leaders_I-B.fna
 
 =head2 Leader regions specified in location file
 
-getLeaderRegions.pl -d CLdb.sqlite -loc locations.txt > psbl_leaders.fna
+CLdb -- getLeaderRegions -d CLdb.sqlite -loc locations.txt > psbl_leaders.fna
 
 =head1 AUTHOR
 
@@ -191,7 +191,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

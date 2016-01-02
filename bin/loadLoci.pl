@@ -95,7 +95,7 @@ input loci table. They just won't be added to CLdb.
 
 =head2 Usage:
 
-loadLoci.pl -d CLdb.sqlite < loci.txt
+CLdb -- loadLoci -d CLdb.sqlite < loci.txt
 
 =head1 AUTHOR
 
@@ -103,7 +103,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

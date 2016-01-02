@@ -33,15 +33,13 @@ CLdb_perldoc srl2json
 Simple script for converting blast output in
 a binary serialization format to json.
 
-=head1 EXAMPLES
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

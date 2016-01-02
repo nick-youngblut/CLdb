@@ -64,11 +64,11 @@ are associated with the selected loci.
 
 =head2 Delete all loci in a genome 
 
-delete.pl -d CLdb.sqlite -taxon_id 6666666.403
+CLdb -- delete -d CLdb.sqlite -taxon_id 6666666.403
 
 =head2 Delete locus_ids 1 through 4 
 
-delete.pl -d CLdb.sqlite -q "AND locus_id IN (1,2,3,4)
+CLdb -- delete -d CLdb.sqlite -q "AND locus_id IN (1,2,3,4)
 
 =head1 AUTHOR
 
@@ -76,7 +76,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

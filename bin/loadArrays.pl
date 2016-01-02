@@ -55,7 +55,7 @@ always + strand.
 
 =head2 Usage:
 
-loadArrays.pl -d CLdb.sqlite 
+CLdb -- loadArrays -d CLdb.sqlite 
 
 =head1 AUTHOR
 
@@ -63,7 +63,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

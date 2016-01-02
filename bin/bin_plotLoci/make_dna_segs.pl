@@ -79,19 +79,19 @@ to add cluster info to the table (used for coloring)
 
 =head2 Plotting all loci classified as subtype 'I-A'
 
-make_dna_segs -d CLdb.sqlite -sub I-A 
+CLdb -- make_dna_segs -d CLdb.sqlite -sub I-A 
 
 =head2 Gene cluster info from ITEP
 
-make_dna_segs -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
+CLdb -- make_dna_segs -d CLdb.sqlite -sub I-A  -I DATABASE.sqlite all_I_2.0_c_0.4_m_maxbit
 
 =head2 No broken loci
 
-make_dna_segs -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
+CLdb -- make_dna_segs -da CLdb.sqlite -sub I-A -q "AND loci.operon_status != 'broken'"
 
 =head2 Just gene features for I-A subtype loci
 
-make_dna_segs -da CLdb.sqlite -sub I-A -f 'gene'
+CLdb -- make_dna_segs -da CLdb.sqlite -sub I-A -f 'gene'
 
 =head1 AUTHOR
 
@@ -99,7 +99,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

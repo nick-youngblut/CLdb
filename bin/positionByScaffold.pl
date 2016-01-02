@@ -93,7 +93,7 @@ connections between scaffolds are determined in a number of steps:
 
 =head2 Normal usage (array files edited):
 
-positionByScaffold.pl < loci.txt -genbank genbank_file_list.txt -array > loci_byScaf.txt
+CLdb -- positionByScaffold < loci.txt -genbank genbank_file_list.txt -array > loci_byScaf.txt
 
 =head1 AUTHOR
 
@@ -101,7 +101,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

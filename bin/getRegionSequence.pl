@@ -66,19 +66,19 @@ Genbank files must be in $HOME/genbank/
 
 =head2 Write all locus regions:
 
-getRegionSequence.pl -d CLdb.sqlite 
+CLdb -- getRegionSequence -d CLdb.sqlite 
 
 =head2 Write all CRISPR array regions:
 
-getRegionSequence.pl -d CLdb.sqlite -r crispr_array
+CLdb -- getRegionSequence -d CLdb.sqlite -r crispr_array
 
 =head2 Refine region sequence query:
 
-getRegionSequence.pl -d CLdb.sqlite -q "where LOCUS_ID=1" 
+CLdb -- getRegionSequence -d CLdb.sqlite -q "where LOCUS_ID=1" 
 
 =head2 Refine region query to a specific subtype & 2 taxon_id's
 
-getRegionSequence.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- getRegionSequence -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
@@ -86,7 +86,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

@@ -66,7 +66,7 @@ For instance, '-keep 100-' will remove the 1st 99 positions from the alignemnt.
 
 =head2 Triming 49 positions off of the upstream unconserved end of the alignment
 
-loadLeaders.pl -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
+CLdb -- loadLeaders -d CLdb.sqlite -t 50 test_leader_Ib.fna test_leader_Ib_aln.fna
 
 =head1 AUTHOR
 
@@ -74,7 +74,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

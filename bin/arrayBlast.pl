@@ -36,6 +36,9 @@ CLdb_perldoc arrayBlast
 
 =head1 DESCRIPTION
 
+This a the top-level commands for running all other commands
+associated with array blast-ing.
+See --list for all subcommands.
 
 =head1 AUTHOR
 
@@ -43,7 +46,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/arrayBlast/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

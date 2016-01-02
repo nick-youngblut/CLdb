@@ -67,19 +67,19 @@ given if a table has 0 entries.
 
 =head2 Write out all tables
 
-writeTable.pl -d CLdb.sqlite 
+CLdb -- writeTable -d CLdb.sqlite 
 
 =head2 Write out just 'Loci' table
 
-writeTable.pl -d CLdb.sqlite -t loci
+CLdb -- writeTable -d CLdb.sqlite -t loci
 
 =head2 Write out 'Spacers' and 'DRs' table
 
-writeTable.pl -d CLdb.sqlite -t spacers drs
+CLdb -- writeTable -d CLdb.sqlite -t spacers drs
 
 =head2 List table names and number of entries
 
-writeTable.pl -d CLdb.sqlite -l
+CLdb -- writeTable -d CLdb.sqlite -l
 
 =head1 AUTHOR
 
@@ -87,7 +87,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

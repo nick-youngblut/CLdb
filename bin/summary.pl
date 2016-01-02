@@ -91,15 +91,15 @@ Next comes table-specific categories ('NA' means not applicable):
 
 =head2 Total summary
 
-summary.pl -d CLdb.sqlite 
+CLdb -- summary -d CLdb.sqlite 
 
 =head2 Summarize by subtype
 
-summary.pl -d CLdb.sqlite -s
+CLdb -- summary -d CLdb.sqlite -s
 
 =head2 Summarize by subtype & taxon_name
 
-summary.pl -d CLdb.sqlite -s -n
+CLdb -- summary -d CLdb.sqlite -s -n
 
 =head1 AUTHOR
 
@@ -107,7 +107,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

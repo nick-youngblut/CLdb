@@ -121,15 +121,15 @@ to limit hits to just 1 subject genome.
 
 =head2 GFF3 of all loci in E.col
 
-loci2GFF.pl -d CLdb.sqlite -name "E.coli" -loci > ecoli_loci.gff
+CLdb -- loci2GFF -d CLdb.sqlite -name "E.coli" -loci > ecoli_loci.gff
 
 =head2 GFF3 of all CRISPR arrays & CASs in E.col
 
-loci2GFF.pl -d CLdb.sqlite -name "E.coli" -o a > ecoli_array-CAS.gff
+CLdb -- loci2GFF -d CLdb.sqlite -name "E.coli" -o a > ecoli_array-CAS.gff
 
 =head2 GFF3 of all spacers in taxon_ID: 'FIG|2209.27'
 
-loci2GFF.pl -d CLdb.sqlite -id 2209.27 -s > 2209.27_spacers.gff
+CLdb -- loci2GFF -d CLdb.sqlite -id 2209.27 -s > 2209.27_spacers.gff
 
 =head1 AUTHOR
 
@@ -137,7 +137,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

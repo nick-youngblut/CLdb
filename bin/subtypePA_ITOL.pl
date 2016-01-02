@@ -74,27 +74,27 @@ the subtypes are provided via '-subtype'
 
 =head2 Pres-abs table of all subtypes & taxa in CLdb
 
-subtypePA_ITOL.pl -d CLdb.sqlite 
+CLdb -- subtypePA_ITOL -d CLdb.sqlite 
 
 =head2 Subtype count table of all subtypes & taxa in CLdb (not-binary)
 
-subtypePA_ITOL.pl -d CLdb.sqlite -a
+CLdb -- subtypePA_ITOL -d CLdb.sqlite -a
 
 =head2 Subtype count table of loci containing CAS operons
 
-subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status!='absent'"
+CLdb --sql -q "AND operon_status!='absent'" -- subtypePA_ITOL -d CLdb.sqlite 
 
 =head2 Subtype count table of loci containing intact CAS operons (no broken or shuffled)
 
-subtypePA_ITOL.pl -d CLdb.sqlite -q "AND operon_status='intact'"
+CLdb --sql -q "AND operon_status='intact'" -- subtypePA_ITOL -d CLdb.sqlite 
 
 =head2 User provided colors
 
-subtypePA_ITOL.pl -d CLdb.sqlite -c "#FF0000 #FF6600 #FFFF00"
+CLdb -- subtypePA_ITOL -d CLdb.sqlite -c "#FF0000 #FF6600 #FFFF00"
 
 =head2 Pres-abs table of specific subtypes & taxa_names
 
-subtypePA_ITOL.pl -d CLdb.sqlite -sub I-A I-B I-C -taxon_name Ecoli Senterica Awoodii 
+CLdb -- subtypePA_ITOL -d CLdb.sqlite -sub I-A I-B I-C -taxon_name Ecoli Senterica Awoodii 
 
 =head1 AUTHOR
 
@@ -102,7 +102,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

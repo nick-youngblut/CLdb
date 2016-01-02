@@ -101,15 +101,15 @@ cd-hit-est
 
 =head2 Clustering spacers
 
-clusterArrayElements.pl -d CLdb.sqlite -s
+CLdb -- clusterArrayElements -d CLdb.sqlite -s
 
 =head2 Clustering spacers & DRs
 
-clusterArrayElements.pl -d CLdb.sqlite -s -r
+CLdb -- clusterArrayElements -d CLdb.sqlite -s -r
 
 =head2 Clustering spacers & DRs (only at 0.9 & 1 cutoffs)
 
-clusterArrayElements.pl -d CLdb.sqlite -s -r -c 0.9 1 0.1
+CLdb -- clusterArrayElements -d CLdb.sqlite -s -r -c 0.9 1 0.1
 
 =head1 AUTHOR
 
@@ -117,7 +117,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

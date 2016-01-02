@@ -80,15 +80,15 @@ otherwise a 'N' will be used.
 
 =head2 Calculate & upload DB consensus sequences for all CRISPR arrays
 
-loadDRConsensus.pl -d CRISPR.sqlite 
+CLdb -- loadDRConsensus -d CLdb.sqlite 
 
 =head2 Calculate & upload DB consensus sequences for just locus_id '1'
 
-loadDRConsensus.pl -d CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb --sql -q "where LOCUS_ID=1" -- loadDRConsensus -d CRISPR.sqlite 
 
 =head2 Calculate & upload DB consensus sequences for specific subtype & 2 taxon_id's
 
-loadDRConsensus.pl -d CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- loadDRConsensus -d CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
  
 =head1 AUTHOR
 
@@ -96,7 +96,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

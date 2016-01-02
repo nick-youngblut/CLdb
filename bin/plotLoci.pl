@@ -36,6 +36,9 @@ CLdb_perldoc plotLoci
 
 =head1 DESCRIPTION
 
+Top level command for all commands associated with
+making/editing CRISPR loci plots.
+See --list for all subcommands.
 
 =head1 AUTHOR
 
@@ -43,7 +46,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/plotLoci/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

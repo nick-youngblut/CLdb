@@ -70,11 +70,11 @@ Temporary blast files will be written in $HOME/spacer_blast/
 
 =head2 Pairwise spacer BLASTn-short of all spacers
 
-spacerPairwiseBlast.pl -d CLdb.sqlite
+CLdb -- spacerPairwiseBlast -d CLdb.sqlite
 
 =head2 Pairwise spacer BLASTn-short for 1 subtype
 
-spacerPairwiseBlast.pl -da CLdb.sqlite -subtype I-B
+CLdb -- spacerPairwiseBlast -da CLdb.sqlite -subtype I-B
 
 =head1 AUTHOR
 
@@ -82,7 +82,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

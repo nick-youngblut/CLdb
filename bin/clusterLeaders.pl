@@ -68,7 +68,7 @@ cd-hit-est, leader2fasta.pl
 
 =head2 Grouping all leaders
 
-clusterLeaders.pl -d CRISPR.sqlite -s
+CLdb -- clusterLeaders -d CLdb.sqlite -s
 
 =head1 AUTHOR
 
@@ -76,7 +76,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

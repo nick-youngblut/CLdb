@@ -67,15 +67,13 @@ The 1st 3 columns of the table are the user-define regions
 (column names start with 'region_*'). The rest are values
 associated with the features.
 
-=head1 EXAMPLES
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/annotation/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

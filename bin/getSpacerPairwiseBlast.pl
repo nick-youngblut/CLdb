@@ -82,15 +82,15 @@ query_spacer_overlap, subject_spacer_overlap
 
 =head2 All spacer-spacer blasts
 
-getSpacerPairwiseBlast.pl -d CLdb.sqlite
+CLdb -- getSpacerPairwiseBlast -d CLdb.sqlite
 
 =head2 All spacer-spacer blasts for just subtype I-B
 
-getSpacerPairwiseBlast.pl -d CLdb.sqlite -subtype I-B
+CLdb -- getSpacerPairwiseBlast -d CLdb.sqlite -subtype I-B
 
 =head2 All spacer-spacer blasts that only partially overlap
 
-getSpacerPairwiseBlast.pl -d CLdb.sqlite -o 0 0.99
+CLdb -- getSpacerPairwiseBlast -d CLdb.sqlite -o 0 0.99
 
 =head1 AUTHOR
 
@@ -98,7 +98,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

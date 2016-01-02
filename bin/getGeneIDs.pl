@@ -77,23 +77,23 @@ particular loci.
 
 =head2 All Gene_IDs in Subtype I-B loci
 
-getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" 
+CLdb -- getGeneIDs -data CLdb.sqlite -sub "I-B" 
 
 =head2 All Gene_IDs in Subtype I-B & 2 particular Taxon_ID's
 
-getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- getGeneIDs -da CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head2 All Gene_IDs in Subtype I-B loci & pipe to ITEP to get clusters
 
-getGeneIDs.pl -data CRISPR.sqlite -sub "I-B" | db_getClustersContainingGenes.py | less
+CLdb -- getGeneIDs -data CLdb.sqlite -sub "I-B" | db_getClustersContainingGenes.py | less
 
 =head2 All Gene_IDs in Subtype I-B & 2 particular Taxon_ID's
 
-getGeneIDs.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- getGeneIDs -da CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head2 Using '-q' to pick genes in operons (and in subtype 'I-B')
 
-getGeneIDs.pl -da CRISPR.sqlite -sub I-B -q "AND genes.In_Operon='yes'"
+CLdb --sql "AND genes.In_Operon='yes'" -- getGeneIDs -da CLdb.sqlite -sub I-B 
 
 =head1 AUTHOR
 
@@ -101,7 +101,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

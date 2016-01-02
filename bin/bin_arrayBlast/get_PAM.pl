@@ -76,19 +76,13 @@ immediately upstream of the protospacer.
 '-PAM 1 2' would select the 2bp immediately
 upstream of the protospacer.
 
-
-=head1 EXAMPLES
-
-=head2 Basic Usage:
-
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

@@ -66,19 +66,19 @@ locus_id|Leader_start|Leader_end
 
 =head2 Write all spacers to a fasta:
 
-leader2fasta.pl -data CRISPR.sqlite 
+CLdb -- leader2fasta -data CLdb.sqlite 
 
 =head2 Write all direct repeats to a fasta:
 
-leader2fasta.pl -data CRISPR.sqlite -r
+CLdb -- leader2fasta -data CLdb.sqlite -r
 
 =head2 Refine spacer sequence query:
 
-leader2fasta.pl -data CRISPR.sqlite -q "where LOCUS_ID=1" 
+CLdb --sql -q "where LOCUS_ID=1" -- leader2fasta -da CLdb.sqlite 
 
 =head2 Refine spacer query to a specific subtype & 2 taxon_id's
 
-leader2fasta.pl -da CRISPR.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- leader2fasta -da CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
@@ -86,7 +86,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

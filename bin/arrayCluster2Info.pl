@@ -86,19 +86,19 @@ A table is returned with the following columns:
 
 =head2 Get all info for Spacer_group 1
 
-echo 1 | arrayCluster2Info.pl -d CLdb.sqlite < groups.txt > array_info.txt
+echo 1 | CLdb -- arrayCluster2Info -d CLdb.sqlite < groups.txt > array_info.txt
 
 =head2 Get all info for a list of repeat groups
 
-arrayCluster2Info.pl -d CLdb.sqlite -r < repeat_groups.txt > array_info.txt
+CLdb -- arrayCluster2Info -d CLdb.sqlite -r < repeat_groups.txt > array_info.txt
 
 =head2 Get just subtype 'I-B' info for a list of spacer groups > array_info.txt
 
-arrayCluster2Info.pl -d CLdb.sqlite -sub I-B < spacer_groups.txt > array_info.txt
+CLdb -- arrayCluster2Info -d CLdb.sqlite -sub I-B < spacer_groups.txt > array_info.txt
 
 =head2 Get info for table of BLAST hits where spacer groups were the query
 
-arrayCluster2Info.pl -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
+CLdb -- arrayCluster2Info -d CLdb.sqlite < spacer_groups_blastn.txt > array_info.txt
 
 =head1 AUTHOR
 
@@ -106,7 +106,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

@@ -55,17 +55,13 @@ and the results are written to STDOUT.
 ITEP cluster run IDs will be in the last column
 if -ITEP and -runid flags are provided.
 
-
-=head1 EXAMPLES
-
-
 =head1 AUTHOR
 
 Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

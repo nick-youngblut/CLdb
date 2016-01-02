@@ -58,7 +58,7 @@ start-end is in relation to the positive strand.
 
 =head2 Basic usage (CRT output file = 'a.out'):
 
-crt_parse.pl < a.out
+CLdb -- crt_parse.pl < a.out
 
 =head1 AUTHOR
 
@@ -66,7 +66,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

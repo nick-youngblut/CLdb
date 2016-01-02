@@ -85,11 +85,11 @@ if the tree is used for plotting!
 
 =head3 Ordering a dna_segs table
 
-order_by_tree -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
+CLdb -- order_by_tree -t tree.nwk < dna_segs.txt > dna_segs_ordered.txt
 
 =head3 Ordering the complemenary xlims table
 
-order_by_tree -t tree.nwk -x < xlims.txt > xlims_ordered.txt
+CLdb -- order_by_tree -t tree.nwk -x < xlims.txt > xlims_ordered.txt
 
 =head1 AUTHOR
 
@@ -97,7 +97,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

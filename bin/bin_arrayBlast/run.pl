@@ -114,21 +114,21 @@ blastn -task 'blastn-short' -db nt -query spacers.fna
 
 =head2 Blasting all spacers against all genomes in CLdb
 
-array2fasta.pl -d CLdb.sqlite -clust > unique_spacers.fna
+CLdb -- array2fasta -d CLdb.sqlite -clust > unique_spacers.fna
 
-run.pl -d CLdb.sqlite -q unique_spacers.fna > blast_hits.xml
+CLdb -- run -d CLdb.sqlite -q unique_spacers.fna > blast_hits.xml
 
 =head2 Blasting all DRs against all genomes in CLdb
 
-array2fasta.pl -d CLdb.sqlite -r -clust > unique_DRs.fna
+CLdb -- array2fasta -d CLdb.sqlite -r -clust > unique_DRs.fna
 
-run.pl -d CLdb.sqlite -q unique_DRs.fna > blast_hits.xml
+CLdb -- run -d CLdb.sqlite -q unique_DRs.fna > blast_hits.xml
 
 =head2 Blasting all spacers against 1 genome (taxon_name = 'e.coli')
 
-array2fasta.pl -d CLdb.sqlite -clust > unique_spacers.fna
+CLdb -- array2fasta.pl -d CLdb.sqlite -clust > unique_spacers.fna
 
-run.pl -d CLdb.sqlite -q unique_spacers.fna -taxon_name "e.coli"
+CLdb -- run -d CLdb.sqlite -q unique_spacers.fna -taxon_name "e.coli"
 
 =head1 AUTHOR
 
@@ -136,7 +136,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

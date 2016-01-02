@@ -79,27 +79,27 @@ Else: ">locus_id|spacer/DR|elementID|NA|NA"
 
 =head2 Write all spacers to a fasta:
 
-array2fasta.pl -d CLdb.sqlite 
+CLdb -- array2fasta -d CLdb.sqlite 
 
 =head2 Write all direct repeats to a fasta:
 
-array2fasta.pl -d CLdb.sqlite -r
+CLdb -- array2fasta -d CLdb.sqlite -r
 
 =head2 Write all unique spacers
 
-array2fasta.pl -d CLdb.sqlite -clust
+CLdb -- array2fasta -d CLdb.sqlite -clust
 
 =head2 Write all spacers clustered at 80% seqence ID
 
-array2fasta.pl -d CLdb.sqlite -clust -cut 0.8
+CLdb -- array2fasta -d CLdb.sqlite -clust -cut 0.8
 
 =head2 Refine spacer sequence query:
 
-array2fasta.pl -d CLdb.sqlite -q "AND loci.Locus_ID=1" 
+CLdb -- array2fasta -d CLdb.sqlite -q "AND loci.Locus_ID=1" 
 
 =head2 Refine spacer query to a specific subtype & 2 taxon_id's
 
-array2fasta.pl -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
+CLdb -- array2fasta -d CLdb.sqlite -sub I-B -taxon_id 6666666.4038 6666666.40489
 
 =head1 AUTHOR
 
@@ -107,7 +107,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

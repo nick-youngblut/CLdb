@@ -78,11 +78,11 @@ successfully, the batch is re-tried.
 
 =head2 GI of ecoli strain
 
-printf "170079663\nEcoli" | accession-GI2fastaGenome.pl > ecoli.fasta
+printf "170079663\nEcoli" | CLdb -- accession-GI2fastaGenome.pl > ecoli.fasta
 
 =head2 genbank file output
 
-printf "170079663\nEcoli" | accession-GI2fastaGenome.pl -f genbank > ecoli.gbk
+printf "170079663\nEcoli" | CLdb -- accession-GI2fastaGenome.pl -f genbank > ecoli.gbk
 
 =head1 AUTHOR
 
@@ -90,7 +90,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 

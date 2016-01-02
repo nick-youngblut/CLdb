@@ -75,11 +75,11 @@ The tree is written to STDOUT in newick format (required for plotting).
 
 =head3 Pruning by a dna_segs table
 
-prune_tree -d dna_segs.txt < tree.nwk > tree_prn.nwkk
+CLdb -- prune_tree -d dna_segs.txt < tree.nwk > tree_prn.nwkk
 
 =head3 Pruning by an xlims table
 
-prune_tree -x xlims.txt < tree.nwk > tree_prn.nwk
+CLdb -- prune_tree -x xlims.txt < tree.nwk > tree_prn.nwk
 
 =head1 AUTHOR
 
@@ -87,7 +87,7 @@ Nick Youngblut <nyoungb2@illinois.edu>
 
 =head1 AVAILABILITY
 
-sharchaea.life.uiuc.edu:/home/git/CLdb/
+https://github.com/nyoungb2/CLdb
 
 =head1 COPYRIGHT
 
