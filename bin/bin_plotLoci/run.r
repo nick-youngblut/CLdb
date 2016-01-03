@@ -191,6 +191,16 @@ xlims.tbl <- format.dna.segs.xlims(xlims.tbl)
 ## converting to lists
 dna_segs <- df2list.dna_segs(DNAsegs.tbl)
 xlims <- df2list.xlims(xlims.tbl)
+## dna_segs loci must be present in xlims
+dna_segs = dna_segs[names(xlims)]
+
+
+#- debug -#
+#print(names(xlims));
+#print(names(dna_segs)); 
+#print(length(xlims));
+#print(length(names(xlims) %in% names(dna_segs)));
+#stop()
 
 # loading and formatting the comparisons table #
 ## not needed if no comparisions necessary 

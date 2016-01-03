@@ -199,27 +199,27 @@ my ($dna_segs_r, $dna_segs_order_r, $header_r) = load_dna_segs();
 # tree-based color formatting #
 ## using brlen distance to remove similar colors ##
 if($tree_in){
-	my $treeio = Bio::TreeIO -> new(-file => $tree_in,
-								-format => $format);
-	my $treeo = $treeio->next_tree;
-	
-	# getting brlens #
-	my $brlen_mat_r = make_brlen_matrix($treeo, $write_brlen_stats);
+  my $treeio = Bio::TreeIO -> new(-file => $tree_in,
+				  -format => $format);
+  my $treeo = $treeio->next_tree;
+  
+  # getting brlens #
+  my $brlen_mat_r = make_brlen_matrix($treeo, $write_brlen_stats);
 	add_upper($brlen_mat_r);
-	
-	# finding colors where max brlen between taxa are < cutoff #
-	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "spacer")
-		if $spacer_color_opt == 1 || $spacer_color_opt == 3;
-		
-	apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "gene")
-		if $gene_color_opt == 1 || $gene_color_opt == 3;	
-	}
+  
+  # finding colors where max brlen between taxa are < cutoff #
+  apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "spacer")
+    if $spacer_color_opt == 1 || $spacer_color_opt == 3;
+  
+  apply_brlen_cutoff($dna_segs_r, $brlen_mat_r, \%color_mod, "gene")
+    if $gene_color_opt == 1 || $gene_color_opt == 3;	
+}
 
 # adjacency-based color formatting #	
 check_adjacency($dna_segs_r, $dna_segs_order_r, \%color_mod, "spacer", $header_r)
-	if $spacer_color_opt == 2 || $spacer_color_opt == 3;
+  if $spacer_color_opt == 2 || $spacer_color_opt == 3;
 check_adjacency($dna_segs_r, $dna_segs_order_r,  \%color_mod, "gene", $header_r)
-	if $gene_color_opt == 2 || $gene_color_opt == 3;
+  if $gene_color_opt == 2 || $gene_color_opt == 3;
 
 # editting colors #
 ## finding colors that need descriminating hexadecimal coloring ##
@@ -237,401 +237,334 @@ write_dna_segs($dna_segs_r, $header_r, $dna_segs_order_r, \%color_mod);
 
 ### Subroutines
 sub write_dna_segs{
-# writing dna_segs table #
-	my ($dna_segs_r, $header_r, $dna_segs_order_r, $color_mod_r) = @_;
-	
-	# header #
-	print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
-	
-	# body #
-	foreach my $dna_segs_id (@$dna_segs_order_r){
-		foreach my $feat (keys %$dna_segs_r){
-			foreach my $col (keys %{$dna_segs_r->{$feat}}){
-				foreach my $row (@{$dna_segs_r->{$feat}{$col}{$dna_segs_id}}){
-					# sanity check #
-					die " ERROR: $feat -> $col not found in color index! $!\n"
-						unless exists  $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
-					
-					# applying modified colors (hexadecimal) #
-					$$row[$header_r->{"col"}] = $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
-					print join("\t", @$row), "\n";
-					}
-				}
-			}
-		}
+  # writing dna_segs table #
+  my ($dna_segs_r, $header_r, $dna_segs_order_r, $color_mod_r) = @_;
+  
+  # header #
+  print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
+  
+  # body #
+  foreach my $dna_segs_id (@$dna_segs_order_r){
+    foreach my $feat (keys %$dna_segs_r){
+      foreach my $col (keys %{$dna_segs_r->{$feat}}){
+	foreach my $row (@{$dna_segs_r->{$feat}{$col}{$dna_segs_id}}){
+	  # sanity check #
+	  die " ERROR: $feat -> $col not found in color index! $!\n"
+	    unless exists  $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
+	  
+	  # applying modified colors (hexadecimal) #
+	  $$row[$header_r->{"col"}] = $color_mod_r->{$feat}{$$row[$header_r->{"col"}]};
+	  print join("\t", @$row), "\n";
 	}
+      }
+    }
+  }
+}
 
 sub apply_DR_color{
-# applying default to direct repeat #
-	my $color_mod_r = shift;	
-	foreach my $col ( keys %{$color_mod_r->{"directrepeat"}} ){
-		$color_mod_r->{"directrepeat"}{$col} = $default_colors{"directrepeat"};
-		}
-	}
+  # applying default to direct repeat #
+  my $color_mod_r = shift;	
+  foreach my $col ( keys %{$color_mod_r->{"directrepeat"}} ){
+    $color_mod_r->{"directrepeat"}{$col} = $default_colors{"directrepeat"};
+  }
+}
 
 sub apply_rainbow{
-# applying rainbow to color mod #
-	my ($color_mod_r, $descrim_cnt_r) = @_;
-		
-	my %new_dna_segs;
-	foreach my $feat (keys %$color_mod_r){
-		next if $feat eq "directrepeat";
-		
-		# getting hexa colors for color wheel #
-		my $color = Color::Mix->new;
-		my @hexa = $color->analogous('0000ff', 
-							$descrim_cnt_r->{$feat}, 
-							$descrim_cnt_r->{$feat});
-		
-		# formatting hexa #
-		map{ $_ = "#$_"} @hexa;
-		
-		# applying colors #
-		my $cnt = 0;
-		if($feat eq 'gene'){
-			foreach my $col (sort {$a cmp $b} keys %{$color_mod_r->{$feat}}){
-				unless($color_mod_r->{$feat}{$col}){
-					$color_mod_r->{$feat}{$col} = $hexa[$cnt];
-					$cnt++;
-					}
-				}			
-			}
-		else{
-			foreach my $col (sort {$a<=>$b} keys %{$color_mod_r->{$feat}}){
-				unless($color_mod_r->{$feat}{$col}){
-					$color_mod_r->{$feat}{$col} = $hexa[$cnt];
-					$cnt++;
-					}
-				}
-			}
-		}
-		#print Dumper "here", $color_mod_r; exit;		
+  # applying rainbow to color mod #
+  my ($color_mod_r, $descrim_cnt_r) = @_;
+  
+  my %new_dna_segs;
+  foreach my $feat (keys %$color_mod_r){
+    next if $feat eq "directrepeat";
+    
+    # getting hexa colors for color wheel #
+    my $color = Color::Mix->new;
+    my @hexa = $color->analogous('0000ff', 
+				 $descrim_cnt_r->{$feat}, 
+				 $descrim_cnt_r->{$feat});
+    
+    # formatting hexa #
+    map{ $_ = "#$_"} @hexa;
+    
+    # applying colors #
+    my $cnt = 0;
+    if($feat eq 'gene'){
+      foreach my $col (sort {$a cmp $b} keys %{$color_mod_r->{$feat}}){
+	unless($color_mod_r->{$feat}{$col}){
+	  $color_mod_r->{$feat}{$col} = $hexa[$cnt];
+	  $cnt++;
 	}
+      }			
+    }
+    else{
+      foreach my $col (sort {$a<=>$b} keys %{$color_mod_r->{$feat}}){
+	unless($color_mod_r->{$feat}{$col}){
+	  $color_mod_r->{$feat}{$col} = $hexa[$cnt];
+	  $cnt++;
+	}
+      }
+    }
+  }
+  #print Dumper "here", $color_mod_r; exit;		
+}
 
 sub find_descrim_color{
-	my ($dna_segs_r, $color_mod_r) = @_;
-	
-	my %descrim_cnt;
-	foreach my $feat (keys %$dna_segs_r){
-		foreach my $col (keys %{$dna_segs_r->{$feat}}){
-			unless (exists $color_mod_r->{$feat}{$col}){
-				$color_mod_r->{$feat}{$col} = 0;
-				$descrim_cnt{$feat}++;
-				}
-			}
-		}
-		#print Dumper $color_mod_r; exit; 
-	return \%descrim_cnt;
-	}
+  my ($dna_segs_r, $color_mod_r) = @_;
+  
+  my %descrim_cnt;
+  foreach my $feat (keys %$dna_segs_r){
+    foreach my $col (keys %{$dna_segs_r->{$feat}}){
+      unless (exists $color_mod_r->{$feat}{$col}){
+	$color_mod_r->{$feat}{$col} = 0;
+	$descrim_cnt{$feat}++;
+      }
+    }
+  }
+  #print Dumper $color_mod_r; exit; 
+  return \%descrim_cnt;
+}
 
 sub check_adjacency{
-# making adjacency list for taxa by color #
-	my ($dna_segs_r, $dna_segs_order_r, $color_mod_r, $feat, $header_r) = @_;
-
-	# making and checking adjacency list #
-	foreach my $col (keys %{$dna_segs_r->{$feat}}){			# for each spacer, gene, or DR
-		#next if exists $color_mod_r->{$feat}{$col};		# next if color already assigned
-		
-		my %adjlist;
-		for my $i (0..($#$dna_segs_order_r-1)){				# order
-			my $dna_segs_id1 = $$dna_segs_order_r[$i];
-			my $dna_segs_id2 = $$dna_segs_order_r[$i+1];			
-			
-			if(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1} &&		# adjacent taxa found in same color
-				exists $dna_segs_r->{$feat}{$col}{$dna_segs_id2}){
-				$adjlist{$dna_segs_id1} = $dna_segs_id2;				# color must be found in adjacent 
-				}
-			elsif(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1}){	# if 'loner'
-				$adjlist{$dna_segs_id1} = 0;
-				}
-			}
-			#print Dumper $col, %adjlist;
-			
-		# checking adjacencies #
-		my $adjcnt=0;			# number of adjacency strings
-		my $i = 0;
-		my $adjlen = 0;											# total adjacency length; for checking 'loners'
-		while(1){												# finding 1st adjacency; moving through dna_seg_order
-			last if $i >= $#$dna_segs_order_r;
-			if(exists $adjlist{$$dna_segs_order_r[$i]}){		# found adjacency or loner; following
-				$adjlen++;										# length of adjacency
-				
-				# following adjacency #
-				while(1){										# last in adjacency
-					$i++;
-					if(exists $adjlist{$$dna_segs_order_r[$i]}){
-						$adjlen++ if $adjlist{$$dna_segs_order_r[$i]};				
-						}
-					else{
-						last;
-						}
-					}
-				# counting adjacency if len > 1 #
-				$adjcnt++;
-				}
-			$i++;
-			}	
-			#print Dumper "adjcnt: $adjcnt; adjlen: $adjlen";
-		$color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt <= 1;
-		}
-		
-		#exit;
-		#print Dumper %{$color_mod_r->{"spacer"}}; exit;
-		#print Dumper %debug; exit;
-		#print Dumper scalar keys %{$color_mod_r->{"spacer"}}; exit;
-	}
-
-sub check_adjacency_old{
-# making adjacency list for taxa by color #
-	my ($dna_segs_r, $dna_segs_order_r, $compare_r, $color_mod_r, $feat, $header_r) = @_;
+  # making adjacency list for taxa by color #
+  my ($dna_segs_r, $dna_segs_order_r, $color_mod_r, $feat, $header_r) = @_;
+  
+  # making and checking adjacency list #
+  foreach my $col (keys %{$dna_segs_r->{$feat}}){			# for each spacer, gene, or DR
+    #next if exists $color_mod_r->{$feat}{$col};		# next if color already assigned
+    
+    my %adjlist;
+    for my $i (0..($#$dna_segs_order_r-1)){				# order
+      my $dna_segs_id1 = $$dna_segs_order_r[$i];
+      my $dna_segs_id2 = $$dna_segs_order_r[$i+1];			
+      
+      if(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1} &&		# adjacent taxa found in same color
+	 exists $dna_segs_r->{$feat}{$col}{$dna_segs_id2}){
+	$adjlist{$dna_segs_id1} = $dna_segs_id2;				# color must be found in adjacent 
+      }
+      elsif(exists $dna_segs_r->{$feat}{$col}{$dna_segs_id1}){	# if 'loner'
+	$adjlist{$dna_segs_id1} = 0;
+      }
+    }
+    #print Dumper $col, %adjlist;
+    
+    # checking adjacencies #
+    my $adjcnt=0;			# number of adjacency strings
+    my $i = 0;
+    my $adjlen = 0;											# total adjacency length; for checking 'loners'
+    while(1){												# finding 1st adjacency; moving through dna_seg_order
+      last if $i >= $#$dna_segs_order_r;
+      if(exists $adjlist{$$dna_segs_order_r[$i]}){		# found adjacency or loner; following
+	$adjlen++;										# length of adjacency
 	
-	# making and checking adjacency list #
-	foreach my $col (keys %{$dna_segs_r->{$feat}}){		# for each spacer, gene, or DR
-		#next if exists $color_mod_r->{$feat}{$col};		# next if color already assigned
-		
-		# making adjacency list #
-		my %adjlist;
-		for my $i (0..($#$dna_segs_order_r-1)){			# order
-			my $dna_segs_id1 = $$dna_segs_order_r[$i];
-			my $dna_segs_id2 = $$dna_segs_order_r[$i+1];			
-			
-			# checking comparisons #
-			foreach my $row (@{$dna_segs_r->{$feat}{$col}{$dna_segs_id1}}){
-				my $feat_id = $$row[$header_r->{"feat_id"}];
-				
-				if(exists $compare_r->{$feat}{$dna_segs_id1}{$dna_segs_id2}{$feat_id}){ 	# feature must exist in comparison 
-					$adjlist{$dna_segs_id1} = $dna_segs_id2;								# color must be found in adjacent 
-					}
-				}
-			}
-		
-			#print Dumper %adjlist;		# zero means no adjacency
-		
-		# checking adjacencies #
-		my $adjcnt=0;			# number of adjacency strings
-		my $i = 0;
-		my $adjlen = 0;											# total adjacency length
-		while(1){												# finding 1st adjacency; moving through dna_seg_order
-			last if $i >= $#$dna_segs_order_r;
-			if(exists $adjlist{$$dna_segs_order_r[$i]}){				# found adjacency or loner; following
-					#print Dumper "here", $adjlist{$$dna_segs_order_r[$i]};
-					#$debug{$col} = 1 if $adjlist{$$dna_segs_order_r[$i]} eq "3.F.A.2.12__cli74";
-					#$alone++ unless exists $adjlist{$$dna_segs_order_r[$i+1]};		# counting 'loner' arrays; no adjacency
-				$adjlen++;										# length of adjacency
-				
-				# following adjacency #
-				while(1){										# last in adjacency
-					$i++;
-					if(exists $adjlist{$$dna_segs_order_r[$i]}){
-						$adjlen++;								
-						}
-					else{
-						last;
-						}
-					}
-				# counting adjacency if len > 1 #
-				$adjcnt++;
-				
-				}
-			$i++;
-				#$debug{$col} = $i if $debug{$col};
-			}
-			#print Dumper "adj: $adjcnt";
-			#print Dumper "alone: $alone";
-		
-		# modifying to same color (one continued adjacency will be colored default color) #
-		## 1 adjacency & adjacency length must be >1 ##
-		$color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt == 1 && $adjlen > 1;
-		}
-		
-		#exit;
-		#print Dumper %debug; exit;
-		#print Dumper scalar keys %{$color_mod_r->{"spacer"}}; exit;
+	# following adjacency #
+	while(1){										# last in adjacency
+	  $i++;
+	  if(exists $adjlist{$$dna_segs_order_r[$i]}){
+	    $adjlen++ if $adjlist{$$dna_segs_order_r[$i]};				
+	  }
+	  else{
+	    last;
+	  }
 	}
+	# counting adjacency if len > 1 #
+	$adjcnt++;
+      }
+      $i++;
+    }	
+    #print Dumper "adjcnt: $adjcnt; adjlen: $adjlen";
+    $color_mod_r->{$feat}{$col} = $default_colors{$feat} if $adjcnt <= 1;
+  }
+  
+  #exit;
+  #print Dumper %{$color_mod_r->{"spacer"}}; exit;
+  #print Dumper %debug; exit;
+  #print Dumper scalar keys %{$color_mod_r->{"spacer"}}; exit;
+}
+
 
 sub load_compare{
-	my ($compare_in) = @_;
-	
-	open IN, $compare_in or die $!;
-	my %compare;
-	my %header;
-	while(<IN>){
-		chomp;
-		next if /^\s*$/;
-		
-		if($.==1){ 	#header
-			my @tmp = split /\t/;
-			for my $i (0..$#tmp){
-				$header{$tmp[$i]} = $i;
-				}
-			
-			my @check = qw/dna_segs_id1 dna_segs_id2 feat feat_id/;
-			map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
-				unless exists $header{$_} } @check;
-			}
-		else{   	#body
-			my @line = split /\t/;
-			my $dna_segs_id1 = $line[$header{"dna_segs_id1"}];
-			my $dna_segs_id2 = $line[$header{"dna_segs_id2"}];
-			my $feat = $line[$header{"feat"}];
-			my $feat_id = $line[$header{"feat_id"}];
-	
-			# compare #
-			push ( @{$compare{$feat}{$dna_segs_id1}{$dna_segs_id2}{$feat_id}}, \@line );
-			}	
-		}
-	close IN;
-	
-		#print Dumper %compare; exit;
-	return \%compare;
-	}
+  my ($compare_in) = @_;
+  
+  open IN, $compare_in or die $!;
+  my %compare;
+  my %header;
+  while(<IN>){
+    chomp;
+    next if /^\s*$/;
+    
+    if($.==1){ 	#header
+      my @tmp = split /\t/;
+      for my $i (0..$#tmp){
+	$header{$tmp[$i]} = $i;
+      }
+      
+      my @check = qw/dna_segs_id1 dna_segs_id2 feat feat_id/;
+      map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
+	     unless exists $header{$_} } @check;
+    }
+    else{   	#body
+      my @line = split /\t/;
+      my $dna_segs_id1 = $line[$header{"dna_segs_id1"}];
+      my $dna_segs_id2 = $line[$header{"dna_segs_id2"}];
+      my $feat = $line[$header{"feat"}];
+      my $feat_id = $line[$header{"feat_id"}];
+      
+      # compare #
+      push ( @{$compare{$feat}{$dna_segs_id1}{$dna_segs_id2}{$feat_id}}, \@line );
+    }	
+  }
+  close IN;
+  
+  #print Dumper %compare; exit;
+  return \%compare;
+}
 
 sub apply_brlen_cutoff{
-	my ($dna_segs_r, $brlen_mat_r, $color_mod_r, $feat) = @_;
-	
-	#print Dumper %$brlen_mat_r; exit;
-	
-	foreach my $col (keys %{$dna_segs_r->{$feat}}){
-		# finding max brlen distance #
-		my @dna_segs_ids = keys %{$dna_segs_r->{$feat}{$col}};
-		
-		# getting brlen distances among all taxa in a color #
-		my @dists;
-		for my $i (0..$#dna_segs_ids){
-			for my $ii (0..$#dna_segs_ids){
-				next if $ii >= $i;
-				die " ERROR: $dna_segs_ids[$i], $dna_segs_ids[$ii] not found in branch length matrix!\n"
-					unless exists $brlen_mat_r->{$dna_segs_ids[$i]}{$dna_segs_ids[$ii]}; 
-				push(@dists, $brlen_mat_r->{$dna_segs_ids[$i]}{$dna_segs_ids[$ii]});
-				}
-			}
-		push(@dists, 0) unless $dists[0];
-		
-		if(max (@dists) < $brlen_cutoff){
-			$color_mod_r->{$feat}{$col} = $default_colors{$feat};
-			}
-		}
-		#print Dumper %$color_mod_r; exit;
-	}
+  my ($dna_segs_r, $brlen_mat_r, $color_mod_r, $feat) = @_;
+  
+  #print Dumper %$brlen_mat_r; exit;
+  
+  foreach my $col (keys %{$dna_segs_r->{$feat}}){
+    # finding max brlen distance #
+    my @dna_segs_ids = keys %{$dna_segs_r->{$feat}{$col}};
+    
+    # getting brlen distances among all taxa in a color #
+    my @dists;
+    for my $i (0..$#dna_segs_ids){
+      for my $ii (0..$#dna_segs_ids){
+	next if $ii >= $i;
+	die " ERROR: $dna_segs_ids[$i], $dna_segs_ids[$ii] not found in branch length matrix!\n"
+	  unless exists $brlen_mat_r->{$dna_segs_ids[$i]}{$dna_segs_ids[$ii]}; 
+	push(@dists, $brlen_mat_r->{$dna_segs_ids[$i]}{$dna_segs_ids[$ii]});
+      }
+    }
+    push(@dists, 0) unless $dists[0];
+    
+    if(max (@dists) < $brlen_cutoff){
+      $color_mod_r->{$feat}{$col} = $default_colors{$feat};
+    }
+  }
+  #print Dumper %$color_mod_r; exit;
+}
 
 sub make_brlen_matrix{
-# making a pairwise distance matrix of all taxa in tree #
-	my ($treeo, $write_stats) = @_;
-	
-	my @nodes = $treeo->get_leaf_nodes;
-	
-	my %brlens;
-	my @vals;
-	for my $i (0..$#nodes){
-		for my $ii (0..$#nodes){
-			next if $ii >= $i;
-			my $dist = $treeo->distance(@nodes[($i, $ii)]);
-			$brlens{$nodes[$i]->id}{$nodes[$ii]->id} = $dist;
-			push @vals, $dist;
-				
-			}
-		}
-		
-	# stats #
-	if($write_stats){
-		print "Min branch length:\t", min(@vals), "\n";
-		print "Mean branch length:\t", sum(@vals) / scalar @vals, "\n";
-		print "Max branch length:\t", max(@vals), "\n";	
-		print "Stdev branch length:\t", stdev(\@vals), "\n";
-		exit;
-		}
-		
-		#print Dumper %brlens; exit;
-	return \%brlens;
-	}
+  # making a pairwise distance matrix of all taxa in tree #
+  my ($treeo, $write_stats) = @_;
+  
+  my @nodes = $treeo->get_leaf_nodes;
+  
+  my %brlens;
+  my @vals;
+  for my $i (0..$#nodes){
+    for my $ii (0..$#nodes){
+      next if $ii >= $i;
+      my $dist = $treeo->distance(@nodes[($i, $ii)]);
+      $brlens{$nodes[$i]->id}{$nodes[$ii]->id} = $dist;
+      push @vals, $dist;
+      
+    }
+  }
+  
+  # stats #
+  if($write_stats){
+    print "Min branch length:\t", min(@vals), "\n";
+    print "Mean branch length:\t", sum(@vals) / scalar @vals, "\n";
+    print "Max branch length:\t", max(@vals), "\n";	
+    print "Stdev branch length:\t", stdev(\@vals), "\n";
+    exit;
+  }
+  
+  #print Dumper %brlens; exit;
+  return \%brlens;
+}
 
 sub add_upper{
-# adding upper half of matrix #
-	my ($mat_r) = @_;
-	foreach my $i (keys %$mat_r){
-		foreach my $ii (keys %{$mat_r->{$i}}){
-			$mat_r->{$ii}{$i} = $mat_r->{$i}{$ii};
-			}
-		}
-		#print Dumper $mat_r; exit;
-	}
+  # adding upper half of matrix #
+  my ($mat_r) = @_;
+  foreach my $i (keys %$mat_r){
+    foreach my $ii (keys %{$mat_r->{$i}}){
+      $mat_r->{$ii}{$i} = $mat_r->{$i}{$ii};
+    }
+  }
+  #print Dumper $mat_r; exit;
+}
 
 sub load_dna_segs{
-# loading dna_segs from stdin #
-	my %dna_segs_order;
-	my @dna_segs_order;
-	my %dna_segs;
-	my %header;
-	while(<>){
-		chomp;
-		next if /^\s*$/;
+  # loading dna_segs from stdin #
+  my %dna_segs_order;
+  my @dna_segs_order;
+  my %dna_segs;
+  my %header;
+  while(<>){
+    chomp;
+    next if /^\s*$/;
+    
+    # header #
+    if($.==1){
+      my @tmp = split /\t/;
+      for my $i (0..$#tmp){
+	$header{$tmp[$i]} = $i;
+      }
+      
+      my @check = qw/dna_segs_id col feat/;
+      map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
+	     unless exists $header{$_} } @check;
+    }
+    else{
+      my @line = split /\t/;
+      my $dna_segs_id = $line[$header{"dna_segs_id"}];
+      my $col = $line[$header{"col"}];
+      my $feat = $line[$header{"feat"}];
+      
+      # order of loci#
+      push( @dna_segs_order, $dna_segs_id)
+	unless exists $dna_segs_order{$dna_segs_id};	
+      $dna_segs_order{$dna_segs_id} = 1;
+      
+      
+      # dna_segs to %@ #
+      push ( @{$dna_segs{$feat}{$col}{$dna_segs_id}}, \@line );
+    }
+  }
+  #print Dumper %dna_segs; exit;
+  #print Dumper @dna_segs_order; exit;
+  return \%dna_segs, \@dna_segs_order, \%header;
+}
 
-		# header #
-		if($.==1){
-			my @tmp = split /\t/;
-			for my $i (0..$#tmp){
-				$header{$tmp[$i]} = $i;
-				}
-			
-			my @check = qw/dna_segs_id col feat/;
-			map{ die " ERROR: \"$_\" not found in dna_seg header!\n"
-				unless exists $header{$_} } @check;
-			}
-		else{
-			my @line = split /\t/;
-			my $dna_segs_id = $line[$header{"dna_segs_id"}];
-			my $col = $line[$header{"col"}];
-			my $feat = $line[$header{"feat"}];
-	
-			# order of loci#
-			push( @dna_segs_order, $dna_segs_id)
-				unless exists $dna_segs_order{$dna_segs_id};	
-			$dna_segs_order{$dna_segs_id} = 1;
-	
-			
-			# dna_segs to %@ #
-			push ( @{$dna_segs{$feat}{$col}{$dna_segs_id}}, \@line );
-			}
-		}
-		#print Dumper %dna_segs; exit;
-		#print Dumper @dna_segs_order; exit;
-	return \%dna_segs, \@dna_segs_order, \%header;
-	}
-	
 sub check_tree_format{
-	my $format = shift;
-	$format = "newick" if ! $format;
-	$format =~ s/^new$/newick/i;
-	$format =~ s/^nex$/nexus/i;
-	die " Designated tree format ($format) not recognized.\n" if $format !~ /newick|nexus/;
-	return $format;
-	}
+  my $format = shift;
+  $format = "newick" if ! $format;
+  $format =~ s/^new$/newick/i;
+  $format =~ s/^nex$/nexus/i;
+  die " Designated tree format ($format) not recognized.\n" if $format !~ /newick|nexus/;
+  return $format;
+}
 
 sub average{
-        my($data) = @_;
-        if (not @$data) {
-                die("Empty array\n");
-        }
-        my $total = 0;
-        foreach (@$data) {
-                $total += $_;
-        }
-        my $average = $total / @$data;
-        return $average;
+  my($data) = @_;
+  if (not @$data) {
+    die("Empty array\n");
+  }
+  my $total = 0;
+  foreach (@$data) {
+    $total += $_;
+  }
+  my $average = $total / @$data;
+  return $average;
 }
 
 sub stdev{
-        my($data) = @_;
-        if(@$data == 1){
-                return 0;
-        }
-        my $average = &average($data);
-        my $sqtotal = 0;
-        foreach(@$data) {
-                $sqtotal += ($average-$_) ** 2;
-        }
-        my $std = ($sqtotal / (@$data-1)) ** 0.5;
-        return $std;
+  my($data) = @_;
+  if(@$data == 1){
+    return 0;
+  }
+  my $average = &average($data);
+  my $sqtotal = 0;
+  foreach(@$data) {
+    $sqtotal += ($average-$_) ** 2;
+  }
+  my $std = ($sqtotal / (@$data-1)) ** 0.5;
+  return $std;
 }
 
 
