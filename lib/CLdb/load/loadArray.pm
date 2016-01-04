@@ -138,7 +138,7 @@ sub parse_array_file{
     }
 
     # concat array sequence #
-    $seq .= join("", @line[1..2]);                              # total array sequence
+    $seq .= join("", @line[1..2]);       # total array sequence
     $seq =~ s/ +//g;
   }
 
@@ -172,14 +172,15 @@ sub determine_positions{
   my $seq_length = length($seq);
   $seq_length = 0 if ! $seq_length;
 
-  $$line_r[0] = $seq_length + 1 unless $location;          # start = sequence length
+  $$line_r[0] = $seq_length + 1 unless $location;  # start = sequence length
 
   $pos[0] = $$line_r[0] if $$line_r[1];                          
   
   # repeat start
-  $pos[1] = $$line_r[0] + length($$line_r[1]) if $$line_r[1];         # repeat end
-  $pos[2] = $$line_r[0] + length($$line_r[1]) if $$line_r[2];                   # spacer start
-  $pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) if $$line_r[2];             # spacer end
+  $pos[1] = $$line_r[0] + length($$line_r[1]) if $$line_r[1];      
+  $pos[2] = $$line_r[0] + length($$line_r[1]) if $$line_r[2];   
+  $pos[3] = $$line_r[0] + length($$line_r[1]) + length($$line_r[2]) 
+    if $$line_r[2];             # spacer end
 
   die "HERE" unless $$line_r[0];
 
@@ -194,19 +195,12 @@ sub determine_positions{
 
 Nick Youngblut, C<< <nyoungb2 at illinois.edu> >>
 
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-crispr_db at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=CRISPR_db>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
 
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc CLdb::arrayBlast::loadArray
-
 
 You can also look for information at:
 

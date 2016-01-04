@@ -1,0 +1,4 @@
+Locus_ID	Taxon_ID	Taxon_Name	Subtype	Scaffold	Locus_Start	Locus_End	CAS_Start	CAS_End	Array_Start	Array_End	Array_sense_strand	CAS_Status	Array_Status	Genbank_File	Fasta_File	Array_File	Scaffold_count	File_Creation_Date	Author
+KACC10331_1	58579623	X_oryzae_KACC10331	I-C	NC_006834	880612	892516	880612	888512	888612	892516	1	intact	intact	Zoryzae_KACC_33.gbk		KACC10311.txt		5/21/14	Nick Youngblut
+MAFF311018_1	84621657	Zoryzae_MAFF311018	I-C	NC_007705	849969	861149	849969	857869	857969	861149	1	intact	intact	Zoryzae_MAFF3_8.gbk		MAFF311018.txt		5/21/14	Nick Youngblut
+PXO99A_1	188574270	Zoryzae_PXO99A	I-C	NC_010717	4533334	4546146	4533334	4541002	4541190	4546146	1	intact	intact	Zoryzae_PXO99A.gbk		PXO99A.txt		5/21/14	Nick Youngblut

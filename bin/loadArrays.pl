@@ -85,19 +85,14 @@ use DBI;
 # CLdb #
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
-use CLdb::utilities qw/
-	file_exists 
-	connect2db
-	lineBreaks2unix
-	get_file_path/;
-use CLdb::query qw/
-	table_exists/;
-use CLdb::load qw/
-	load_db_table/;
-use CLdb::load::loadArray qw/
-			      make_headers
-			      parse_array_file
-			    /;
+use CLdb::utilities qw/file_exists 
+		       connect2db
+		       lineBreaks2unix
+		       get_file_path/;
+use CLdb::query qw/table_exists/;
+use CLdb::load qw/load_db_table/;
+use CLdb::load::loadArray qw/make_headers
+			     parse_array_file/;
 
 
 ### args/flags
@@ -158,8 +153,8 @@ sub get_array_file_names{
   my $cmd = "SELECT locus_id, array_file from loci where array_file is not null";
   my $names_r = $dbh->selectall_arrayref($cmd);
   
-  die " ERROR: no array file names found!\n" unless $names_r;
-  #print Dumper $names_r; exit;
+  die " ERROR: no array file names found!\n" 
+    unless $names_r and scalar(@$names_r);
   return $names_r;
 }
 
