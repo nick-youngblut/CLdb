@@ -23,7 +23,8 @@ notebook unless the webtool has a good API.
   * This includes the adjacent PAM region
  * Get the crRNA DNA template (crDNA) for each blast query
  * Make protospacer-crDNA alignments
- * Get summaries on protospacer-crDNA mismatches for the SEED sequence and entire protospacer
+ * Get summaries on protospacer-crDNA mismatches for the SEED sequence 
+and entire protospacer
  * Get the PAM regions for each hit
 * Make detailed comparative plots of CRISPR systems 
  * The plots can include information on:
@@ -62,11 +63,11 @@ cd CLdb
 ### Add CLdb to your PATH 
 
 ~~~
-echo 'source '`pwd`'/CLdb.sourceMe' >> ~/.profile
+echo 'source '`pwd`'/sourceMe' >> ~/.profile
 source ~/.profile
 ~~~
 
-'CLdb' and 'CLdb_perldoc' should now be in your $PATH.
+`CLdb` should now be in your $PATH.
 See [this](http://kb.iu.edu/data/acar.html) for more info
 on the $PATH variable.
 Also, bash command line completion should now be set up (see below).
@@ -92,6 +93,19 @@ Example command-sub-subcommand: `CLdb -- arrayBlast -- run -h`
 
 * Remember: tab completion for (sub)subcommands will only work after
 the "--". So, with sub-subcommands: `CLdb -- arrayBlast -- <tab><tab>`
+
+
+## Dependencies 
+
+Not all dependencies are needed depending on what you plan
+on doing with CLdb. The perl modules can be downloaded easily (hopefully)
+with [cpanminus](http://search.cpan.org/~miyagawa/Menlo-1.9001/script/cpanm-menlo).
+
+* Perl modules:
+  * [BioPerl](http://www.bioperl.org/wiki/Installing_BioPerl)
+  * [Parallel::ForkManager](http://search.cpan.org/~dlux/Parallel-ForkManager-0.7.5/ForkManager.pm)
+  * [Set::IntervalTree](http://search.cpan.org/~benbooth/Set-IntervalTree-0.01/lib/Set/IntervalTree.pm)
+  * [Sereal](http://search.cpan.org/~yves/Sereal-0.330/lib/Sereal.pm)
 
 
 ## Documentation

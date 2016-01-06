@@ -520,7 +520,7 @@ sub check_multi{
     " Adding loci_ids to names in dna_segs table!\n"
     if $multi_loci;
   print STDERR "...Found multiple subtypes.",  
-    "Adding subtype to names in dna_segs table!\n"
+    " Adding subtype to names in dna_segs table!\n"
       if $multi_subtype;
   
   return $multi_loci, $multi_subtype;
@@ -758,8 +758,8 @@ SELECT
 loci.taxon_name,
 loci.locus_id,
 loci.subtype
-FROM Loci Loci, Loci b
-WHERE Loci.locus_id = b.locus_id
+FROM Loci loci, Loci b
+WHERE loci.locus_id = b.locus_id
 $join_sql
 $extra_query
 GROUP BY loci.locus_id
@@ -772,8 +772,9 @@ GROUP BY loci.locus_id
   
   # query db #
   my $ret = $dbh->selectall_arrayref($query);
-  die " ERROR: no matching entries for subtype query!\n"
-    unless $$ret[0];
+  die " ERROR: no matching entries for subtype query!\n",
+    "  QUERY: '$query'\n"
+      unless $$ret[0];
   
   my %subtypes; 
   # taxon_name => locus_id => subtype

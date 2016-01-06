@@ -133,7 +133,7 @@ use CLdb::utilities qw/
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
 
-my ($verbose, $tree_in, $format, $tree_name, $xlims_bool, $databse);
+my ($verbose, $tree_in, $format, $tree_name, $xlims_bool, $database);
 GetOptions(
 	   "tree=s" => \$tree_in,
 	   "format=s" => \$format,
@@ -155,7 +155,7 @@ $format = check_tree_format($format);
 #--- Main ---#
 # loading tree #
 my $treeio = Bio::TreeIO -> new(-file => $tree_in,
-								-format => $format);
+				-format => $format);
 my $treeo = $treeio->next_tree;
 
 # loading dna_segs table #
@@ -194,7 +194,8 @@ sub order_dna_segs{
   my ($dna_segs_r, $tree_order_r, $header_r, $name_index_r) = @_;
   
   # header #
-  print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} keys %$header_r), "\n";
+  print join("\t", sort{$header_r->{$a}<=>$header_r->{$b}} 
+	     keys %$header_r), "\n";
 
 
   # body #
@@ -208,7 +209,7 @@ sub order_dna_segs{
       
     if($leaf =~ /__[^_]+/){   	## if lociID already in name (prevents duplicates)
       (my $locus_id = $leaf) =~ s/^.*?__([^_]+).*/$1/; 	#if $leaf =~ /\|\d+$/;
-      if(exists $dna_segs_r->{$taxon_name}{$locus_id}){ # locus_id actually in taxon__name
+      if(exists $dna_segs_r->{$taxon_name}{$locus_id}){ 
 	foreach my $row (@{$dna_segs_r->{$taxon_name}{$locus_id}{"entries"}}){
 	  print join("\t", @$row), "\n";
 	}
@@ -252,7 +253,7 @@ sub add_leaves{
 	
   # splitting taxa if needed #
   for my $node ($treeo->get_leaf_nodes){
-    my @loci = keys %{$dna_segs_r->{$node->id}};     # locus_ids for each taxon_name 
+    my @loci = keys %{$dna_segs_r->{$node->id}};  # locus_ids for each taxon_name 
     
     for my $i (0..$#loci){
       if ($#loci > 0){		# adding nodes if needed 	
@@ -267,9 +268,7 @@ sub add_leaves{
 	
 	my $new_node = new Bio::Tree::Node(
 					   -id => $dna_segs_ids_r->{$loci[$i]},
-					   -branch_length => 0);					
-	
-	#$new_node->id( join("__", $new_node_id, "cli$loci[$i]") );					
+					   -branch_length => 0);      
 	$node->add_Descendent($new_node);
 	
 	$node->id(100) if $i == $#loci;
