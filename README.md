@@ -3,7 +3,7 @@ CLdb (CRISPR Loci Database)
 
 CLdb is toolset for organizing and analyzing large amounts of CRISPR data.
 
-Existing webtools are fairly easy to use but suffer from some limitatios:
+Existing webtools are fairly easy to use but suffer from some limitations:
 
 * They can require A LOT of tedious clicking/typing for large datasets.
   * ie., they don't SCALE well.
@@ -17,7 +17,7 @@ notebook unless the webtool has a good API.
 
 ## Major Features of CLdb
 
-* Easy spacer Blasting
+* **Flexible and scalable spacer Blasting**
  * Filter out spacer blast hits to other CRISPR arrays
  * Get the protospacer of each blast hit
   * This includes the adjacent PAM region
@@ -26,12 +26,12 @@ notebook unless the webtool has a good API.
  * Get summaries on protospacer-crDNA mismatches for the SEED sequence 
 and entire protospacer
  * Get the PAM regions for each hit
-* Make detailed comparative plots of CRISPR systems 
+* **Make detailed comparative plots of CRISPR systems**
  * The plots can include information on:
   * CAS gene conservation among CRISPRs
   * Spacer conservation among CRISPRs
   * Location of the leader region
-* Summarize your dataset quickly
+* **Summarize your dataset quickly**
  * Get the number of spacers shared among:
   * CRISPR loci
   * CRISPR subtypes
