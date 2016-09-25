@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-CLdb -- CRISPR locus database
+CLdb -- CRISPR locus database (v0.2)
 
 =head1 SYNOPSIS
 
