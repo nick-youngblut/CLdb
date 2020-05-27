@@ -107,6 +107,12 @@ with [cpanminus](http://search.cpan.org/~miyagawa/Menlo-1.9001/script/cpanm-menl
   * [Set::IntervalTree](http://search.cpan.org/~benbooth/Set-IntervalTree-0.01/lib/Set/IntervalTree.pm)
   * [Sereal](http://search.cpan.org/~yves/Sereal-0.330/lib/Sereal.pm)
 
+### Installing dependencies via conda
+
+```
+conda create -n CLdb bioconda::perl-bioperl bioconda::perl-sereal bioconda::perl-set-intervaltree bioconda::perl-parallel-forkmanager
+conda activate CLdb
+```
 
 ## Documentation
 

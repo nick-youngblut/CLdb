@@ -1,0 +1,34 @@
+name: CLdb
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: build (${{ matrix.perl-version }}, ${{ matrix.os }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        perl-version: [5.20, 5.26]
+    steps:
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+        miniconda-version: 'latest'
+        auto-update-conda: true
+        channels: conda-forge,bioconda
+        activate-environment: CLdb
+    - name: conda env setup
+      shell: bash -l {0}
+      run: |
+        conda info -a
+        conda install perl=${{ matrix.perl-version }} bioconda::perl-bioperl bioconda::perl-sereal bioconda::perl-set-intervaltree bioconda::perl-parallel-forkmanager
+    - uses: actions/checkout@v2	
+    - name: Test run scripts
+      shell: bash -l {0}
+      run: |
+        ./CLdb -h
+        ./CLdb -- arrayBlast -h
+	
