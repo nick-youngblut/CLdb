@@ -87,6 +87,7 @@ use File::Spec;
 ### args/flags
 #pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
+sub Pod2Usage{ pod2usage({@_, -exitval => 0}) }
 my ($verbose, $replace, $drop_all, $database);
 my @tables = ("leaders", "genes");
 GetOptions(
@@ -95,7 +96,7 @@ GetOptions(
 	   "drop" => \$drop_all,
 	   "database=s" => \$database, # unused
 	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
+	   "help|?" => \&Pod2Usage # Help
 	   );
 
 ### I/O error & defaults

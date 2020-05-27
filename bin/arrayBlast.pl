@@ -68,17 +68,15 @@ use File::Spec;
 
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
+sub Pod2Usage{ pod2usage({@_, -exitval => 0}) }
 my ($verbose, $listSubcmds, $getPerlDoc, $database);
 GetOptions (
 	    "--list" => \$listSubcmds,
 	    "--perldoc" => \$getPerlDoc,
 	    "--verbose" => \$verbose,
 	    "database=s" => \$database,  # 
-	    "-help|?" => \&pod2usage
+	    "-help|?" => \&Pod2Usage
 	   );
-
-
 
 
 #--- I/O error ---#

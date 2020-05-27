@@ -106,6 +106,8 @@ use File::Spec;
 #--- option parsing ---#
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
 
+sub Pod2Usage{ pod2usage({@_, -exitval => 0}) }
+
 my ($verbose, $listSubcmds, $getPerlDoc, 
     $sql, $config, $config_params);
 GetOptions (
@@ -115,9 +117,8 @@ GetOptions (
 	    "--config=s" => \$config,
 	    "--config-params" => \$config_params,
 	    "--verbose" => \$verbose,
-	    "-help|?" => \&pod2usage
+	    "-help|?" => \&Pod2Usage
 	   );
-
 
 #-- intial assertions/defaults --#
 my $bindir = File::Spec->catdir($FindBin::RealBin, 'bin');

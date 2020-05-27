@@ -1,3 +1,5 @@
+![CLdb](https://github.com/nick-youngblut/CLdb/workflows/CLdb/badge.svg)
+
 CLdb (CRISPR Loci Database) 
 ===========================
 
