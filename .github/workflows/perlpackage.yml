@@ -24,7 +24,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda info -a
-        conda install perl=${{ matrix.perl-version }} bioconda::perl-bioperl bioconda::perl-sereal bioconda::perl-set-intervaltree bioconda::perl-parallel-forkmanager bioconda::perl-dbi
+        conda install perl=${{ matrix.perl-version }} bioconda::perl-bioperl bioconda::perl-sereal bioconda::perl-set-intervaltree bioconda::perl-parallel-forkmanager bioconda::perl-dbi bioconda::blast
     - uses: actions/checkout@v2	
     - name: Test run scripts
       shell: bash -l {0}

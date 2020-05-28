@@ -111,10 +111,8 @@ with [cpanminus](http://search.cpan.org/~miyagawa/Menlo-1.9001/script/cpanm-menl
 
 ### Installing dependencies via conda
 
-```
-conda create -n CLdb bioconda::perl-bioperl bioconda::perl-sereal bioconda::perl-set-intervaltree bioconda::perl-parallel-forkmanager
-conda activate CLdb
-```
+See the "conda install" line in [perlpackage.yml](.github/workflows/perlpackage.yml).
+Make sure to activate the conda env that you create.
 
 ## Documentation
 
