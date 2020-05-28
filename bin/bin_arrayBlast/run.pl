@@ -173,7 +173,7 @@ use CLdb::arrayBlast::blast qw/
 
 ### args/flags
 pod2usage("$0: No files given.") if ((@ARGV == 0) && (-t STDIN));
-
+sub Pod2Usage{ pod2usage({@_, -exitval => 0}) }
 
 my ($verbose, $database_file, $query_file);
 my (@subtype, @taxon_id, @taxon_name);
@@ -190,7 +190,7 @@ GetOptions(
 	   "blast=s" => \$blast_params,
 	   "fork=i" => \$fork,
 	   "verbose" => \$verbose,
-	   "help|?" => \&pod2usage # Help
+	   "help|?" => \&Pod2Usage # Help
 	   );
 
 #--- I/O error & defaults ---#
